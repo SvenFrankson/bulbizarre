@@ -1,0 +1,5 @@
+lib/
+*.blend1
+init_repo.bat
+*.manifest
+*.log
