@@ -1,6 +1,9 @@
 /// <reference path="../lib/babylon.d.ts"/>
-/// <reference path="../../nabu/nabu.d.ts"/>
-/// <reference path="../../mummu/mummu.d.ts"/>
+/// <reference path="../lib/nabu/nabu.d.ts"/>
+/// <reference path="../lib/mummu/mummu.d.ts"/>
+/// <reference path="../lib/kulla-grid/kulla-grid.d.ts"/>
+
+import Kulla = KullaGrid;
 
 function addLine(text: string): void {
     let e = document.createElement("div");
@@ -31,6 +34,8 @@ class Game {
     public cameraOrtho: boolean = false;
 
     public skybox: BABYLON.Mesh;
+
+    public terrain: Kulla.Terrain;
 
     constructor(canvasElement: string) {
         Game.Instance = this;
@@ -90,6 +95,42 @@ class Game {
         let firstStone = new BABYLON.Mesh("first-stone");
         let datas = await this.vertexDataLoader.get("./datas/meshes/first-stone.babylon");
         datas[0].applyToMesh(firstStone);
+
+        Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
+            this.terrain = new Kulla.Terrain({
+                scene: this.scene,
+                generatorType: Kulla.GeneratorType.Empty,
+                generatorProperties: [],
+                maxDisplayedLevel: 0,
+                blockSizeIJ_m: 1,
+                blockSizeK_m: 1,
+                chunckLengthIJ: 32,
+                chunckLengthK: 128,
+                chunckCountIJ: 2,
+                useAnalytics: true
+            });
+
+            let mat = new TerrainMaterial("terrain", this.scene);
+            this.terrain.materials = [mat];
+
+            this.terrain.initialize();
+
+            let todo = () => {
+                let ijk = this.terrain.getChunckAndIJKAtPos(new BABYLON.Vector3(1.5, 1.5, 1.5), 0);
+                if (ijk && ijk.chunck) {
+                    console.log("chunck found");
+                    let affectedChuncks = new Nabu.UniqueList<Kulla.Chunck>();
+                    affectedChuncks.push(...ijk.chunck.setData(Kulla.BlockType.Dirt, ijk.ijk.i, ijk.ijk.j, ijk.ijk.k));
+                    affectedChuncks.forEach(c => {
+                        c.redrawMesh(true);
+                    })
+                }
+                else {
+                    requestAnimationFrame(todo);
+                }
+            }
+            todo();
+        });
 	}
 
 	public animate(): void {

@@ -1,6 +1,8 @@
 /// <reference path="../lib/babylon.d.ts"/>
-/// <reference path="../../nabu/nabu.d.ts"/>
-/// <reference path="../../mummu/mummu.d.ts"/>
+/// <reference path="../lib/nabu/nabu.d.ts"/>
+/// <reference path="../lib/mummu/mummu.d.ts"/>
+/// <reference path="../lib/kulla-grid/kulla-grid.d.ts"/>
+var Kulla = KullaGrid;
 function addLine(text) {
     let e = document.createElement("div");
     e.classList.add("debug-log");
@@ -60,6 +62,38 @@ class Game {
         let firstStone = new BABYLON.Mesh("first-stone");
         let datas = await this.vertexDataLoader.get("./datas/meshes/first-stone.babylon");
         datas[0].applyToMesh(firstStone);
+        Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
+            this.terrain = new Kulla.Terrain({
+                scene: this.scene,
+                generatorType: Kulla.GeneratorType.Empty,
+                generatorProperties: [],
+                maxDisplayedLevel: 0,
+                blockSizeIJ_m: 1,
+                blockSizeK_m: 1,
+                chunckLengthIJ: 32,
+                chunckLengthK: 128,
+                chunckCountIJ: 2,
+                useAnalytics: true
+            });
+            let mat = new TerrainMaterial("terrain", this.scene);
+            this.terrain.materials = [mat];
+            this.terrain.initialize();
+            let todo = () => {
+                let ijk = this.terrain.getChunckAndIJKAtPos(new BABYLON.Vector3(1.5, 1.5, 1.5), 0);
+                if (ijk && ijk.chunck) {
+                    console.log("chunck found");
+                    let affectedChuncks = new Nabu.UniqueList();
+                    affectedChuncks.push(...ijk.chunck.setData(Kulla.BlockType.Dirt, ijk.ijk.i, ijk.ijk.j, ijk.ijk.k));
+                    affectedChuncks.forEach(c => {
+                        c.redrawMesh(true);
+                    });
+                }
+                else {
+                    requestAnimationFrame(todo);
+                }
+            };
+            todo();
+        });
     }
     animate() {
         this.engine.runRenderLoop(() => {
@@ -97,3 +131,38 @@ window.addEventListener("DOMContentLoaded", () => {
         main.animate();
     });
 });
+class TerrainMaterial extends BABYLON.ShaderMaterial {
+    constructor(name, scene) {
+        super(name, scene, {
+            vertex: "terrainToon",
+            fragment: "terrainToon",
+        }, {
+            attributes: ["position", "normal", "uv", "uv2", "color"],
+            uniforms: [
+                "world", "worldView", "worldViewProjection", "view", "projection",
+                "lightInvDirW",
+                "level"
+            ]
+        });
+        this._lightInvDirW = BABYLON.Vector3.Up();
+        this._level = 0;
+        this.setLightInvDir(BABYLON.Vector3.One().normalize());
+        this.setLevel(0);
+        this.setFloat("blockSize_m", 1);
+        this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
+    }
+    getLightInvDir() {
+        return this._lightInvDirW;
+    }
+    setLightInvDir(p) {
+        this._lightInvDirW.copyFrom(p);
+        this.setVector3("lightInvDirW", this._lightInvDirW);
+    }
+    getLevel() {
+        return this._level;
+    }
+    setLevel(v) {
+        this._level = v;
+        this.setInt("level", this._level);
+    }
+}
