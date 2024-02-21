@@ -99,11 +99,12 @@ class Game {
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.terrain = new Kulla.Terrain({
                 scene: this.scene,
-                generatorType: Kulla.GeneratorType.Empty,
-                generatorProperties: [],
+                generatorProps: {
+                    type: Kulla.GeneratorType.Empty
+                },
                 maxDisplayedLevel: 0,
-                blockSizeIJ_m: 1,
-                blockSizeK_m: 1,
+                blockSizeIJ_m: 0.5,
+                blockSizeK_m: 0.5,
                 chunckLengthIJ: 32,
                 chunckLengthK: 128,
                 chunckCountIJ: 2,
@@ -116,9 +117,8 @@ class Game {
             this.terrain.initialize();
 
             let todo = () => {
-                let ijk = this.terrain.getChunckAndIJKAtPos(new BABYLON.Vector3(1.5, 1.5, 1.5), 0);
+                let ijk = this.terrain.getChunckAndIJKAtPos(new BABYLON.Vector3(1.25, 1.25, 1.25), 0);
                 if (ijk && ijk.chunck) {
-                    console.log("chunck found");
                     let affectedChuncks = new Nabu.UniqueList<Kulla.Chunck>();
                     affectedChuncks.push(...ijk.chunck.setData(Kulla.BlockType.Dirt, ijk.ijk.i, ijk.ijk.j, ijk.ijk.k));
                     affectedChuncks.forEach(c => {
