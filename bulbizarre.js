@@ -66,11 +66,13 @@ class Game {
             this.terrain = new Kulla.Terrain({
                 scene: this.scene,
                 generatorProps: {
-                    type: Kulla.GeneratorType.Empty
+                    type: Kulla.GeneratorType.Flat,
+                    altitude: 0,
+                    blockType: Kulla.BlockType.Grass
                 },
                 maxDisplayedLevel: 0,
-                blockSizeIJ_m: 0.5,
-                blockSizeK_m: 0.5,
+                blockSizeIJ_m: 1,
+                blockSizeK_m: 1,
                 chunckLengthIJ: 32,
                 chunckLengthK: 128,
                 chunckCountIJ: 2,
