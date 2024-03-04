@@ -15,7 +15,7 @@ function addLine(text: string): void {
 class Game {
     
     public static Instance: Game;
-    public DEBUG_MODE: boolean = false;
+    public DEBUG_MODE: boolean = true;
 
 	public canvas: HTMLCanvasElement;
 	public engine: BABYLON.Engine;
@@ -36,6 +36,7 @@ class Game {
     public skybox: BABYLON.Mesh;
 
     public terrain: Kulla.Terrain;
+    public terrainEditor: Kulla.TerrainEditor;
 
     constructor(canvasElement: string) {
         Game.Instance = this;
@@ -58,6 +59,9 @@ class Game {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
         }
 
+        let router = new Router();
+        router.initialize();
+
         this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 3, - 2.5)).normalize(), this.scene);
 
         this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 / Math.sqrt(3) }, this.scene);
@@ -75,6 +79,8 @@ class Game {
         this.skybox.rotation.y = 0.16 * Math.PI;
 
         this.camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 4, 10, BABYLON.Vector3.Zero());
+        this.camera.wheelPrecision *= 100;
+        this.camera.minZ = 0.1;
         
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-target")) {
@@ -92,24 +98,49 @@ class Game {
 
         this.camera.attachControl();
 
-        let firstStone = new BABYLON.Mesh("first-stone");
-        let datas = await this.vertexDataLoader.get("./datas/meshes/first-stone.babylon");
-        datas[0].applyToMesh(firstStone);
+        let clothMaterial = new BABYLON.StandardMaterial("cloth");
+        clothMaterial.diffuseColor.copyFromFloats(1, 1, 1);
+        clothMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/test_hand_cloth.png");
+        clothMaterial.diffuseTexture.hasAlpha = true;
+        clothMaterial.transparencyMode = 1;
+        clothMaterial.useAlphaFromDiffuseTexture = true;
+        clothMaterial.specularColor.copyFromFloats(0, 0, 0);
+
+        let meshes = await BABYLON.SceneLoader.ImportMeshAsync("", "./datas/meshes/arm_4.babylon");
+        let root = new BABYLON.Mesh("hand-root");
+        meshes.meshes.forEach(mesh => {
+            mesh.parent = root;
+            if (mesh instanceof BABYLON.Mesh) {
+                if (mesh.material instanceof BABYLON.MultiMaterial) {
+                    mesh.material.subMaterials[1] = clothMaterial;
+                }
+                mesh.instances.forEach(instance => {
+                    instance.parent = root;
+                })
+            }
+        })
+
+        root.position.y = 0;
 
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.terrain = new Kulla.Terrain({
                 scene: this.scene,
-                generatorProps: {
+                /*generatorProps: {
                     type: Kulla.GeneratorType.Flat,
                     altitude: 0,
                     blockType: Kulla.BlockType.Grass
+                },*/
+                generatorProps: {
+                    type: Kulla.GeneratorType.PNG,
+                    url: "./datas/textures/test_terrain.png",
+                    squareSize: 1
                 },
                 maxDisplayedLevel: 0,
                 blockSizeIJ_m: 1,
                 blockSizeK_m: 1,
                 chunckLengthIJ: 32,
                 chunckLengthK: 128,
-                chunckCountIJ: 2,
+                chunckCountIJ: 4,
                 useAnalytics: true
             });
 
@@ -118,20 +149,22 @@ class Game {
 
             this.terrain.initialize();
 
-            let todo = () => {
-                let ijk = this.terrain.getChunckAndIJKAtPos(new BABYLON.Vector3(1.25, 1.25, 1.25), 0);
+            this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+
+            /*
+            setInterval(() => {
+                let p = new BABYLON.Vector3(- 1 + 2 * Math.random(), Math.random() * 0.5, - 1 + 2 * Math.random());
+                p.normalize().scaleInPlace(24 + 4 * Math.random());
+                let ijk = this.terrain.getChunckAndIJKAtPos(p, 0);
                 if (ijk && ijk.chunck) {
-                    let affectedChuncks = new Nabu.UniqueList<Kulla.Chunck>();
-                    affectedChuncks.push(...ijk.chunck.setData(Kulla.BlockType.Dirt, ijk.ijk.i, ijk.ijk.j, ijk.ijk.k));
-                    affectedChuncks.forEach(c => {
-                        c.redrawMesh(true);
+                    this.terrainEditor.doAction(ijk.chunck, ijk.ijk, {
+                        brushSize: 2,
+                        brushBlock: Kulla.BlockType.Dirt,
+                        mode: Kulla.TerrainEditionMode.Add
                     })
                 }
-                else {
-                    requestAnimationFrame(todo);
-                }
-            }
-            todo();
+            }, 50);
+            */
         });
 	}
 

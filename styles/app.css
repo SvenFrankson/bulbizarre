@@ -19,3 +19,40 @@ body {
     border: none;
     z-index: 0;
 }
+
+menu-page {
+    top: calc((100vh - min(100vh, 100vw)) * 0.5);
+    left: calc((100vw - min(100vh, 100vw)) * 0.5);
+    width: min(100vh, 100vw);
+    height: min(100vh, 100vw);
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+    color: white;
+    pointer-events: none;
+}
+
+menu-panel {
+    border: 1px solid white;
+    border-radius: min(1.5vh, 1.5vw);
+    pointer-events: initial;
+}
+
+menu-panel h2 {
+    color: white;
+}
+
+a:link { 
+    text-decoration: none; 
+}
+
+a:visited { 
+    text-decoration: none; 
+}
+
+a:hover { 
+    text-decoration: none; 
+}
+
+a:active { 
+    text-decoration: none; 
+}

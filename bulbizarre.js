@@ -11,7 +11,7 @@ function addLine(text) {
 }
 class Game {
     constructor(canvasElement) {
-        this.DEBUG_MODE = false;
+        this.DEBUG_MODE = true;
         this.screenRatio = 1;
         this.cameraOrtho = false;
         Game.Instance = this;
@@ -33,6 +33,8 @@ class Game {
         else {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
         }
+        let router = new Router();
+        router.initialize();
         this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 3, -2.5)).normalize(), this.scene);
         this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 / Math.sqrt(3) }, this.scene);
         let skyboxMaterial = new BABYLON.StandardMaterial("skyBox", this.scene);
@@ -45,6 +47,8 @@ class Game {
         this.skybox.material = skyboxMaterial;
         this.skybox.rotation.y = 0.16 * Math.PI;
         this.camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 4, 10, BABYLON.Vector3.Zero());
+        this.camera.wheelPrecision *= 100;
+        this.camera.minZ = 0.1;
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-target")) {
                 let target = JSON.parse(window.localStorage.getItem("camera-target"));
@@ -59,42 +63,66 @@ class Game {
             }
         }
         this.camera.attachControl();
-        let firstStone = new BABYLON.Mesh("first-stone");
-        let datas = await this.vertexDataLoader.get("./datas/meshes/first-stone.babylon");
-        datas[0].applyToMesh(firstStone);
+        let clothMaterial = new BABYLON.StandardMaterial("cloth");
+        clothMaterial.diffuseColor.copyFromFloats(1, 1, 1);
+        clothMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/test_hand_cloth.png");
+        clothMaterial.diffuseTexture.hasAlpha = true;
+        clothMaterial.transparencyMode = 1;
+        clothMaterial.useAlphaFromDiffuseTexture = true;
+        clothMaterial.specularColor.copyFromFloats(0, 0, 0);
+        let meshes = await BABYLON.SceneLoader.ImportMeshAsync("", "./datas/meshes/arm_4.babylon");
+        let root = new BABYLON.Mesh("hand-root");
+        meshes.meshes.forEach(mesh => {
+            mesh.parent = root;
+            if (mesh instanceof BABYLON.Mesh) {
+                if (mesh.material instanceof BABYLON.MultiMaterial) {
+                    mesh.material.subMaterials[1] = clothMaterial;
+                }
+                mesh.instances.forEach(instance => {
+                    instance.parent = root;
+                });
+            }
+        });
+        root.position.y = 0;
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.terrain = new Kulla.Terrain({
                 scene: this.scene,
-                generatorProps: {
+                /*generatorProps: {
                     type: Kulla.GeneratorType.Flat,
                     altitude: 0,
                     blockType: Kulla.BlockType.Grass
+                },*/
+                generatorProps: {
+                    type: Kulla.GeneratorType.PNG,
+                    url: "./datas/textures/test_terrain.png",
+                    squareSize: 1
                 },
                 maxDisplayedLevel: 0,
                 blockSizeIJ_m: 1,
                 blockSizeK_m: 1,
                 chunckLengthIJ: 32,
                 chunckLengthK: 128,
-                chunckCountIJ: 2,
+                chunckCountIJ: 4,
                 useAnalytics: true
             });
             let mat = new TerrainMaterial("terrain", this.scene);
             this.terrain.materials = [mat];
             this.terrain.initialize();
-            let todo = () => {
-                let ijk = this.terrain.getChunckAndIJKAtPos(new BABYLON.Vector3(1.25, 1.25, 1.25), 0);
+            this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+            /*
+            setInterval(() => {
+                let p = new BABYLON.Vector3(- 1 + 2 * Math.random(), Math.random() * 0.5, - 1 + 2 * Math.random());
+                p.normalize().scaleInPlace(24 + 4 * Math.random());
+                let ijk = this.terrain.getChunckAndIJKAtPos(p, 0);
                 if (ijk && ijk.chunck) {
-                    let affectedChuncks = new Nabu.UniqueList();
-                    affectedChuncks.push(...ijk.chunck.setData(Kulla.BlockType.Dirt, ijk.ijk.i, ijk.ijk.j, ijk.ijk.k));
-                    affectedChuncks.forEach(c => {
-                        c.redrawMesh(true);
-                    });
+                    this.terrainEditor.doAction(ijk.chunck, ijk.ijk, {
+                        brushSize: 2,
+                        brushBlock: Kulla.BlockType.Dirt,
+                        mode: Kulla.TerrainEditionMode.Add
+                    })
                 }
-                else {
-                    requestAnimationFrame(todo);
-                }
-            };
-            todo();
+            }, 50);
+            */
         });
     }
     animate() {
@@ -166,5 +194,557 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
     setLevel(v) {
         this._level = v;
         this.setInt("level", this._level);
+    }
+}
+class ToonMaterial extends BABYLON.ShaderMaterial {
+    constructor(name, scene) {
+        super(name, scene, {
+            vertex: "toon",
+            fragment: "toon",
+        }, {
+            attributes: ["position", "normal", "uv", "color"],
+            uniforms: [
+                "world", "worldView", "worldViewProjection", "view", "projection",
+                "useVertexColor",
+                "useLightFromPOV",
+                "autoLight",
+                "diffuseSharpness",
+                "diffuse",
+                "diffuseTexture",
+                "viewPositionW",
+                "viewDirectionW",
+                "lightInvDirW",
+                "alpha",
+                "useFlatSpecular",
+                "specularIntensity",
+                "specularColor",
+                "specularCount",
+                "specularPower"
+            ]
+        });
+        this._update = () => {
+            let camera = this.getScene().activeCamera;
+            let direction = camera.getForwardRay().direction;
+            this.setVector3("viewPositionW", camera.position);
+            this.setVector3("viewDirectionW", direction);
+            let lights = this.getScene().lights;
+            for (let i = 0; i < lights.length; i++) {
+                let light = lights[i];
+                if (light instanceof BABYLON.HemisphericLight) {
+                    this.setVector3("lightInvDirW", light.direction);
+                }
+            }
+        };
+        this._useVertexColor = false;
+        this._useLightFromPOV = false;
+        this._autoLight = 0;
+        this._diffuseSharpness = 0;
+        this._diffuse = BABYLON.Color3.White();
+        this._useFlatSpecular = false;
+        this._specularIntensity = 0;
+        this._specular = BABYLON.Color3.White();
+        this._specularCount = 1;
+        this._specularPower = 4;
+        this._voidTexture = new BABYLON.Texture("./datas/textures/void-texture.png");
+        this._voidTexture.wrapU = 1;
+        this._voidTexture.wrapV = 1;
+        this.updateUseVertexColor();
+        this.updateUseLightFromPOV();
+        this.updateAutoLight();
+        this.updateDiffuseSharpness();
+        this.updateDiffuse();
+        this.updateDiffuseTexture();
+        this.updateAlpha();
+        this.updateUseFlatSpecular();
+        this.updateSpecularIntensity();
+        this.updateSpecular();
+        this.updateSpecularCount();
+        this.updateSpecularPower();
+        this.setVector3("viewPositionW", BABYLON.Vector3.Zero());
+        this.setVector3("viewDirectionW", BABYLON.Vector3.Up());
+        this.setVector3("lightInvDirW", BABYLON.Vector3.Up());
+        this.getScene().onBeforeRenderObservable.add(this._update);
+    }
+    dispose(forceDisposeEffect, forceDisposeTextures, notBoundToMesh) {
+        super.dispose(forceDisposeEffect, forceDisposeTextures, notBoundToMesh);
+        this.getScene().onBeforeRenderObservable.removeCallback(this._update);
+    }
+    get useVertexColor() {
+        return this._useVertexColor;
+    }
+    setUseVertexColor(b) {
+        this._useVertexColor = b;
+        this.updateUseVertexColor();
+    }
+    updateUseVertexColor() {
+        this.setInt("useVertexColor", this._useVertexColor ? 1 : 0);
+    }
+    get useLightFromPOV() {
+        return this._useLightFromPOV;
+    }
+    setUseLightFromPOV(b) {
+        this._useLightFromPOV = b;
+        this.updateUseLightFromPOV();
+    }
+    updateUseLightFromPOV() {
+        this.setInt("useLightFromPOV", this._useLightFromPOV ? 1 : 0);
+    }
+    get autoLight() {
+        return this._autoLight;
+    }
+    setAutoLight(v) {
+        this._autoLight = v;
+        this.updateAutoLight();
+    }
+    updateAutoLight() {
+        this.setFloat("autoLight", this._autoLight);
+    }
+    get diffuseSharpness() {
+        return this._diffuseSharpness;
+    }
+    setDiffuseSharpness(v) {
+        this._diffuseSharpness = v;
+        this.updateDiffuseSharpness();
+    }
+    updateDiffuseSharpness() {
+        this.setFloat("diffuseSharpness", this._diffuseSharpness);
+    }
+    get diffuse() {
+        return this._diffuse;
+    }
+    setDiffuse(c) {
+        this._diffuse = c;
+        this.updateDiffuse();
+    }
+    updateDiffuse() {
+        this.setColor3("diffuse", this._diffuse);
+    }
+    get diffuseTexture() {
+        return this._diffuseTexture;
+    }
+    setDiffuseTexture(t) {
+        this._diffuseTexture = t;
+        this.updateDiffuseTexture();
+    }
+    updateDiffuseTexture() {
+        if (this._diffuseTexture) {
+            this.setTexture("diffuseTexture", this._diffuseTexture);
+        }
+        else {
+            this.setTexture("diffuseTexture", this._voidTexture);
+        }
+    }
+    get alpha() {
+        return this._alpha;
+    }
+    setAlpha(v) {
+        this._alpha = v;
+        this.updateAlpha();
+    }
+    updateAlpha() {
+        if (this.alpha != 1) {
+            this.alphaMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+        }
+        else {
+            this.alphaMode = BABYLON.Material.MATERIAL_OPAQUE;
+        }
+        this.setFloat("alpha", this._alpha);
+    }
+    get useFlatSpecular() {
+        return this._useFlatSpecular;
+    }
+    setUseFlatSpecular(b) {
+        this._useFlatSpecular = b;
+        this.updateUseFlatSpecular();
+    }
+    updateUseFlatSpecular() {
+        this.setInt("useFlatSpecular", this._useFlatSpecular ? 1 : 0);
+    }
+    get specularIntensity() {
+        return this._specularIntensity;
+    }
+    setSpecularIntensity(v) {
+        this._specularIntensity = v;
+        this.updateSpecularIntensity();
+    }
+    updateSpecularIntensity() {
+        this.setFloat("specularIntensity", this._specularIntensity);
+    }
+    get specular() {
+        return this._specular;
+    }
+    setSpecular(c) {
+        this._specular = c;
+        this.updateSpecular();
+    }
+    updateSpecular() {
+        this.setColor3("specular", this._specular);
+    }
+    get specularCount() {
+        return this._specularCount;
+    }
+    setSpecularCount(v) {
+        this._specularCount = v;
+        this.updateSpecularCount();
+    }
+    updateSpecularCount() {
+        this.setFloat("specularCount", this._specularCount);
+    }
+    get specularPower() {
+        return this._specularPower;
+    }
+    setSpecularPower(v) {
+        this._specularPower = v;
+        this.updateSpecularPower();
+    }
+    updateSpecularPower() {
+        this.setFloat("specularPower", this._specularPower);
+    }
+}
+class MainMenu extends HTMLElement {
+    constructor() {
+        super(...arguments);
+        this._loaded = false;
+        this._shown = false;
+        this.panels = [];
+        this.xCount = 1;
+        this.yCount = 1;
+        this.animLineHeight = 2;
+    }
+    static get observedAttributes() {
+        return [
+            "file"
+        ];
+    }
+    get onLoad() {
+        return this._onLoad;
+    }
+    set onLoad(callback) {
+        this._onLoad = callback;
+        if (this._loaded) {
+            this._onLoad();
+        }
+    }
+    connectedCallback() {
+        let file = this.getAttribute("file");
+        if (file) {
+            this.attributeChangedCallback("file", "", file);
+        }
+    }
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (name === "file") {
+            if (this.isConnected) {
+                const xhttp = new XMLHttpRequest();
+                xhttp.onload = () => {
+                    this.innerHTML = xhttp.responseText;
+                    this.style.position = "fixed";
+                    this.style.zIndex = "10";
+                    this._shown = false;
+                    this.resize();
+                    this.hide(0);
+                    this._loaded = true;
+                    if (this._onLoad) {
+                        this._onLoad();
+                    }
+                };
+                xhttp.open("GET", newValue);
+                xhttp.send();
+            }
+        }
+    }
+    async show(duration = 1) {
+        return new Promise(resolve => {
+            if (!this._shown) {
+                clearInterval(this._animateShowInterval);
+                this._shown = true;
+                let outOfScreenLeft = 1.5 * Game.Instance.engine.getRenderWidth();
+                for (let i = 0; i < this.panels.length; i++) {
+                    let panel = this.panels[i];
+                    let targetLeft = outOfScreenLeft;
+                    if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
+                        targetLeft = -outOfScreenLeft;
+                    }
+                    panel.left = targetLeft + panel.computedLeft;
+                    panel.style.display = "block";
+                }
+                let t0 = performance.now() / 1000;
+                this._animateShowInterval = setInterval(() => {
+                    let t = performance.now() / 1000 - t0;
+                    if (t >= duration) {
+                        clearInterval(this._animateShowInterval);
+                        for (let i = 0; i < this.panels.length; i++) {
+                            let panel = this.panels[i];
+                            panel.left = panel.computedLeft;
+                        }
+                        resolve();
+                    }
+                    else {
+                        let f = t / duration;
+                        for (let i = 0; i < this.panels.length; i++) {
+                            let panel = this.panels[i];
+                            let targetLeft = outOfScreenLeft;
+                            if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
+                                targetLeft = -outOfScreenLeft;
+                            }
+                            panel.left = (1 - f) * targetLeft + panel.computedLeft;
+                        }
+                    }
+                }, 15);
+            }
+        });
+    }
+    async hide(duration = 1) {
+        if (duration === 0) {
+            this._shown = false;
+            let outOfScreenLeft = 1.5 * Game.Instance.engine.getRenderWidth();
+            for (let i = 0; i < this.panels.length; i++) {
+                let panel = this.panels[i];
+                panel.left = outOfScreenLeft + panel.computedLeft;
+                panel.style.display = "none";
+            }
+        }
+        else {
+            return new Promise(resolve => {
+                if (this._shown) {
+                    clearInterval(this._animateShowInterval);
+                    this._shown = false;
+                    let outOfScreenLeft = 1.5 * Game.Instance.engine.getRenderWidth();
+                    for (let i = 0; i < this.panels.length; i++) {
+                        let panel = this.panels[i];
+                        let targetLeft = outOfScreenLeft;
+                        if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
+                            targetLeft = -outOfScreenLeft;
+                        }
+                        panel.left = targetLeft + panel.computedLeft;
+                        panel.style.display = "block";
+                    }
+                    let t0 = performance.now() / 1000;
+                    this._animateShowInterval = setInterval(() => {
+                        let t = performance.now() / 1000 - t0;
+                        if (t >= duration) {
+                            clearInterval(this._animateShowInterval);
+                            for (let i = 0; i < this.panels.length; i++) {
+                                let panel = this.panels[i];
+                                let targetLeft = outOfScreenLeft;
+                                if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
+                                    targetLeft = -outOfScreenLeft;
+                                }
+                                panel.left = targetLeft + panel.computedLeft;
+                                panel.style.display = "none";
+                            }
+                            resolve();
+                        }
+                        else {
+                            let f = t / duration;
+                            for (let i = 0; i < this.panels.length; i++) {
+                                let panel = this.panels[i];
+                                let targetLeft = outOfScreenLeft;
+                                if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
+                                    targetLeft = -outOfScreenLeft;
+                                }
+                                panel.left = f * targetLeft + panel.computedLeft;
+                            }
+                        }
+                    }, 15);
+                }
+            });
+        }
+    }
+    resize() {
+        let requestedTileCount = 0;
+        let requestedFullLines = 0;
+        this.panels = [];
+        let elements = this.querySelectorAll("menu-panel");
+        for (let i = 0; i < elements.length; i++) {
+            let panel = elements[i];
+            this.panels[i] = panel;
+            panel.w = parseInt(panel.getAttribute("w"));
+            panel.h = parseInt(panel.getAttribute("h"));
+            let area = panel.w * panel.h;
+            requestedTileCount += area;
+        }
+        let rect = this.getBoundingClientRect();
+        let containerW = rect.width;
+        let containerH = rect.height;
+        let kill = 0;
+        let min = 0;
+        let ok = false;
+        let emptyLinesBottom = 0;
+        while (!ok) {
+            kill++;
+            if (kill > 10) {
+                return;
+            }
+            ok = true;
+            min++;
+            let bestValue = 0;
+            for (let xC = min; xC <= 10; xC++) {
+                for (let yC = min; yC <= 10; yC++) {
+                    let count = xC * yC;
+                    if (count >= requestedTileCount) {
+                        let w = containerW / xC;
+                        let h = containerH / (yC + requestedFullLines);
+                        let area = w * h;
+                        let squareness = Math.min(w / h, h / w);
+                        let value = area * squareness;
+                        if (value > bestValue) {
+                            this.xCount = xC;
+                            this.yCount = yC + requestedFullLines;
+                            bestValue = value;
+                        }
+                    }
+                }
+            }
+            let grid = [];
+            for (let y = 0; y <= this.yCount; y++) {
+                grid[y] = [];
+                for (let x = 0; x <= this.xCount; x++) {
+                    grid[y][x] = (x < this.xCount && y < this.yCount);
+                }
+            }
+            for (let n = 0; n < this.panels.length; n++) {
+                let panel = this.panels[n];
+                panel.x = -1;
+                panel.y = -1;
+                for (let line = 0; line < this.yCount && panel.x === -1; line++) {
+                    for (let col = 0; col < this.xCount && panel.x === -1; col++) {
+                        let fit = true;
+                        for (let x = 0; x < panel.w; x++) {
+                            for (let y = 0; y < panel.h; y++) {
+                                fit = fit && grid[line + y][col + x];
+                            }
+                        }
+                        if (fit) {
+                            panel.x = col;
+                            panel.y = line;
+                            for (let x = 0; x < panel.w; x++) {
+                                for (let y = 0; y < panel.h; y++) {
+                                    grid[line + y][col + x] = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (panel.x === -1) {
+                    ok = false;
+                }
+            }
+            if (ok) {
+                let empty = true;
+                emptyLinesBottom = 0;
+                for (let y = this.yCount - 1; y > 0 && empty; y--) {
+                    for (let x = 0; x < this.xCount && empty; x++) {
+                        if (!grid[y][x]) {
+                            empty = false;
+                        }
+                    }
+                    if (empty) {
+                        emptyLinesBottom++;
+                    }
+                }
+            }
+        }
+        let tileW = containerW / this.xCount;
+        let tileH = containerH / this.yCount;
+        let m = Math.min(tileW, tileH) / 15;
+        for (let i = 0; i < this.panels.length; i++) {
+            let panel = this.panels[i];
+            panel.style.display = "block";
+            panel.style.width = (panel.w * tileW - 2 * m).toFixed(0) + "px";
+            panel.style.height = (panel.h * tileH - 2 * m).toFixed(0) + "px";
+            panel.style.position = "absolute";
+            panel.computedLeft = (panel.x * tileW + m);
+            if (panel.style.display != "none") {
+                panel.style.left = panel.computedLeft.toFixed(0) + "px";
+            }
+            panel.computedTop = (panel.y * tileH + m + emptyLinesBottom * 0.5 * tileH);
+            panel.style.top = panel.computedTop.toFixed(0) + "px";
+            let label = panel.querySelector(".label");
+            if (label) {
+                label.style.fontSize = (tileW / 4).toFixed(0) + "px";
+            }
+            let label2 = panel.querySelector(".label-2");
+            if (label2) {
+                label2.style.fontSize = (tileW / 7).toFixed(0) + "px";
+            }
+        }
+    }
+}
+customElements.define("menu-page", MainMenu);
+class MainMenuPanel extends HTMLElement {
+    constructor() {
+        super(...arguments);
+        this.x = 0;
+        this.y = 0;
+        this.w = 1;
+        this.h = 1;
+        this.computedTop = 0;
+        this.computedLeft = 0;
+    }
+    get top() {
+        return parseFloat(this.style.top);
+    }
+    set top(v) {
+        if (this) {
+            this.style.top = v.toFixed(1) + "px";
+        }
+    }
+    get left() {
+        return parseFloat(this.style.left);
+    }
+    set left(v) {
+        if (this) {
+            this.style.left = v.toFixed(1) + "px";
+        }
+    }
+}
+customElements.define("menu-panel", MainMenuPanel);
+class Router {
+    constructor() {
+        this.pages = [];
+        this._update = () => {
+            let href = window.location.href;
+            if (href != this._currentHRef) {
+                this._currentHRef = href;
+                this._onHRefChange();
+            }
+        };
+        this._onHRefChange = async () => {
+            let split = this._currentHRef.split("/");
+            let page = split[split.length - 1];
+            if (page.endsWith("#challenge")) {
+                this.show(this.challengePage);
+            }
+            else if (page.endsWith("#home") || true) {
+                this.show(this.homePage);
+            }
+        };
+    }
+    async wait(duration) {
+        return new Promise(resolve => {
+            setTimeout(resolve, duration * 1000);
+        });
+    }
+    initialize() {
+        this.pages = [];
+        let mainMenus = document.querySelectorAll("menu-page");
+        mainMenus.forEach(mainMenu => {
+            if (mainMenu instanceof MainMenu) {
+                this.pages.push(mainMenu);
+            }
+        });
+        console.log("pages found " + this.pages.length);
+        // Set all pages here
+        this.homePage = document.getElementById("main-menu-page");
+        this.challengePage = document.getElementById("challenge-menu-page");
+        setInterval(this._update, 30);
+    }
+    async show(page, dontCloseOthers) {
+        if (!dontCloseOthers) {
+            for (let i = 0; i < this.pages.length; i++) {
+                this.pages[i].hide(1);
+            }
+        }
+        await page.show(1);
     }
 }
