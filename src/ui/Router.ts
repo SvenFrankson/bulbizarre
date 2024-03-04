@@ -7,8 +7,8 @@ class Router {
     
     public pages: IPage[] = [];
 
-    public homePage: MainMenu;
-    public challengePage: MainMenu;
+    public homePage: PanelPage;
+    public challengePage: PanelPage;
 
     public async wait(duration: number): Promise<void> {
         return new Promise<void>(resolve => {
@@ -16,26 +16,29 @@ class Router {
         });
     }
 
-    public initialize(): void {
+    public findAllPages(): void {
         this.pages = [];
-        let mainMenus = document.querySelectorAll("menu-page");
+        let mainMenus = document.querySelectorAll("panel-page");
         mainMenus.forEach(mainMenu => {
-            if (mainMenu instanceof MainMenu) {
+            if (mainMenu instanceof PanelPage) {
                 this.pages.push(mainMenu);
             }
         });
+    }
 
-        console.log("pages found " + this.pages.length);
+    public initialize(): void {
+        this.findAllPages();
 
         // Set all pages here
-        
-		this.homePage = document.getElementById("main-menu-page") as MainMenu;
-		this.challengePage = document.getElementById("challenge-menu-page") as MainMenu;
+		this.homePage = document.getElementById("home-page") as PanelPage;
+		this.challengePage = document.getElementById("challenge-page") as PanelPage;
 
         setInterval(this._update, 30);
     }
 
     public async show(page: IPage, dontCloseOthers?: boolean): Promise<void> {
+        this.findAllPages();
+        
         if (!dontCloseOthers) {
             for (let i = 0; i < this.pages.length; i++) {
                 this.pages[i].hide(1);

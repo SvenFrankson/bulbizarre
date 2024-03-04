@@ -1,4 +1,4 @@
-class MainMenuPanel extends HTMLElement {
+class PanelElement extends HTMLElement {
 
     public x: number = 0;
     public y: number = 0;
@@ -28,4 +28,4 @@ class MainMenuPanel extends HTMLElement {
     }
 }
 
-customElements.define("menu-panel", MainMenuPanel);
+customElements.define("panel-element", PanelElement);

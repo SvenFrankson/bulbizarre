@@ -20,7 +20,7 @@ body {
     z-index: 0;
 }
 
-menu-page {
+panel-page {
     top: calc((100vh - min(100vh, 100vw)) * 0.5);
     left: calc((100vw - min(100vh, 100vw)) * 0.5);
     width: min(100vh, 100vw);
@@ -31,13 +31,13 @@ menu-page {
     pointer-events: none;
 }
 
-menu-panel {
+panel-element {
     border: 1px solid white;
     border-radius: min(1.5vh, 1.5vw);
     pointer-events: initial;
 }
 
-menu-panel h2 {
+panel-element h2 {
     color: white;
 }
 

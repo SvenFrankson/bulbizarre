@@ -1,8 +1,10 @@
-class MainMenu extends HTMLElement implements IPage {
+class PanelPage extends HTMLElement implements IPage {
 
     public static get observedAttributes() {
         return [
-            "file"
+            "file",
+            "anim-line-height",
+            "anim-line-dir"
         ];
     }
 
@@ -10,10 +12,11 @@ class MainMenu extends HTMLElement implements IPage {
     private _shown: boolean = false;
     private _animateShowInterval: number;
 
-    public panels: MainMenuPanel[] = [];
+    public panels: PanelElement[] = [];
     public xCount: number = 1;
     public yCount: number = 1;
-    public animLineHeight: number = 2;
+    public animLineHeight: number = 1;
+    public animLineDir: number = 1;
 
     private _onLoad: () => void;
     public get onLoad(): () => void {
@@ -53,6 +56,19 @@ class MainMenu extends HTMLElement implements IPage {
                 xhttp.send();
             }
         }
+        else if (name === "anim-line-height") {
+            let v = parseInt(newValue);
+            if (v > 0) {
+                this.animLineHeight = v;
+            }
+        }
+        else if (name === "anim-line-dir") {
+            let v = parseInt(newValue);
+            if (v === -1 || v === 1) {
+                this.animLineDir = v;
+                console.log("anim line dir " + this.animLineDir);
+            }
+        }
     }
 
     public async show(duration: number = 1): Promise<void> {
@@ -61,15 +77,16 @@ class MainMenu extends HTMLElement implements IPage {
                 clearInterval(this._animateShowInterval);
     
                 this._shown = true;
-                let outOfScreenLeft = 1.5 * Game.Instance.engine.getRenderWidth();
+                let outOfScreenLeft = 1.0 * window.innerWidth;
                 for (let i = 0; i < this.panels.length; i++) {
                     let panel = this.panels[i];
-                    let targetLeft = outOfScreenLeft;
+                    let targetLeft = outOfScreenLeft * this.animLineDir;
                     if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
-                        targetLeft = - outOfScreenLeft;
+                        targetLeft = - outOfScreenLeft * this.animLineDir;
                     }
                     panel.left = targetLeft + panel.computedLeft;
                     panel.style.display = "block";
+                    panel.style.opacity = "0";
                 }
                 let t0 = performance.now() / 1000;
                 this._animateShowInterval = setInterval(() => {
@@ -79,6 +96,7 @@ class MainMenu extends HTMLElement implements IPage {
                         for (let i = 0; i < this.panels.length; i++) {
                             let panel = this.panels[i];
                             panel.left = panel.computedLeft;
+                            panel.style.opacity = "1";
                         }
                         resolve();
                     }
@@ -86,11 +104,12 @@ class MainMenu extends HTMLElement implements IPage {
                         let f = t / duration;
                         for (let i = 0; i < this.panels.length; i++) {
                             let panel = this.panels[i];
-                            let targetLeft = outOfScreenLeft;
+                            let targetLeft = outOfScreenLeft * this.animLineDir;
                             if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
-                                targetLeft = - outOfScreenLeft;
+                                targetLeft = - outOfScreenLeft * this.animLineDir;
                             }
                             panel.left = (1 - f) * targetLeft + panel.computedLeft;
+                            panel.style.opacity = f.toFixed(3);
                         }
                     }
                 }, 15);
@@ -101,11 +120,12 @@ class MainMenu extends HTMLElement implements IPage {
     public async hide(duration: number = 1): Promise<void> {
         if (duration === 0) {
             this._shown = false;
-            let outOfScreenLeft = 1.5 * Game.Instance.engine.getRenderWidth();
+            let outOfScreenLeft = 1.0 * window.innerWidth;
             for (let i = 0; i < this.panels.length; i++) {
                 let panel = this.panels[i];
                 panel.left = outOfScreenLeft + panel.computedLeft;
                 panel.style.display = "none";
+                panel.style.opacity = "0";
             }
         }
         else {
@@ -114,15 +134,16 @@ class MainMenu extends HTMLElement implements IPage {
                     clearInterval(this._animateShowInterval);
         
                     this._shown = false;
-                    let outOfScreenLeft = 1.5 * Game.Instance.engine.getRenderWidth();
+                    let outOfScreenLeft = 1.0 * window.innerWidth;
                     for (let i = 0; i < this.panels.length; i++) {
                         let panel = this.panels[i];
-                        let targetLeft = outOfScreenLeft;
+                        let targetLeft = outOfScreenLeft * this.animLineDir;
                         if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
-                            targetLeft = - outOfScreenLeft;
+                            targetLeft = - outOfScreenLeft * this.animLineDir;
                         }
                         panel.left = targetLeft + panel.computedLeft;
                         panel.style.display = "block";
+                        panel.style.opacity = "1";
                     }
                     let t0 = performance.now() / 1000;
                     this._animateShowInterval = setInterval(() => {
@@ -131,12 +152,13 @@ class MainMenu extends HTMLElement implements IPage {
                             clearInterval(this._animateShowInterval);
                             for (let i = 0; i < this.panels.length; i++) {
                                 let panel = this.panels[i];
-                                let targetLeft = outOfScreenLeft;
+                                let targetLeft = outOfScreenLeft * this.animLineDir;
                                 if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
-                                    targetLeft = - outOfScreenLeft;
+                                    targetLeft = - outOfScreenLeft * this.animLineDir;
                                 }
                                 panel.left = targetLeft + panel.computedLeft;
                                 panel.style.display = "none";
+                                panel.style.opacity = "0";
                             }
                             resolve();
                         }
@@ -144,11 +166,12 @@ class MainMenu extends HTMLElement implements IPage {
                             let f = t / duration;
                             for (let i = 0; i < this.panels.length; i++) {
                                 let panel = this.panels[i];
-                                let targetLeft = outOfScreenLeft;
+                                let targetLeft = outOfScreenLeft * this.animLineDir;
                                 if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
-                                    targetLeft = - outOfScreenLeft;
+                                    targetLeft = - outOfScreenLeft * this.animLineDir;
                                 }
                                 panel.left = f * targetLeft + panel.computedLeft;
+                                panel.style.opacity = (1 - f).toFixed(3);
                             }
                         }
                     }, 15)
@@ -161,9 +184,9 @@ class MainMenu extends HTMLElement implements IPage {
         let requestedTileCount = 0;
         let requestedFullLines = 0;
         this.panels = [];
-        let elements = this.querySelectorAll("menu-panel");
+        let elements = this.querySelectorAll("panel-element");
         for (let i = 0; i < elements.length; i++) {
-            let panel = elements[i] as MainMenuPanel;
+            let panel = elements[i] as PanelElement;
             this.panels[i] = panel;
             panel.w = parseInt(panel.getAttribute("w"));
             panel.h = parseInt(panel.getAttribute("h"));
@@ -213,7 +236,7 @@ class MainMenu extends HTMLElement implements IPage {
                 }
             }
             for (let n = 0; n < this.panels.length; n++) {
-                let panel = this.panels[n] as MainMenuPanel;
+                let panel = this.panels[n] as PanelElement;
                 panel.x = -1;
                 panel.y = -1;
 
@@ -284,4 +307,4 @@ class MainMenu extends HTMLElement implements IPage {
     }
 }
 
-customElements.define("menu-page", MainMenu);
+customElements.define("panel-page", PanelPage);

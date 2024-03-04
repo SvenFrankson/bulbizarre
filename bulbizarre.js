@@ -401,7 +401,35 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
         this.setFloat("specularPower", this._specularPower);
     }
 }
-class MainMenu extends HTMLElement {
+class PanelElement extends HTMLElement {
+    constructor() {
+        super(...arguments);
+        this.x = 0;
+        this.y = 0;
+        this.w = 1;
+        this.h = 1;
+        this.computedTop = 0;
+        this.computedLeft = 0;
+    }
+    get top() {
+        return parseFloat(this.style.top);
+    }
+    set top(v) {
+        if (this) {
+            this.style.top = v.toFixed(1) + "px";
+        }
+    }
+    get left() {
+        return parseFloat(this.style.left);
+    }
+    set left(v) {
+        if (this) {
+            this.style.left = v.toFixed(1) + "px";
+        }
+    }
+}
+customElements.define("panel-element", PanelElement);
+class PanelPage extends HTMLElement {
     constructor() {
         super(...arguments);
         this._loaded = false;
@@ -409,11 +437,14 @@ class MainMenu extends HTMLElement {
         this.panels = [];
         this.xCount = 1;
         this.yCount = 1;
-        this.animLineHeight = 2;
+        this.animLineHeight = 1;
+        this.animLineDir = 1;
     }
     static get observedAttributes() {
         return [
-            "file"
+            "file",
+            "anim-line-height",
+            "anim-line-dir"
         ];
     }
     get onLoad() {
@@ -451,21 +482,35 @@ class MainMenu extends HTMLElement {
                 xhttp.send();
             }
         }
+        else if (name === "anim-line-height") {
+            let v = parseInt(newValue);
+            if (v > 0) {
+                this.animLineHeight = v;
+            }
+        }
+        else if (name === "anim-line-dir") {
+            let v = parseInt(newValue);
+            if (v === -1 || v === 1) {
+                this.animLineDir = v;
+                console.log("anim line dir " + this.animLineDir);
+            }
+        }
     }
     async show(duration = 1) {
         return new Promise(resolve => {
             if (!this._shown) {
                 clearInterval(this._animateShowInterval);
                 this._shown = true;
-                let outOfScreenLeft = 1.5 * Game.Instance.engine.getRenderWidth();
+                let outOfScreenLeft = 1.0 * window.innerWidth;
                 for (let i = 0; i < this.panels.length; i++) {
                     let panel = this.panels[i];
-                    let targetLeft = outOfScreenLeft;
+                    let targetLeft = outOfScreenLeft * this.animLineDir;
                     if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
-                        targetLeft = -outOfScreenLeft;
+                        targetLeft = -outOfScreenLeft * this.animLineDir;
                     }
                     panel.left = targetLeft + panel.computedLeft;
                     panel.style.display = "block";
+                    panel.style.opacity = "0";
                 }
                 let t0 = performance.now() / 1000;
                 this._animateShowInterval = setInterval(() => {
@@ -475,6 +520,7 @@ class MainMenu extends HTMLElement {
                         for (let i = 0; i < this.panels.length; i++) {
                             let panel = this.panels[i];
                             panel.left = panel.computedLeft;
+                            panel.style.opacity = "1";
                         }
                         resolve();
                     }
@@ -482,11 +528,12 @@ class MainMenu extends HTMLElement {
                         let f = t / duration;
                         for (let i = 0; i < this.panels.length; i++) {
                             let panel = this.panels[i];
-                            let targetLeft = outOfScreenLeft;
+                            let targetLeft = outOfScreenLeft * this.animLineDir;
                             if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
-                                targetLeft = -outOfScreenLeft;
+                                targetLeft = -outOfScreenLeft * this.animLineDir;
                             }
                             panel.left = (1 - f) * targetLeft + panel.computedLeft;
+                            panel.style.opacity = f.toFixed(3);
                         }
                     }
                 }, 15);
@@ -496,11 +543,12 @@ class MainMenu extends HTMLElement {
     async hide(duration = 1) {
         if (duration === 0) {
             this._shown = false;
-            let outOfScreenLeft = 1.5 * Game.Instance.engine.getRenderWidth();
+            let outOfScreenLeft = 1.0 * window.innerWidth;
             for (let i = 0; i < this.panels.length; i++) {
                 let panel = this.panels[i];
                 panel.left = outOfScreenLeft + panel.computedLeft;
                 panel.style.display = "none";
+                panel.style.opacity = "0";
             }
         }
         else {
@@ -508,15 +556,16 @@ class MainMenu extends HTMLElement {
                 if (this._shown) {
                     clearInterval(this._animateShowInterval);
                     this._shown = false;
-                    let outOfScreenLeft = 1.5 * Game.Instance.engine.getRenderWidth();
+                    let outOfScreenLeft = 1.0 * window.innerWidth;
                     for (let i = 0; i < this.panels.length; i++) {
                         let panel = this.panels[i];
-                        let targetLeft = outOfScreenLeft;
+                        let targetLeft = outOfScreenLeft * this.animLineDir;
                         if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
-                            targetLeft = -outOfScreenLeft;
+                            targetLeft = -outOfScreenLeft * this.animLineDir;
                         }
                         panel.left = targetLeft + panel.computedLeft;
                         panel.style.display = "block";
+                        panel.style.opacity = "1";
                     }
                     let t0 = performance.now() / 1000;
                     this._animateShowInterval = setInterval(() => {
@@ -525,12 +574,13 @@ class MainMenu extends HTMLElement {
                             clearInterval(this._animateShowInterval);
                             for (let i = 0; i < this.panels.length; i++) {
                                 let panel = this.panels[i];
-                                let targetLeft = outOfScreenLeft;
+                                let targetLeft = outOfScreenLeft * this.animLineDir;
                                 if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
-                                    targetLeft = -outOfScreenLeft;
+                                    targetLeft = -outOfScreenLeft * this.animLineDir;
                                 }
                                 panel.left = targetLeft + panel.computedLeft;
                                 panel.style.display = "none";
+                                panel.style.opacity = "0";
                             }
                             resolve();
                         }
@@ -538,11 +588,12 @@ class MainMenu extends HTMLElement {
                             let f = t / duration;
                             for (let i = 0; i < this.panels.length; i++) {
                                 let panel = this.panels[i];
-                                let targetLeft = outOfScreenLeft;
+                                let targetLeft = outOfScreenLeft * this.animLineDir;
                                 if (Math.floor(panel.y / this.animLineHeight) % 2 != Math.floor(this.yCount / this.animLineHeight) % 2) {
-                                    targetLeft = -outOfScreenLeft;
+                                    targetLeft = -outOfScreenLeft * this.animLineDir;
                                 }
                                 panel.left = f * targetLeft + panel.computedLeft;
+                                panel.style.opacity = (1 - f).toFixed(3);
                             }
                         }
                     }, 15);
@@ -554,7 +605,7 @@ class MainMenu extends HTMLElement {
         let requestedTileCount = 0;
         let requestedFullLines = 0;
         this.panels = [];
-        let elements = this.querySelectorAll("menu-panel");
+        let elements = this.querySelectorAll("panel-element");
         for (let i = 0; i < elements.length; i++) {
             let panel = elements[i];
             this.panels[i] = panel;
@@ -670,35 +721,7 @@ class MainMenu extends HTMLElement {
         }
     }
 }
-customElements.define("menu-page", MainMenu);
-class MainMenuPanel extends HTMLElement {
-    constructor() {
-        super(...arguments);
-        this.x = 0;
-        this.y = 0;
-        this.w = 1;
-        this.h = 1;
-        this.computedTop = 0;
-        this.computedLeft = 0;
-    }
-    get top() {
-        return parseFloat(this.style.top);
-    }
-    set top(v) {
-        if (this) {
-            this.style.top = v.toFixed(1) + "px";
-        }
-    }
-    get left() {
-        return parseFloat(this.style.left);
-    }
-    set left(v) {
-        if (this) {
-            this.style.left = v.toFixed(1) + "px";
-        }
-    }
-}
-customElements.define("menu-panel", MainMenuPanel);
+customElements.define("panel-page", PanelPage);
 class Router {
     constructor() {
         this.pages = [];
@@ -725,21 +748,24 @@ class Router {
             setTimeout(resolve, duration * 1000);
         });
     }
-    initialize() {
+    findAllPages() {
         this.pages = [];
-        let mainMenus = document.querySelectorAll("menu-page");
+        let mainMenus = document.querySelectorAll("panel-page");
         mainMenus.forEach(mainMenu => {
-            if (mainMenu instanceof MainMenu) {
+            if (mainMenu instanceof PanelPage) {
                 this.pages.push(mainMenu);
             }
         });
-        console.log("pages found " + this.pages.length);
+    }
+    initialize() {
+        this.findAllPages();
         // Set all pages here
-        this.homePage = document.getElementById("main-menu-page");
-        this.challengePage = document.getElementById("challenge-menu-page");
+        this.homePage = document.getElementById("home-page");
+        this.challengePage = document.getElementById("challenge-page");
         setInterval(this._update, 30);
     }
     async show(page, dontCloseOthers) {
+        this.findAllPages();
         if (!dontCloseOthers) {
             for (let i = 0; i < this.pages.length; i++) {
                 this.pages[i].hide(1);
