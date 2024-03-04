@@ -59,7 +59,7 @@ class Game {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
         }
 
-        let router = new Router();
+        let router = new Nabu.Router();
         router.initialize();
 
         this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 3, - 2.5)).normalize(), this.scene);
