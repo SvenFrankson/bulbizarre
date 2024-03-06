@@ -17,6 +17,7 @@ class Game {
     public static Instance: Game;
     public DEBUG_MODE: boolean = true;
 
+    public configuration: GameConfiguration;
 	public canvas: HTMLCanvasElement;
 	public engine: BABYLON.Engine;
     public scene: BABYLON.Scene;
@@ -51,6 +52,9 @@ class Game {
 
     public async createScene(): Promise<void> {
         this.scene = new BABYLON.Scene(this.engine);
+        this.configuration = new GameConfiguration("my-test-configuration");
+        this.configuration.initialize();
+        this.configuration.saveToLocalStorage();
         this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
         this.vertexDataLoader = new Mummu.VertexDataLoader(this.scene);
 

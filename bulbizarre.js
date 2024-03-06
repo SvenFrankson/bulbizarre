@@ -1,3 +1,11 @@
+class GameConfiguration extends Mummu.Configuration {
+    _buildElementsArray() {
+        this.configurationElements = [
+            new Mummu.ConfigurationElement("quality", Mummu.ConfigurationElementType.Enum, 0),
+            new Mummu.ConfigurationElement("renderDist", Mummu.ConfigurationElementType.Number, 5)
+        ];
+    }
+}
 /// <reference path="../lib/babylon.d.ts"/>
 /// <reference path="../lib/nabu/nabu.d.ts"/>
 /// <reference path="../lib/mummu/mummu.d.ts"/>
@@ -25,6 +33,9 @@ class Game {
     }
     async createScene() {
         this.scene = new BABYLON.Scene(this.engine);
+        this.configuration = new GameConfiguration("my-test-configuration");
+        this.configuration.initialize();
+        this.configuration.saveToLocalStorage();
         this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
         this.vertexDataLoader = new Mummu.VertexDataLoader(this.scene);
         if (this.DEBUG_MODE) {
