@@ -44,8 +44,6 @@ class Game {
         else {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
         }
-        let router = new Nabu.Router();
-        router.initialize();
         this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 3, -2.5)).normalize(), this.scene);
         this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 / Math.sqrt(3) }, this.scene);
         let skyboxMaterial = new BABYLON.StandardMaterial("skyBox", this.scene);
@@ -76,6 +74,7 @@ class Game {
         this.camera.attachControl();
         this.router = new GameRouter(this);
         this.router.initialize();
+        this.router.optionPage.setConfiguration(this.configuration);
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.terrain = new Kulla.Terrain({
                 scene: this.scene,

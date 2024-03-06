@@ -55,6 +55,7 @@ class Game {
         this.configuration = new GameConfiguration("my-test-configuration");
         this.configuration.initialize();
         this.configuration.saveToLocalStorage();
+
         this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
         this.vertexDataLoader = new Mummu.VertexDataLoader(this.scene);
 
@@ -64,9 +65,6 @@ class Game {
         else {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
         }
-
-        let router = new Nabu.Router();
-        router.initialize();
 
         this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 3, - 2.5)).normalize(), this.scene);
 
@@ -106,6 +104,7 @@ class Game {
 
         this.router = new GameRouter(this);
         this.router.initialize();
+        this.router.optionPage.setConfiguration(this.configuration);
 
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.terrain = new Kulla.Terrain({
