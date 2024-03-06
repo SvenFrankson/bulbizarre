@@ -1,3 +1,6 @@
+<panel-element class="panel" w="line" h="2" style="background-image: url(./datas/icons/logo-white-black-bg.png); background-size: contain; background-position: center; background-repeat: no-repeat; background-color: black;">
+    
+</panel-element>
 <panel-element class="panel create" w="4" h="2">
     <h2 class="label">CREATE</h2>
 </panel-element>

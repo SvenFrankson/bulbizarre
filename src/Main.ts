@@ -38,6 +38,8 @@ class Game {
     public terrain: Kulla.Terrain;
     public terrainEditor: Kulla.TerrainEditor;
 
+    public router: GameRouter;
+
     constructor(canvasElement: string) {
         Game.Instance = this;
         
@@ -98,29 +100,8 @@ class Game {
 
         this.camera.attachControl();
 
-        let clothMaterial = new BABYLON.StandardMaterial("cloth");
-        clothMaterial.diffuseColor.copyFromFloats(1, 1, 1);
-        clothMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/test_hand_cloth.png");
-        clothMaterial.diffuseTexture.hasAlpha = true;
-        clothMaterial.transparencyMode = 1;
-        clothMaterial.useAlphaFromDiffuseTexture = true;
-        clothMaterial.specularColor.copyFromFloats(0, 0, 0);
-
-        let meshes = await BABYLON.SceneLoader.ImportMeshAsync("", "./datas/meshes/arm_4.babylon");
-        let root = new BABYLON.Mesh("hand-root");
-        meshes.meshes.forEach(mesh => {
-            mesh.parent = root;
-            if (mesh instanceof BABYLON.Mesh) {
-                if (mesh.material instanceof BABYLON.MultiMaterial) {
-                    mesh.material.subMaterials[1] = clothMaterial;
-                }
-                mesh.instances.forEach(instance => {
-                    instance.parent = root;
-                })
-            }
-        })
-
-        root.position.y = 0;
+        this.router = new GameRouter(this);
+        this.router.initialize();
 
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.terrain = new Kulla.Terrain({
