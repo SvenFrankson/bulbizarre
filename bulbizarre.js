@@ -1,8 +1,8 @@
-class GameConfiguration extends Mummu.Configuration {
+class GameConfiguration extends Nabu.Configuration {
     _buildElementsArray() {
         this.configurationElements = [
-            new Mummu.ConfigurationElement("quality", Mummu.ConfigurationElementType.Enum, 0),
-            new Mummu.ConfigurationElement("renderDist", Mummu.ConfigurationElementType.Number, 5)
+            new Nabu.ConfigurationElement("quality", Nabu.ConfigurationElementType.Enum, 0),
+            new Nabu.ConfigurationElement("renderDist", Nabu.ConfigurationElementType.Number, 5)
         ];
     }
 }
@@ -400,11 +400,15 @@ class GameRouter extends Nabu.Router {
     }
     onFindAllPages() {
         this.homePage = document.getElementById("home-page");
+        this.optionPage = document.getElementById("option-page");
     }
     onUpdate() {
     }
     async onHRefChange(page) {
-        if (page.startsWith("#home") || true) {
+        if (page.startsWith("#options")) {
+            this.show(this.optionPage);
+        }
+        else if (page.startsWith("#home") || true) {
             this.show(this.homePage);
         }
     }

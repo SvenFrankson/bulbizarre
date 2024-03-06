@@ -1,9 +1,9 @@
-class GameConfiguration extends Mummu.Configuration {
+class GameConfiguration extends Nabu.Configuration {
 
     protected _buildElementsArray(): void {
         this.configurationElements = [
-            new Mummu.ConfigurationElement("quality", Mummu.ConfigurationElementType.Enum, 0),
-            new Mummu.ConfigurationElement("renderDist", Mummu.ConfigurationElementType.Number, 5)
+            new Nabu.ConfigurationElement("quality", Nabu.ConfigurationElementType.Enum, 0),
+            new Nabu.ConfigurationElement("renderDist", Nabu.ConfigurationElementType.Number, 5)
         ]
     }
 }
