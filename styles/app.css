@@ -131,7 +131,7 @@ option-page .value {
     padding: 0;
     margin-left: min(1svh, 1vw);
     margin-right: min(1svh, 1vw);
-    min-width: min(3svh, 3vw);
+    min-width: min(15svh, 15vw);
     height: min(3svh, 3vw);
     text-align: center;
 }
