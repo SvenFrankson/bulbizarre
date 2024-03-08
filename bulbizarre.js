@@ -1,7 +1,12 @@
 class GameConfiguration extends Nabu.Configuration {
+    constructor(configName, game) {
+        super(configName);
+        this.game = game;
+    }
     _buildElementsArray() {
         this.configurationElements = [
             new Nabu.ConfigurationElement("quality", Nabu.ConfigurationElementType.Enum, 0, {
+                displayName: "Graphic Quality",
                 min: 0,
                 max: 2,
                 toString: (v) => {
@@ -17,13 +22,19 @@ class GameConfiguration extends Nabu.Configuration {
                 }
             }),
             new Nabu.ConfigurationElement("renderDist", Nabu.ConfigurationElementType.Number, 0, {
+                displayName: "Render Distance",
                 min: 1,
                 max: 15,
                 toString: (v) => {
                     return v.toFixed(0);
                 }
+            }, (newValue) => {
+                console.log("!");
+                this.game.terrain.chunckManager.setDistance(newValue * this.game.terrain.chunckLengthIJ);
             }),
-            new Nabu.ConfigurationElement("god mode", Nabu.ConfigurationElementType.Boolean, 5)
+            new Nabu.ConfigurationElement("god mode", Nabu.ConfigurationElementType.Boolean, 5, {
+                displayName: "God Mode"
+            })
         ];
     }
 }
@@ -54,7 +65,7 @@ class Game {
     }
     async createScene() {
         this.scene = new BABYLON.Scene(this.engine);
-        this.configuration = new GameConfiguration("my-test-configuration");
+        this.configuration = new GameConfiguration("my-test-configuration", this);
         this.configuration.initialize();
         this.configuration.saveToLocalStorage();
         this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
@@ -76,8 +87,7 @@ class Game {
         skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
         this.skybox.material = skyboxMaterial;
         this.skybox.rotation.y = 0.16 * Math.PI;
-        this.camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 4, 10, BABYLON.Vector3.Zero());
-        this.camera.wheelPrecision *= 100;
+        this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero());
         this.camera.minZ = 0.1;
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-target")) {
@@ -89,7 +99,7 @@ class Game {
             if (window.localStorage.getItem("camera-position")) {
                 let positionItem = JSON.parse(window.localStorage.getItem("camera-position"));
                 let position = new BABYLON.Vector3(positionItem.x, positionItem.y, positionItem.z);
-                this.camera.setPosition(position);
+                this.camera.position = position;
             }
         }
         this.camera.attachControl();

@@ -27,7 +27,7 @@ class Game {
     public screenRatio: number = 1;
 
     //public camera: BABYLON.FreeCamera;
-    public camera: BABYLON.ArcRotateCamera;
+    public camera: BABYLON.FreeCamera;
     
     public light: BABYLON.HemisphericLight;
     public vertexDataLoader: Mummu.VertexDataLoader;
@@ -52,7 +52,7 @@ class Game {
 
     public async createScene(): Promise<void> {
         this.scene = new BABYLON.Scene(this.engine);
-        this.configuration = new GameConfiguration("my-test-configuration");
+        this.configuration = new GameConfiguration("my-test-configuration", this);
         this.configuration.initialize();
         this.configuration.saveToLocalStorage();
 
@@ -82,8 +82,7 @@ class Game {
         this.skybox.material = skyboxMaterial;
         this.skybox.rotation.y = 0.16 * Math.PI;
 
-        this.camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 4, 10, BABYLON.Vector3.Zero());
-        this.camera.wheelPrecision *= 100;
+        this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero());
         this.camera.minZ = 0.1;
         
         if (this.DEBUG_MODE) {
@@ -96,7 +95,7 @@ class Game {
             if (window.localStorage.getItem("camera-position")) {
                 let positionItem = JSON.parse(window.localStorage.getItem("camera-position"));
                 let position = new BABYLON.Vector3(positionItem.x, positionItem.y, positionItem.z);
-                this.camera.setPosition(position);
+                this.camera.position = position;
             }
         }
 

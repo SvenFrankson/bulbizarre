@@ -80,6 +80,8 @@ option-page .container-frame {
 option-page .line {
     height: min(4svh, 4vw);
     margin-bottom: 0.5%;
+    padding-top: 0.5%;
+    background-color: rgba(0, 0, 0, 10%);
 }
 
 option-page .label {
