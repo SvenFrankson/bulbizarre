@@ -116,14 +116,14 @@ class Game {
                 generatorProps: {
                     type: Kulla.GeneratorType.PNG,
                     url: "./datas/textures/test_terrain.png",
-                    squareSize: 1
+                    squareSize: 2
                 },
                 maxDisplayedLevel: 0,
                 blockSizeIJ_m: 1,
                 blockSizeK_m: 1,
                 chunckLengthIJ: 32,
                 chunckLengthK: 128,
-                chunckCountIJ: 4,
+                chunckCountIJ: 8,
                 useAnalytics: true
             });
 
@@ -133,6 +133,9 @@ class Game {
             this.terrain.initialize();
 
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+
+            let genMap = new GenMap(5, 1024);
+            genMap.downloadAsPNG(4096);
 
             /*
             setInterval(() => {

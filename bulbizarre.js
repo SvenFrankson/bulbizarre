@@ -29,7 +29,6 @@ class GameConfiguration extends Nabu.Configuration {
                     return v.toFixed(0);
                 }
             }, (newValue) => {
-                console.log("!");
                 this.game.terrain.chunckManager.setDistance(newValue * this.game.terrain.chunckLengthIJ);
             }),
             new Nabu.ConfigurationElement("god mode", Nabu.ConfigurationElementType.Boolean, 5, {
@@ -117,20 +116,22 @@ class Game {
                 generatorProps: {
                     type: Kulla.GeneratorType.PNG,
                     url: "./datas/textures/test_terrain.png",
-                    squareSize: 1
+                    squareSize: 2
                 },
                 maxDisplayedLevel: 0,
                 blockSizeIJ_m: 1,
                 blockSizeK_m: 1,
                 chunckLengthIJ: 32,
                 chunckLengthK: 128,
-                chunckCountIJ: 4,
+                chunckCountIJ: 8,
                 useAnalytics: true
             });
             let mat = new TerrainMaterial("terrain", this.scene);
             this.terrain.materials = [mat];
             this.terrain.initialize();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+            let genMap = new GenMap(5, 1024);
+            genMap.downloadAsPNG(4096);
             /*
             setInterval(() => {
                 let p = new BABYLON.Vector3(- 1 + 2 * Math.random(), Math.random() * 0.5, - 1 + 2 * Math.random());
@@ -421,6 +422,122 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
     }
     updateSpecularPower() {
         this.setFloat("specularPower", this._specularPower);
+    }
+}
+class GenMap {
+    constructor(N, size) {
+        this.N = N;
+        this.size = size;
+        this.primes = [1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+        this.seedMaps = [];
+        for (let i = 0; i < this.N; i++) {
+            this.seedMaps[i] = [];
+            for (let j = 0; j < this.N; j++) {
+                this.seedMaps[i][j] = new SeedMap("seedmap-" + i + "-" + j, this.size);
+                this.seedMaps[i][j].randomFill();
+            }
+        }
+    }
+    getValue(i, j) {
+        let di = this.primes[Math.floor(i / (this.size * this.N))];
+        let dj = this.primes[Math.floor(j / (this.size * this.N))];
+        if (!isFinite(di)) {
+            di = 1;
+        }
+        if (!isFinite(dj)) {
+            dj = 1;
+        }
+        let IMap = (i + Math.floor(i / this.size)) % this.N;
+        let JMap = (j + Math.floor(j / this.size)) % this.N;
+        return this.seedMaps[IMap][JMap].getData(i * di, j * dj);
+    }
+    downloadAsPNG(size) {
+        let canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        let data = new Uint8ClampedArray(size * size);
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                data[i + j * size] = this.getValue(i, j);
+            }
+        }
+        let context = canvas.getContext("2d");
+        let pixels = new Uint8ClampedArray(data.length * 4);
+        for (let i = 0; i < data.length; i++) {
+            let v = Math.floor(data[i] / 32) * 32;
+            pixels[4 * i] = v;
+            pixels[4 * i + 1] = v;
+            pixels[4 * i + 2] = v;
+            pixels[4 * i + 3] = 255;
+        }
+        context.putImageData(new ImageData(pixels, size, size), 0, 0);
+        var a = document.createElement('a');
+        a.setAttribute('href', canvas.toDataURL());
+        a.setAttribute('download', "genMap.png");
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+}
+class SeedMap {
+    constructor(name, size) {
+        this.name = name;
+        this.size = size;
+        this._data = new Uint8ClampedArray(this.size * this.size);
+    }
+    getData(i, j) {
+        i = i % this.size;
+        j = j % this.size;
+        return this._data[i + j * this.size];
+    }
+    setData(i, j, v) {
+        this._data[i + j * this.size] = v;
+    }
+    randomFill() {
+        for (let i = 0; i < this._data.length; i++) {
+            this._data[i] = Math.floor(Math.random() * 128 + 64);
+        }
+    }
+    fillFromPNG(url) {
+        return new Promise(resolve => {
+            let image = document.createElement("img");
+            image.src = url;
+            image.onload = () => {
+                let canvas = document.createElement("canvas");
+                this.size = Math.min(image.width, image.height);
+                this._data = new Uint8ClampedArray(this.size * this.size);
+                canvas.height = this.size;
+                let ctx = canvas.getContext("2d");
+                ctx.drawImage(image, 0, 0);
+                let imgData = ctx.getImageData(0, 0, this.size, this.size).data;
+                for (let i = 0; i < this._data.length; i++) {
+                    this._data[i] = imgData[4 * i];
+                }
+                resolve();
+            };
+        });
+    }
+    downloadAsPNG() {
+        let canvas = document.createElement("canvas");
+        canvas.width = this.size;
+        canvas.height = this.size;
+        let context = canvas.getContext("2d");
+        let pixels = new Uint8ClampedArray(this._data.length * 4);
+        for (let i = 0; i < this._data.length; i++) {
+            pixels[4 * i] = this._data[i];
+            pixels[4 * i + 1] = this._data[i];
+            pixels[4 * i + 2] = this._data[i];
+            pixels[4 * i + 3] = 255;
+        }
+        context.putImageData(new ImageData(pixels, this.size, this.size), 0, 0);
+        var a = document.createElement('a');
+        a.setAttribute('href', canvas.toDataURL());
+        a.setAttribute('download', this.name + ".png");
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
 }
 class GameRouter extends Nabu.Router {
