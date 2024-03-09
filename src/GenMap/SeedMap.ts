@@ -21,6 +21,16 @@ class SeedMap {
         }
     }
 
+    public fillFromBaseSeedMap(baseSeedMap: Uint8ClampedArray, n: number, IMap: number, JMap: number): void {
+        for (let i = 0; i < this.size; i++) {
+            for (let j = 0; j < this.size; j++) {
+                let I = i + this.size * IMap;
+                let J = j + this.size * JMap;
+                this._data[i + j * this.size] = baseSeedMap[I + J * n];
+            }
+        }
+    }
+
     public fillFromPNG(url: string): Promise<void> {
         return new Promise<void>(resolve => {
             let image = document.createElement("img");

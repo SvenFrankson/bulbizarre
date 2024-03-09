@@ -130,10 +130,21 @@ class Game {
             this.terrain.materials = [mat];
             this.terrain.initialize();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
-            let seededMap = new SeededMap(8, 256);
+            let L = 211;
+            let masterSeed = MasterSeed.GetFor("Paulita");
+            let t0 = performance.now();
+            let seededMap = SeededMap.CreateFromMasterSeed(masterSeed, 4, 512);
+            let t1 = performance.now();
+            console.log("seededMap generated in " + (t1 - t0) + "ms");
             let terrainMap = new TerrainMap(seededMap, 512);
-            terrainMap.downloadAsPNG(0, 0);
-            terrainMap.downloadAsPNG(1, 0);
+            seededMap.downloadDebugBaseSeedAsPNG();
+            let sorted = new Uint8ClampedArray(masterSeed).sort((a, b) => { return a - b; });
+            console.log("#0 " + sorted[0]);
+            for (let d = 10; d < 100; d += 10) {
+                console.log("#" + d.toFixed(0) + " " + (sorted[Math.floor(d / 100 * L)] / 255 * 100).toFixed(2));
+            }
+            console.log("#100 " + sorted[L - 1]);
+            console.log(masterSeed);
             /*
             setInterval(() => {
                 let p = new BABYLON.Vector3(- 1 + 2 * Math.random(), Math.random() * 0.5, - 1 + 2 * Math.random());
@@ -426,6 +437,16 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
         this.setFloat("specularPower", this._specularPower);
     }
 }
+class MasterSeed {
+    static GetFor(name) {
+        let masterSeed = new Uint8ClampedArray(MasterSeed.BaseSeed);
+        for (let i = 0; i < masterSeed.length; i++) {
+            masterSeed[i] = masterSeed[i] ^ name.charCodeAt(i % name.length);
+        }
+        return masterSeed;
+    }
+}
+MasterSeed.BaseSeed = new Uint8ClampedArray([161, 230, 19, 231, 240, 195, 189, 19, 206, 120, 135, 15, 5, 43, 129, 94, 184, 97, 143, 120, 3, 147, 12, 42, 53, 108, 200, 121, 36, 175, 175, 36, 131, 119, 196, 9, 35, 226, 215, 169, 210, 224, 198, 104, 19, 224, 186, 209, 223, 96, 94, 247, 36, 203, 87, 7, 229, 242, 118, 209, 75, 181, 82, 140, 50, 213, 202, 165, 204, 72, 159, 57, 159, 142, 228, 187, 103, 187, 68, 219, 102, 108, 149, 162, 57, 124, 214, 51, 18, 236, 184, 139, 79, 153, 42, 36, 162, 110, 90, 231, 68, 0, 202, 80, 243, 85, 157, 63, 55, 42, 169, 234, 238, 250, 203, 118, 41, 15, 198, 46, 250, 147, 195, 174, 15, 150, 162, 86, 205, 107, 185, 60, 57, 28, 144, 217, 216, 7, 74, 252, 245, 79, 31, 10, 40, 70, 113, 35, 43, 206, 116, 52, 179, 173, 220, 36, 143, 135, 114, 203, 118, 173, 107, 245, 76, 183, 242, 220, 158, 133, 157, 215, 57, 147, 70, 148, 138, 234, 47, 195, 90, 30, 29, 106, 13, 68, 123, 161, 179, 162, 46, 159, 84, 129, 168, 254, 210, 18, 74, 223, 97, 240, 234, 46, 49, 46, 164, 217, 27, 152, 157]);
 class SeedMap {
     constructor(name, size) {
         this.name = name;
@@ -443,6 +464,15 @@ class SeedMap {
     randomFill() {
         for (let i = 0; i < this._data.length; i++) {
             this._data[i] = Math.floor(Math.random() * 128 + 64);
+        }
+    }
+    fillFromBaseSeedMap(baseSeedMap, n, IMap, JMap) {
+        for (let i = 0; i < this.size; i++) {
+            for (let j = 0; j < this.size; j++) {
+                let I = i + this.size * IMap;
+                let J = j + this.size * JMap;
+                this._data[i + j * this.size] = baseSeedMap[I + J * n];
+            }
         }
     }
     fillFromPNG(url) {
@@ -490,15 +520,88 @@ class SeededMap {
     constructor(N, size) {
         this.N = N;
         this.size = size;
-        this.primes = [1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
         this.seedMaps = [];
-        for (let i = 0; i < this.N; i++) {
-            this.seedMaps[i] = [];
-            for (let j = 0; j < this.N; j++) {
-                this.seedMaps[i][j] = new SeedMap("seedmap-" + i + "-" + j, this.size);
-                this.seedMaps[i][j].randomFill();
+        this.primes = [1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+    }
+    static CreateFromMasterSeed(masterSeed, N, size) {
+        let seededMap = new SeededMap(N, size);
+        let l = (N * size);
+        let L = l * l;
+        let baseSeedMap = new Uint8ClampedArray(L);
+        let index = 0;
+        let masterSeedLength = masterSeed.length;
+        let start = 0;
+        let t0 = performance.now();
+        while (index < L) {
+            for (let i = 0; i < masterSeedLength; i++) {
+                if (index < L) {
+                    baseSeedMap[index] = masterSeed[(i + start) % masterSeedLength];
+                }
+                index++;
+            }
+            start++;
+        }
+        let t1 = performance.now();
+        console.log("first fill in " + (t1 - t0) + "ms");
+        for (let xors = 0; xors < 4; xors++) {
+            let clonedBaseSeedMap = new Uint8ClampedArray(baseSeedMap);
+            for (let i = 0; i < l; i++) {
+                for (let j = 0; j < l; j++) {
+                    let i2 = (i + 1) % l;
+                    if (i % 2 === 1) {
+                        i2 = (i - 1 + l) % l;
+                    }
+                    baseSeedMap[i + j * l] = clonedBaseSeedMap[i2 + j * l];
+                }
+            }
+            clonedBaseSeedMap = new Uint8ClampedArray(baseSeedMap);
+            for (let i = 0; i < l; i++) {
+                for (let j = 0; j < l; j++) {
+                    let j2 = (j + 1) % l;
+                    if (j % 2 === 1) {
+                        j2 = (j - 1 + l) % l;
+                    }
+                    baseSeedMap[i + j * l] = clonedBaseSeedMap[i + j2 * l];
+                }
+            }
+            for (let i = 1; i < L; i++) {
+                baseSeedMap[i] = baseSeedMap[i] ^ baseSeedMap[i - 1];
             }
         }
+        let t2 = performance.now();
+        console.log("scramble in " + (t2 - t1) + "ms");
+        seededMap.seedMaps = [];
+        for (let i = 0; i < seededMap.N; i++) {
+            seededMap.seedMaps[i] = [];
+            for (let j = 0; j < seededMap.N; j++) {
+                seededMap.seedMaps[i][j] = new SeedMap("seedmap-" + i + "-" + j, seededMap.size);
+                seededMap.seedMaps[i][j].fillFromBaseSeedMap(baseSeedMap, (N * size), i, j);
+            }
+        }
+        seededMap.debugBaseSeedMap = baseSeedMap;
+        let t3 = performance.now();
+        console.log("split in " + (t3 - t2) + "ms");
+        /*
+        let sorted = baseSeedMap.sort((a, b) => { return a - b; });
+        console.log("#0 " + sorted[0]);
+        for (let d = 10; d < 100; d += 10) {
+            console.log("#" + d.toFixed(0) + " " + (sorted[Math.floor(d / 100 * L)] / 255 * 100).toFixed(2));
+        }
+        console.log("#100 " + sorted[L - 1]);
+        */
+        return seededMap;
+    }
+    static CreateWithRandomFill(N, size) {
+        let seededMap = new SeededMap(N, size);
+        seededMap.seedMaps = [];
+        for (let i = 0; i < seededMap.N; i++) {
+            seededMap.seedMaps[i] = [];
+            for (let j = 0; j < seededMap.N; j++) {
+                seededMap.seedMaps[i][j] = new SeedMap("seedmap-" + i + "-" + j, seededMap.size);
+                seededMap.seedMaps[i][j].randomFill();
+            }
+        }
+        return seededMap;
     }
     getValue(i, j, d) {
         i = Math.max(i, 0);
@@ -543,6 +646,29 @@ class SeededMap {
         a.click();
         document.body.removeChild(a);
     }
+    downloadDebugBaseSeedAsPNG() {
+        let size = (this.N * this.size);
+        let canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        let context = canvas.getContext("2d");
+        let pixels = new Uint8ClampedArray(this.debugBaseSeedMap.length * 4);
+        for (let i = 0; i < this.debugBaseSeedMap.length; i++) {
+            let v = Math.floor(this.debugBaseSeedMap[i] / 32) * 32;
+            pixels[4 * i] = v;
+            pixels[4 * i + 1] = v;
+            pixels[4 * i + 2] = v;
+            pixels[4 * i + 3] = 255;
+        }
+        context.putImageData(new ImageData(pixels, size, size), 0, 0);
+        var a = document.createElement('a');
+        a.setAttribute('href', canvas.toDataURL());
+        a.setAttribute('download', "genMap.png");
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
 }
 class TerrainMap {
     constructor(seededMap, size) {
@@ -565,10 +691,7 @@ class TerrainMap {
     }
     generateMap(IMap, JMap) {
         let map = new Uint8ClampedArray(this.size * this.size);
-        let l = 16;
-        let n = this.size / l;
-        let iOffset = IMap * n;
-        let jOffset = JMap * n;
+        map.fill(0);
         /*
         // Linear version
         for (let i = 0; i < n; i++) {
@@ -591,32 +714,40 @@ class TerrainMap {
         }
         */
         // Bicubic version
-        for (let i = 0; i < n; i++) {
-            for (let j = 0; j < n; j++) {
-                let v00 = this.seededMap.getValue(iOffset + i - 1, jOffset + j - 1, 0);
-                let v10 = this.seededMap.getValue(iOffset + i + 0, jOffset + j - 1, 0);
-                let v20 = this.seededMap.getValue(iOffset + i + 1, jOffset + j - 1, 0);
-                let v30 = this.seededMap.getValue(iOffset + i + 2, jOffset + j - 1, 0);
-                let v01 = this.seededMap.getValue(iOffset + i - 1, jOffset + j + 0, 0);
-                let v11 = this.seededMap.getValue(iOffset + i + 0, jOffset + j + 0, 0);
-                let v21 = this.seededMap.getValue(iOffset + i + 1, jOffset + j + 0, 0);
-                let v31 = this.seededMap.getValue(iOffset + i + 2, jOffset + j + 0, 0);
-                let v02 = this.seededMap.getValue(iOffset + i - 1, jOffset + j + 1, 0);
-                let v12 = this.seededMap.getValue(iOffset + i + 0, jOffset + j + 1, 0);
-                let v22 = this.seededMap.getValue(iOffset + i + 1, jOffset + j + 1, 0);
-                let v32 = this.seededMap.getValue(iOffset + i + 2, jOffset + j + 1, 0);
-                let v03 = this.seededMap.getValue(iOffset + i - 1, jOffset + j + 2, 0);
-                let v13 = this.seededMap.getValue(iOffset + i + 0, jOffset + j + 2, 0);
-                let v23 = this.seededMap.getValue(iOffset + i + 1, jOffset + j + 2, 0);
-                let v33 = this.seededMap.getValue(iOffset + i + 2, jOffset + j + 2, 0);
-                for (let ii = 0; ii < l; ii++) {
-                    for (let jj = 0; jj < l; jj++) {
-                        let di = ii / l;
-                        let dj = jj / l;
-                        map[(i * l + ii) + (j * l + jj) * this.size] = Nabu.BicubicInterpolate(di, dj, v00, v10, v20, v30, v01, v11, v21, v31, v02, v12, v22, v32, v03, v13, v23, v33);
+        let supperpoCount = 6;
+        let l = 128;
+        for (let c = 0; c < supperpoCount; c++) {
+            let n = this.size / l;
+            let iOffset = IMap * n;
+            let jOffset = JMap * n;
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    let v00 = this.seededMap.getValue(iOffset + i - 1, jOffset + j - 1, c);
+                    let v10 = this.seededMap.getValue(iOffset + i + 0, jOffset + j - 1, c);
+                    let v20 = this.seededMap.getValue(iOffset + i + 1, jOffset + j - 1, c);
+                    let v30 = this.seededMap.getValue(iOffset + i + 2, jOffset + j - 1, c);
+                    let v01 = this.seededMap.getValue(iOffset + i - 1, jOffset + j + 0, c);
+                    let v11 = this.seededMap.getValue(iOffset + i + 0, jOffset + j + 0, c);
+                    let v21 = this.seededMap.getValue(iOffset + i + 1, jOffset + j + 0, c);
+                    let v31 = this.seededMap.getValue(iOffset + i + 2, jOffset + j + 0, c);
+                    let v02 = this.seededMap.getValue(iOffset + i - 1, jOffset + j + 1, c);
+                    let v12 = this.seededMap.getValue(iOffset + i + 0, jOffset + j + 1, c);
+                    let v22 = this.seededMap.getValue(iOffset + i + 1, jOffset + j + 1, c);
+                    let v32 = this.seededMap.getValue(iOffset + i + 2, jOffset + j + 1, c);
+                    let v03 = this.seededMap.getValue(iOffset + i - 1, jOffset + j + 2, c);
+                    let v13 = this.seededMap.getValue(iOffset + i + 0, jOffset + j + 2, c);
+                    let v23 = this.seededMap.getValue(iOffset + i + 1, jOffset + j + 2, c);
+                    let v33 = this.seededMap.getValue(iOffset + i + 2, jOffset + j + 2, c);
+                    for (let ii = 0; ii < l; ii++) {
+                        for (let jj = 0; jj < l; jj++) {
+                            let di = ii / l;
+                            let dj = jj / l;
+                            map[(i * l + ii) + (j * l + jj) * this.size] += Nabu.BicubicInterpolate(di, dj, v00, v10, v20, v30, v01, v11, v21, v31, v02, v12, v22, v32, v03, v13, v23, v33) / 255 * l;
+                        }
                     }
                 }
             }
+            l = l / 2;
         }
         return map;
     }
