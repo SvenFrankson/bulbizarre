@@ -1,4 +1,4 @@
-class GenMap {
+class SeededMap {
 
     public seedMaps: SeedMap[][];
     public primes = [1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
@@ -14,9 +14,11 @@ class GenMap {
         }
     }
 
-    public getValue(i: number, j: number): number {
-        let di = this.primes[Math.floor(i / (this.size * this.N))];
-        let dj = this.primes[Math.floor(j / (this.size * this.N))];
+    public getValue(i: number, j: number, d: number): number {
+        i = Math.max(i, 0);
+        j = Math.max(j, 0);
+        let di = this.primes[(Math.floor(i / (this.size * this.N)) + d) % this.primes.length];
+        let dj = this.primes[(Math.floor(j / (this.size * this.N)) + d) % this.primes.length];
         if (!isFinite(di)) {
             di = 1;
         }
@@ -28,7 +30,7 @@ class GenMap {
         return this.seedMaps[IMap][JMap].getData(i * di, j * dj);
     }
 
-    public downloadAsPNG(size: number): void {
+    public downloadAsPNG(size: number, d: number = 0): void {
         let canvas = document.createElement("canvas");
         canvas.width = size;
         canvas.height = size;
@@ -36,7 +38,7 @@ class GenMap {
         let data = new Uint8ClampedArray(size * size);
         for (let i = 0; i < size; i++) {
             for (let j = 0; j < size; j++) {
-                data[i + j * size] = this.getValue(i, j);
+                data[i + j * size] = this.getValue(i, j, d);
             }
         }
 

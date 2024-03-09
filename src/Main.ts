@@ -134,8 +134,10 @@ class Game {
 
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
 
-            let genMap = new GenMap(5, 1024);
-            genMap.downloadAsPNG(4096);
+            let seededMap = new SeededMap(8, 256);
+            let terrainMap = new TerrainMap(seededMap, 512);
+            terrainMap.downloadAsPNG(0, 0);
+            terrainMap.downloadAsPNG(1, 0);
 
             /*
             setInterval(() => {
