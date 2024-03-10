@@ -136,12 +136,9 @@ class Game {
 
             let masterSeed = MasterSeed.GetFor("Paulita");
 
-            let t0 = performance.now();
             let seededMap = SeededMap.CreateFromMasterSeed(masterSeed, 4, 512);
-            let t1 = performance.now();
-            console.log("seededMap generated in " + (t1 - t0) + "ms");
             let terrainMap = new TerrainMap(seededMap, 2000);
-            terrainMap.downloadAsPNG(0, 0, 2);
+            terrainMap.downloadAsPNG(0, 0, 4);
             
             /*
             let sorted = new Uint8ClampedArray(masterSeed).sort((a, b) => { return a - b; });
@@ -174,6 +171,7 @@ class Game {
 		this.engine.runRenderLoop(() => {
 			this.scene.render();
 			this.update();
+            this.camera.rotation.y += 0.2 * Math.PI * 0.015;
 		});
 
 		window.onresize = () => {

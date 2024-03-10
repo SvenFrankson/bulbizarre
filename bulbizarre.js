@@ -131,12 +131,9 @@ class Game {
             this.terrain.initialize();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
             let masterSeed = MasterSeed.GetFor("Paulita");
-            let t0 = performance.now();
             let seededMap = SeededMap.CreateFromMasterSeed(masterSeed, 4, 512);
-            let t1 = performance.now();
-            console.log("seededMap generated in " + (t1 - t0) + "ms");
             let terrainMap = new TerrainMap(seededMap, 2000);
-            terrainMap.downloadAsPNG(0, 0, 2);
+            terrainMap.downloadAsPNG(0, 0, 4);
             /*
             let sorted = new Uint8ClampedArray(masterSeed).sort((a, b) => { return a - b; });
             console.log("#0 " + sorted[0]);
@@ -166,6 +163,7 @@ class Game {
         this.engine.runRenderLoop(() => {
             this.scene.render();
             this.update();
+            this.camera.rotation.y += 0.2 * Math.PI * 0.015;
         });
         window.onresize = () => {
             this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
@@ -532,7 +530,6 @@ class SeededMap {
         let index = 0;
         let masterSeedLength = masterSeed.length;
         let start = 0;
-        let t0 = performance.now();
         while (index < L) {
             for (let i = 0; i < masterSeedLength; i++) {
                 if (index < L) {
@@ -542,8 +539,6 @@ class SeededMap {
             }
             start++;
         }
-        let t1 = performance.now();
-        console.log("first fill in " + (t1 - t0) + "ms");
         for (let xors = 0; xors < 4; xors++) {
             let clonedBaseSeedMap = new Uint8ClampedArray(baseSeedMap);
             for (let i = 0; i < l; i++) {
@@ -569,8 +564,6 @@ class SeededMap {
                 baseSeedMap[i] = baseSeedMap[i] ^ baseSeedMap[i - 1];
             }
         }
-        let t2 = performance.now();
-        console.log("scramble in " + (t2 - t1) + "ms");
         seededMap.seedMaps = [];
         for (let i = 0; i < seededMap.N; i++) {
             seededMap.seedMaps[i] = [];
@@ -580,8 +573,6 @@ class SeededMap {
             }
         }
         seededMap.debugBaseSeedMap = baseSeedMap;
-        let t3 = performance.now();
-        console.log("split in " + (t3 - t2) + "ms");
         /*
         let sorted = baseSeedMap.sort((a, b) => { return a - b; });
         console.log("#0 " + sorted[0]);
@@ -683,10 +674,9 @@ class TerrainMap {
         else {
             this.period = ceil;
         }
-        console.log(this.period);
         this.detailedMaps = new Map();
     }
-    getMap(IMap, JMap) {
+    async getMap(IMap, JMap) {
         let line = this.detailedMaps.get(IMap);
         if (!line) {
             line = new Map();
@@ -694,121 +684,145 @@ class TerrainMap {
         }
         let map = line.get(JMap);
         if (!map) {
-            let t0 = performance.now();
-            map = this.generateMap(IMap, JMap);
-            let t1 = performance.now();
-            let dt = (t1 - t0);
-            console.log("Map generated in " + dt.toFixed(3) + " ms");
+            map = await this.generateMap(IMap, JMap);
             line.set(JMap, map);
         }
         return map;
     }
-    generateMap(IMap, JMap) {
-        let map = new Uint8ClampedArray(TerrainMap.MAP_SIZE * TerrainMap.MAP_SIZE);
-        map.fill(0);
-        // Bicubic version
-        let supperpoCount = 7;
-        let f = 0.5;
-        let l = this.period;
-        for (let c = 0; c < supperpoCount; c++) {
-            if (l > TerrainMap.MAP_SIZE) {
-                let count = l / TerrainMap.MAP_SIZE;
-                let I0 = Math.floor(IMap / count);
-                let J0 = Math.floor(JMap / count);
-                let v00 = this.seededMap.getValue(I0 - 1, J0 - 1, c);
-                let v10 = this.seededMap.getValue(I0 + 0, J0 - 1, c);
-                let v20 = this.seededMap.getValue(I0 + 1, J0 - 1, c);
-                let v30 = this.seededMap.getValue(I0 + 2, J0 - 1, c);
-                let v01 = this.seededMap.getValue(I0 - 1, J0 + 0, c);
-                let v11 = this.seededMap.getValue(I0 + 0, J0 + 0, c);
-                let v21 = this.seededMap.getValue(I0 + 1, J0 + 0, c);
-                let v31 = this.seededMap.getValue(I0 + 2, J0 + 0, c);
-                let v02 = this.seededMap.getValue(I0 - 1, J0 + 1, c);
-                let v12 = this.seededMap.getValue(I0 + 0, J0 + 1, c);
-                let v22 = this.seededMap.getValue(I0 + 1, J0 + 1, c);
-                let v32 = this.seededMap.getValue(I0 + 2, J0 + 1, c);
-                let v03 = this.seededMap.getValue(I0 - 1, J0 + 2, c);
-                let v13 = this.seededMap.getValue(I0 + 0, J0 + 2, c);
-                let v23 = this.seededMap.getValue(I0 + 1, J0 + 2, c);
-                let v33 = this.seededMap.getValue(I0 + 2, J0 + 2, c);
-                let diMin = (IMap % count) / count;
-                let diMax = diMin + 1 / count;
-                let djMin = (JMap % count) / count;
-                let djMax = djMin + 1 / count;
-                for (let jj = 0; jj < TerrainMap.MAP_SIZE; jj++) {
-                    for (let ii = 0; ii < TerrainMap.MAP_SIZE; ii++) {
-                        let di = ii / TerrainMap.MAP_SIZE;
-                        di = diMin * (1 - di) + diMax * di;
-                        let dj = jj / TerrainMap.MAP_SIZE;
-                        dj = djMin * (1 - dj) + djMax * dj;
-                        map[ii + jj * TerrainMap.MAP_SIZE] += Nabu.BicubicInterpolate(di, dj, v00, v10, v20, v30, v01, v11, v21, v31, v02, v12, v22, v32, v03, v13, v23, v33) * f;
+    async generateMap(IMap, JMap) {
+        return new Promise(async (resolve) => {
+            let map = new Uint8ClampedArray(TerrainMap.MAP_SIZE * TerrainMap.MAP_SIZE);
+            map.fill(0);
+            // Bicubic version
+            let supperpoCount = 7;
+            let f = 0.5;
+            let l = this.period;
+            for (let c = 0; c < supperpoCount; c++) {
+                if (l > TerrainMap.MAP_SIZE) {
+                    let count = l / TerrainMap.MAP_SIZE;
+                    let I0 = Math.floor(IMap / count);
+                    let J0 = Math.floor(JMap / count);
+                    let v00 = this.seededMap.getValue(I0 - 1, J0 - 1, c);
+                    let v10 = this.seededMap.getValue(I0 + 0, J0 - 1, c);
+                    let v20 = this.seededMap.getValue(I0 + 1, J0 - 1, c);
+                    let v30 = this.seededMap.getValue(I0 + 2, J0 - 1, c);
+                    let v01 = this.seededMap.getValue(I0 - 1, J0 + 0, c);
+                    let v11 = this.seededMap.getValue(I0 + 0, J0 + 0, c);
+                    let v21 = this.seededMap.getValue(I0 + 1, J0 + 0, c);
+                    let v31 = this.seededMap.getValue(I0 + 2, J0 + 0, c);
+                    let v02 = this.seededMap.getValue(I0 - 1, J0 + 1, c);
+                    let v12 = this.seededMap.getValue(I0 + 0, J0 + 1, c);
+                    let v22 = this.seededMap.getValue(I0 + 1, J0 + 1, c);
+                    let v32 = this.seededMap.getValue(I0 + 2, J0 + 1, c);
+                    let v03 = this.seededMap.getValue(I0 - 1, J0 + 2, c);
+                    let v13 = this.seededMap.getValue(I0 + 0, J0 + 2, c);
+                    let v23 = this.seededMap.getValue(I0 + 1, J0 + 2, c);
+                    let v33 = this.seededMap.getValue(I0 + 2, J0 + 2, c);
+                    let diMin = (IMap % count) / count;
+                    let diMax = diMin + 1 / count;
+                    let djMin = (JMap % count) / count;
+                    let djMax = djMin + 1 / count;
+                    let doStep = (jj) => {
+                        for (let ii = 0; ii < TerrainMap.MAP_SIZE; ii++) {
+                            let di = ii / TerrainMap.MAP_SIZE;
+                            di = diMin * (1 - di) + diMax * di;
+                            let dj = jj / TerrainMap.MAP_SIZE;
+                            dj = djMin * (1 - dj) + djMax * dj;
+                            map[ii + jj * TerrainMap.MAP_SIZE] += Nabu.BicubicInterpolate(di, dj, v00, v10, v20, v30, v01, v11, v21, v31, v02, v12, v22, v32, v03, v13, v23, v33) * f;
+                        }
+                    };
+                    let t0 = performance.now();
+                    for (let jj = 0; jj < TerrainMap.MAP_SIZE; jj++) {
+                        let t1 = performance.now();
+                        if (t1 - t0 < TerrainMap.MAX_FRAME_TIME_MS) {
+                            doStep(jj);
+                        }
+                        else {
+                            //console.log("break 1 at " + (t1 - t0).toFixed(3) + " ms");
+                            await Nabu.NextFrame();
+                            t0 = performance.now();
+                            doStep(jj);
+                        }
                     }
                 }
-            }
-            else {
-                let n = TerrainMap.MAP_SIZE / l;
-                let iOffset = IMap * n;
-                let jOffset = JMap * n;
-                for (let j = 0; j < n; j++) {
-                    let v00 = this.seededMap.getValue(iOffset - 1, jOffset + j - 1, c);
-                    let v10 = this.seededMap.getValue(iOffset + 0, jOffset + j - 1, c);
-                    let v20 = this.seededMap.getValue(iOffset + 1, jOffset + j - 1, c);
-                    let v30 = this.seededMap.getValue(iOffset + 2, jOffset + j - 1, c);
-                    let v01 = this.seededMap.getValue(iOffset - 1, jOffset + j + 0, c);
-                    let v11 = this.seededMap.getValue(iOffset + 0, jOffset + j + 0, c);
-                    let v21 = this.seededMap.getValue(iOffset + 1, jOffset + j + 0, c);
-                    let v31 = this.seededMap.getValue(iOffset + 2, jOffset + j + 0, c);
-                    let v02 = this.seededMap.getValue(iOffset - 1, jOffset + j + 1, c);
-                    let v12 = this.seededMap.getValue(iOffset + 0, jOffset + j + 1, c);
-                    let v22 = this.seededMap.getValue(iOffset + 1, jOffset + j + 1, c);
-                    let v32 = this.seededMap.getValue(iOffset + 2, jOffset + j + 1, c);
-                    let v03 = this.seededMap.getValue(iOffset - 1, jOffset + j + 2, c);
-                    let v13 = this.seededMap.getValue(iOffset + 0, jOffset + j + 2, c);
-                    let v23 = this.seededMap.getValue(iOffset + 1, jOffset + j + 2, c);
-                    let v33 = this.seededMap.getValue(iOffset + 2, jOffset + j + 2, c);
-                    for (let i = 0; i < n; i++) {
-                        for (let ii = 0; ii < l; ii++) {
-                            for (let jj = 0; jj < l; jj++) {
-                                let di = ii / l;
-                                let dj = jj / l;
-                                map[(i * l + ii) + (j * l + jj) * TerrainMap.MAP_SIZE] += Nabu.BicubicInterpolate(di, dj, v00, v10, v20, v30, v01, v11, v21, v31, v02, v12, v22, v32, v03, v13, v23, v33) * f;
+                else {
+                    let n = TerrainMap.MAP_SIZE / l;
+                    let iOffset = IMap * n;
+                    let jOffset = JMap * n;
+                    let doStep = (j) => {
+                        let v00 = this.seededMap.getValue(iOffset - 1, jOffset + j - 1, c);
+                        let v10 = this.seededMap.getValue(iOffset + 0, jOffset + j - 1, c);
+                        let v20 = this.seededMap.getValue(iOffset + 1, jOffset + j - 1, c);
+                        let v30 = this.seededMap.getValue(iOffset + 2, jOffset + j - 1, c);
+                        let v01 = this.seededMap.getValue(iOffset - 1, jOffset + j + 0, c);
+                        let v11 = this.seededMap.getValue(iOffset + 0, jOffset + j + 0, c);
+                        let v21 = this.seededMap.getValue(iOffset + 1, jOffset + j + 0, c);
+                        let v31 = this.seededMap.getValue(iOffset + 2, jOffset + j + 0, c);
+                        let v02 = this.seededMap.getValue(iOffset - 1, jOffset + j + 1, c);
+                        let v12 = this.seededMap.getValue(iOffset + 0, jOffset + j + 1, c);
+                        let v22 = this.seededMap.getValue(iOffset + 1, jOffset + j + 1, c);
+                        let v32 = this.seededMap.getValue(iOffset + 2, jOffset + j + 1, c);
+                        let v03 = this.seededMap.getValue(iOffset - 1, jOffset + j + 2, c);
+                        let v13 = this.seededMap.getValue(iOffset + 0, jOffset + j + 2, c);
+                        let v23 = this.seededMap.getValue(iOffset + 1, jOffset + j + 2, c);
+                        let v33 = this.seededMap.getValue(iOffset + 2, jOffset + j + 2, c);
+                        for (let i = 0; i < n; i++) {
+                            for (let ii = 0; ii < l; ii++) {
+                                for (let jj = 0; jj < l; jj++) {
+                                    let di = ii / l;
+                                    let dj = jj / l;
+                                    map[i * l + ii + (j * l + jj) * TerrainMap.MAP_SIZE] += Nabu.BicubicInterpolate(di, dj, v00, v10, v20, v30, v01, v11, v21, v31, v02, v12, v22, v32, v03, v13, v23, v33) * f;
+                                }
+                            }
+                            if (i < n - 1) {
+                                v00 = v10;
+                                v10 = v20;
+                                v20 = v30;
+                                v30 = this.seededMap.getValue(iOffset + i + 1 + 2, jOffset + j - 1, c);
+                                v01 = v11;
+                                v11 = v21;
+                                v21 = v31;
+                                v31 = this.seededMap.getValue(iOffset + i + 1 + 2, jOffset + j + 0, c);
+                                v02 = v12;
+                                v12 = v22;
+                                v22 = v32;
+                                v32 = this.seededMap.getValue(iOffset + i + 1 + 2, jOffset + j + 1, c);
+                                v03 = v13;
+                                v13 = v23;
+                                v23 = v33;
+                                v33 = this.seededMap.getValue(iOffset + i + 1 + 2, jOffset + j + 2, c);
                             }
                         }
-                        if (i < n - 1) {
-                            v00 = v10;
-                            v10 = v20;
-                            v20 = v30;
-                            v30 = this.seededMap.getValue(iOffset + i + 1 + 2, jOffset + j - 1, c);
-                            v01 = v11;
-                            v11 = v21;
-                            v21 = v31;
-                            v31 = this.seededMap.getValue(iOffset + i + 1 + 2, jOffset + j + 0, c);
-                            v02 = v12;
-                            v12 = v22;
-                            v22 = v32;
-                            v32 = this.seededMap.getValue(iOffset + i + 1 + 2, jOffset + j + 1, c);
-                            v03 = v13;
-                            v13 = v23;
-                            v23 = v33;
-                            v33 = this.seededMap.getValue(iOffset + i + 1 + 2, jOffset + j + 2, c);
+                    };
+                    let t0 = performance.now();
+                    for (let j = 0; j < n; j++) {
+                        let t1 = performance.now();
+                        if (t1 - t0 < TerrainMap.MAX_FRAME_TIME_MS) {
+                            doStep(j);
+                        }
+                        else {
+                            //console.log("break 2 at " + (t1 - t0).toFixed(3) + " ms");
+                            await Nabu.NextFrame();
+                            t0 = performance.now();
+                            doStep(j);
                         }
                     }
                 }
+                l = l / 2;
+                f = f / 2;
+                await Nabu.NextFrame();
             }
-            l = l / 2;
-            f = f / 2;
-            console.log("f = " + Math.round(f * 255));
-        }
-        return map;
+            resolve(map);
+        });
     }
-    downloadAsPNG(IMap, JMap, size = 1) {
+    async downloadAsPNG(IMap, JMap, size = 1) {
         let canvas = document.createElement("canvas");
         canvas.width = TerrainMap.MAP_SIZE * size;
         canvas.height = TerrainMap.MAP_SIZE * size;
         let context = canvas.getContext("2d");
         for (let J = 0; J < size; J++) {
             for (let I = 0; I < size; I++) {
-                let data = this.getMap(IMap + I, JMap + J);
+                let data = await this.getMap(IMap + I, JMap + J);
                 let pixels = new Uint8ClampedArray(data.length * 4);
                 for (let i = 0; i < data.length; i++) {
                     let v = data[i];
@@ -820,16 +834,17 @@ class TerrainMap {
                 context.putImageData(new ImageData(pixels, TerrainMap.MAP_SIZE, TerrainMap.MAP_SIZE), I * TerrainMap.MAP_SIZE, J * TerrainMap.MAP_SIZE);
             }
         }
-        var a = document.createElement('a');
-        a.setAttribute('href', canvas.toDataURL());
-        a.setAttribute('download', "terrainMap_" + IMap + "_" + JMap + ".png");
-        a.style.display = 'none';
+        var a = document.createElement("a");
+        a.setAttribute("href", canvas.toDataURL());
+        a.setAttribute("download", "terrainMap_" + IMap + "_" + JMap + ".png");
+        a.style.display = "none";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
     }
 }
-TerrainMap.MAP_SIZE = 512;
+TerrainMap.MAX_FRAME_TIME_MS = 15;
+TerrainMap.MAP_SIZE = 1024;
 class GameRouter extends Nabu.Router {
     constructor(game) {
         super();

@@ -18,7 +18,6 @@ class SeededMap {
         let masterSeedLength = masterSeed.length;
         let start = 0;
 
-        let t0 = performance.now();
         while (index < L) {
             for (let i = 0; i < masterSeedLength; i++) {
                 if (index < L) {
@@ -28,8 +27,6 @@ class SeededMap {
             }
             start++;
         }
-        let t1 = performance.now();
-        console.log("first fill in " + (t1 - t0) + "ms");
 
         for (let xors = 0; xors < 4; xors++) {
             let clonedBaseSeedMap = new Uint8ClampedArray(baseSeedMap);
@@ -58,8 +55,6 @@ class SeededMap {
                 baseSeedMap[i] = baseSeedMap[i] ^ baseSeedMap[i - 1];
             }
         }
-        let t2 = performance.now();
-        console.log("scramble in " + (t2 - t1) + "ms");
 
         seededMap.seedMaps = [];
         for (let i = 0; i < seededMap.N; i++) {
@@ -71,8 +66,6 @@ class SeededMap {
         }
 
         seededMap.debugBaseSeedMap = baseSeedMap;
-        let t3 = performance.now();
-        console.log("split in " + (t3 - t2) + "ms");
 
         /*
         let sorted = baseSeedMap.sort((a, b) => { return a - b; });
