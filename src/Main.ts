@@ -134,16 +134,19 @@ class Game {
 
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
 
-            let L = 211;
             let masterSeed = MasterSeed.GetFor("Paulita");
 
             let t0 = performance.now();
             let seededMap = SeededMap.CreateFromMasterSeed(masterSeed, 4, 512);
             let t1 = performance.now();
             console.log("seededMap generated in " + (t1 - t0) + "ms");
-            let terrainMap = new TerrainMap(seededMap, 512);
-            seededMap.downloadDebugBaseSeedAsPNG();
+            let terrainMap = new TerrainMap(seededMap, 2000);
+            terrainMap.downloadAsPNG(0, 0);
+            terrainMap.downloadAsPNG(1, 0);
+            terrainMap.downloadAsPNG(0, 1);
+            terrainMap.downloadAsPNG(1, 1);
             
+            /*
             let sorted = new Uint8ClampedArray(masterSeed).sort((a, b) => { return a - b; });
             console.log("#0 " + sorted[0]);
             for (let d = 10; d < 100; d += 10) {
@@ -151,6 +154,7 @@ class Game {
             }
             console.log("#100 " + sorted[L - 1]);
             console.log(masterSeed);
+            */
 
             /*
             setInterval(() => {
