@@ -137,8 +137,12 @@ class Game {
             let masterSeed = MasterSeed.GetFor("Paulita");
 
             let seededMap = SeededMap.CreateFromMasterSeed(masterSeed, 4, 512);
-            let terrainMap = new TerrainMap(seededMap, 2000);
-            terrainMap.downloadAsPNG(0, 0, 4);
+            let terrainMap = new TerrainMapGenerator(seededMap, 2000);
+            /*
+            await terrainMap.downloadAsPNG(0, 0, 2, 0);
+            await terrainMap.downloadAsPNG(0, 0, 2, 1);
+            await terrainMap.downloadAsPNG(0, 0, 2, 2);
+            */
             
             /*
             let sorted = new Uint8ClampedArray(masterSeed).sort((a, b) => { return a - b; });
