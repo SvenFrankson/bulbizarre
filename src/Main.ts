@@ -141,10 +141,7 @@ class Game {
             let t1 = performance.now();
             console.log("seededMap generated in " + (t1 - t0) + "ms");
             let terrainMap = new TerrainMap(seededMap, 2000);
-            terrainMap.downloadAsPNG(0, 0);
-            terrainMap.downloadAsPNG(1, 0);
-            terrainMap.downloadAsPNG(0, 1);
-            terrainMap.downloadAsPNG(1, 1);
+            terrainMap.downloadAsPNG(0, 0, 2);
             
             /*
             let sorted = new Uint8ClampedArray(masterSeed).sort((a, b) => { return a - b; });
