@@ -132,7 +132,7 @@ class Game {
                 blockSizeIJ_m: 1,
                 blockSizeK_m: 1,
                 chunckLengthIJ: 32,
-                chunckLengthK: 128,
+                chunckLengthK: 256,
                 chunckCountIJ: 64,
                 useAnalytics: true
             });
