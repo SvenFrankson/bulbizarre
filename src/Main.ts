@@ -137,10 +137,8 @@ class Game {
             this.terrain.materials = [mat];
 
             this.terrain.initialize();
-            let configDist = this.configuration.getValue("renderDist");
-            if (isFinite(configDist)) {
-                this.terrain.chunckManager.setDistance(configDist * this.terrain.chunckLengthIJ);
-            }
+            this.configuration.getElement("renderDist").forceInit();
+            this.configuration.getElement("showRenderDistDebug").forceInit();
 
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
 

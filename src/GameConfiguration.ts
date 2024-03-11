@@ -6,22 +6,27 @@ class GameConfiguration extends Nabu.Configuration {
 
     protected _buildElementsArray(): void {
         this.configurationElements = [
-            new Nabu.ConfigurationElement("quality", Nabu.ConfigurationElementType.Enum, 0, {
-                displayName: "Graphic Quality",
-                min: 0,
-                max: 2,
-                toString: (v) => {
-                    if (v === 0) {
-                        return "LOW";
-                    }
-                    if (v === 1) {
-                        return "MEDIUM";
-                    }
-                    if (v === 2) {
-                        return "HIGH";
+            new Nabu.ConfigurationElement(
+                "quality",
+                Nabu.ConfigurationElementType.Enum,
+                0,
+                {
+                    displayName: "Graphic Quality",
+                    min: 0,
+                    max: 2,
+                    toString: (v) => {
+                        if (v === 0) {
+                            return "LOW";
+                        }
+                        if (v === 1) {
+                            return "MEDIUM";
+                        }
+                        if (v === 2) {
+                            return "HIGH";
+                        }
                     }
                 }
-            }),
+            ),
             new Nabu.ConfigurationElement(
                 "renderDist",
                 Nabu.ConfigurationElementType.Number,
@@ -39,9 +44,9 @@ class GameConfiguration extends Nabu.Configuration {
                 }
             ),
             new Nabu.ConfigurationElement(
-                "god mode",
+                "godMode",
                 Nabu.ConfigurationElementType.Boolean,
-                5,
+                0,
                 {
                     displayName: "God Mode"
                 },
@@ -51,6 +56,22 @@ class GameConfiguration extends Nabu.Configuration {
                     }
                     else {
                         this.game.camera.speed = 0.2;
+                    }
+                }
+            ),
+            new Nabu.ConfigurationElement(
+                "showRenderDistDebug",
+                Nabu.ConfigurationElementType.Boolean,
+                0,
+                {
+                    displayName: "Show Render Distance Debug"
+                },
+                (newValue) => {
+                    if (newValue === 1) {
+                        this.game.terrain.chunckManager.setShowDebugRenderDist(true);
+                    }
+                    else {
+                        this.game.terrain.chunckManager.setShowDebugRenderDist(false);
                     }
                 }
             )

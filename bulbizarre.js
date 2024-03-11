@@ -31,7 +31,7 @@ class GameConfiguration extends Nabu.Configuration {
             }, (newValue) => {
                 this.game.terrain.chunckManager.setDistance(newValue * this.game.terrain.chunckLengthIJ);
             }),
-            new Nabu.ConfigurationElement("god mode", Nabu.ConfigurationElementType.Boolean, 5, {
+            new Nabu.ConfigurationElement("godMode", Nabu.ConfigurationElementType.Boolean, 0, {
                 displayName: "God Mode"
             }, (newValue) => {
                 if (newValue === 1) {
@@ -39,6 +39,16 @@ class GameConfiguration extends Nabu.Configuration {
                 }
                 else {
                     this.game.camera.speed = 0.2;
+                }
+            }),
+            new Nabu.ConfigurationElement("showRenderDistDebug", Nabu.ConfigurationElementType.Boolean, 0, {
+                displayName: "Show Render Distance Debug"
+            }, (newValue) => {
+                if (newValue === 1) {
+                    this.game.terrain.chunckManager.setShowDebugRenderDist(true);
+                }
+                else {
+                    this.game.terrain.chunckManager.setShowDebugRenderDist(false);
                 }
             })
         ];
@@ -151,10 +161,8 @@ class Game {
             let mat = new TerrainMaterial("terrain", this.scene);
             this.terrain.materials = [mat];
             this.terrain.initialize();
-            let configDist = this.configuration.getValue("renderDist");
-            if (isFinite(configDist)) {
-                this.terrain.chunckManager.setDistance(configDist * this.terrain.chunckLengthIJ);
-            }
+            this.configuration.getElement("renderDist").forceInit();
+            this.configuration.getElement("showRenderDistDebug").forceInit();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
             /*
             let masterSeed = MasterSeed.GetFor("Paulita");
