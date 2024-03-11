@@ -60,7 +60,7 @@ class Game {
         this.vertexDataLoader = new Mummu.VertexDataLoader(this.scene);
 
         if (this.DEBUG_MODE) {
-            this.scene.clearColor = BABYLON.Color4.FromHexString("#00ff0000");
+            this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
         }
         else {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
@@ -68,6 +68,7 @@ class Game {
 
         this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 3, - 2.5)).normalize(), this.scene);
 
+        /*
         this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 / Math.sqrt(3) }, this.scene);
         let skyboxMaterial: BABYLON.StandardMaterial = new BABYLON.StandardMaterial("skyBox", this.scene);
         skyboxMaterial.backFaceCulling = false;
@@ -81,21 +82,21 @@ class Game {
         skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
         this.skybox.material = skyboxMaterial;
         this.skybox.rotation.y = 0.16 * Math.PI;
+        */
 
         this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero());
         this.camera.minZ = 0.1;
         
         if (this.DEBUG_MODE) {
-            if (window.localStorage.getItem("camera-target")) {
-                let target = JSON.parse(window.localStorage.getItem("camera-target"));
-                this.camera.target.x = target.x;
-                this.camera.target.y = target.y;
-                this.camera.target.z = target.z;
-            }
             if (window.localStorage.getItem("camera-position")) {
                 let positionItem = JSON.parse(window.localStorage.getItem("camera-position"));
                 let position = new BABYLON.Vector3(positionItem.x, positionItem.y, positionItem.z);
                 this.camera.position = position;
+            }
+            if (window.localStorage.getItem("camera-rotation")) {
+                let rotationItem = JSON.parse(window.localStorage.getItem("camera-rotation"));
+                let rotation = new BABYLON.Vector3(rotationItem.x, rotationItem.y, rotationItem.z);
+                this.camera.rotation = rotation;
             }
         }
 
@@ -108,22 +109,22 @@ class Game {
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.terrain = new Kulla.Terrain({
                 scene: this.scene,
-                /*generatorProps: {
-                    type: Kulla.GeneratorType.Flat,
-                    altitude: 0,
-                    blockType: Kulla.BlockType.Grass
-                },*/
+                generatorProps: {
+                    type: Kulla.GeneratorType.Map
+                },
+                /*
                 generatorProps: {
                     type: Kulla.GeneratorType.PNG,
                     url: "./datas/textures/test_terrain.png",
                     squareSize: 2
                 },
+                */
                 maxDisplayedLevel: 0,
                 blockSizeIJ_m: 1,
                 blockSizeK_m: 1,
                 chunckLengthIJ: 32,
                 chunckLengthK: 128,
-                chunckCountIJ: 8,
+                chunckCountIJ: 64,
                 useAnalytics: true
             });
 
@@ -131,13 +132,21 @@ class Game {
             this.terrain.materials = [mat];
 
             this.terrain.initialize();
+            let configDist = this.configuration.getValue("renderDist");
+            if (isFinite(configDist)) {
+                console.log("ConfigDist from Config " + configDist);
+                this.terrain.chunckManager.setDistance(configDist * this.terrain.chunckLengthIJ);
+            }
 
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
 
+            /*
             let masterSeed = MasterSeed.GetFor("Paulita");
 
             let seededMap = SeededMap.CreateFromMasterSeed(masterSeed, 4, 512);
             let terrainMap = new TerrainMapGenerator(seededMap, 2000);
+            */
+            
             /*
             await terrainMap.downloadAsPNG(0, 0, 2, 0);
             await terrainMap.downloadAsPNG(0, 0, 2, 1);
@@ -175,7 +184,7 @@ class Game {
 		this.engine.runRenderLoop(() => {
 			this.scene.render();
 			this.update();
-            this.camera.rotation.y += 0.2 * Math.PI * 0.015;
+            //this.camera.rotation.y += 0.2 * Math.PI * 0.015;
 		});
 
 		window.onresize = () => {
@@ -199,9 +208,9 @@ class Game {
 
         if (this.DEBUG_MODE) {
             let camPos = this.camera.position;
-            let camTarget = this.camera.target;
+            let camRot = this.camera.rotation;
             window.localStorage.setItem("camera-position", JSON.stringify({ x: camPos.x, y: camPos.y, z: camPos.z }));
-            window.localStorage.setItem("camera-target", JSON.stringify({ x: camTarget.x, y: camTarget.y, z: camTarget.z }));
+            window.localStorage.setItem("camera-rotation", JSON.stringify({ x: camRot.x, y: camRot.y, z: camRot.z }));
         }
     }
 }

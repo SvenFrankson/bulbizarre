@@ -43,4 +43,11 @@ class GameConfiguration extends Nabu.Configuration {
             })
         ]
     }
+
+    public getValue(property: string): number {
+        let configElement = this.configurationElements.find(e => { return e.property === property; });
+        if (configElement) {
+            return configElement.value;
+        }
+    }
 }
