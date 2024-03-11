@@ -85,6 +85,11 @@ class Game {
         */
 
         this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero());
+        this.camera.speed = 0.2;
+        let godMode = this.configuration.getValue("godMode");
+        if (godMode === 1) {
+            this.camera.speed = 1;
+        }
         this.camera.minZ = 0.1;
         
         if (this.DEBUG_MODE) {
@@ -134,7 +139,6 @@ class Game {
             this.terrain.initialize();
             let configDist = this.configuration.getValue("renderDist");
             if (isFinite(configDist)) {
-                console.log("ConfigDist from Config " + configDist);
                 this.terrain.chunckManager.setDistance(configDist * this.terrain.chunckLengthIJ);
             }
 
@@ -177,6 +181,17 @@ class Game {
                 }
             }, 50);
             */
+
+            window.addEventListener("keydown", (event: KeyboardEvent) => {
+                if (event.key === "Escape") {
+                    var a = document.createElement("a");
+                    a.setAttribute("href", "#home");
+                    a.style.display = "none";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+            })
         });
 	}
 

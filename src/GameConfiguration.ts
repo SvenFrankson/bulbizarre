@@ -38,9 +38,22 @@ class GameConfiguration extends Nabu.Configuration {
                     this.game.terrain.chunckManager.setDistance(newValue * this.game.terrain.chunckLengthIJ);
                 }
             ),
-            new Nabu.ConfigurationElement("god mode", Nabu.ConfigurationElementType.Boolean, 5, {
-                displayName: "God Mode"
-            })
+            new Nabu.ConfigurationElement(
+                "god mode",
+                Nabu.ConfigurationElementType.Boolean,
+                5,
+                {
+                    displayName: "God Mode"
+                },
+                (newValue) => {
+                    if (newValue === 1) {
+                        this.game.camera.speed = 1;
+                    }
+                    else {
+                        this.game.camera.speed = 0.2;
+                    }
+                }
+            )
         ]
     }
 

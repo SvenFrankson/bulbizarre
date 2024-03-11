@@ -17,7 +17,10 @@ class GameRouter extends Nabu.Router {
     }
 
     protected async onHRefChange(page: string): Promise<void> {
-        if (page.startsWith("#options")) {
+        if (page.startsWith("#game")) {
+            this.hideAll();
+        }
+        else if (page.startsWith("#options")) {
             this.show(this.optionPage);
         }
         else if (page.startsWith("#home") || true) {

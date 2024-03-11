@@ -33,6 +33,13 @@ class GameConfiguration extends Nabu.Configuration {
             }),
             new Nabu.ConfigurationElement("god mode", Nabu.ConfigurationElementType.Boolean, 5, {
                 displayName: "God Mode"
+            }, (newValue) => {
+                if (newValue === 1) {
+                    this.game.camera.speed = 1;
+                }
+                else {
+                    this.game.camera.speed = 0.2;
+                }
             })
         ];
     }
@@ -98,6 +105,11 @@ class Game {
         this.skybox.rotation.y = 0.16 * Math.PI;
         */
         this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero());
+        this.camera.speed = 0.2;
+        let godMode = this.configuration.getValue("godMode");
+        if (godMode === 1) {
+            this.camera.speed = 1;
+        }
         this.camera.minZ = 0.1;
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-position")) {
@@ -141,7 +153,6 @@ class Game {
             this.terrain.initialize();
             let configDist = this.configuration.getValue("renderDist");
             if (isFinite(configDist)) {
-                console.log("ConfigDist from Config " + configDist);
                 this.terrain.chunckManager.setDistance(configDist * this.terrain.chunckLengthIJ);
             }
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
@@ -179,6 +190,16 @@ class Game {
                 }
             }, 50);
             */
+            window.addEventListener("keydown", (event) => {
+                if (event.key === "Escape") {
+                    var a = document.createElement("a");
+                    a.setAttribute("href", "#home");
+                    a.style.display = "none";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+            });
         });
     }
     animate() {
@@ -470,7 +491,10 @@ class GameRouter extends Nabu.Router {
     onUpdate() {
     }
     async onHRefChange(page) {
-        if (page.startsWith("#options")) {
+        if (page.startsWith("#game")) {
+            this.hideAll();
+        }
+        else if (page.startsWith("#options")) {
             this.show(this.optionPage);
         }
         else if (page.startsWith("#home") || true) {
