@@ -9,6 +9,25 @@ body {
     background-color: black;
 }
 
+#debug-container {
+	position: fixed;
+	top: 10px;
+	right: 10px;
+	width: 500px;
+	padding: 10px;
+	font-size: 16px;
+	color: #00FF00;
+	text-align: right;
+	font-family: monospace;
+	z-index: 1;
+	background-color: rgba(0, 0, 0, 50%);
+	pointer-events: none;
+}
+
+.debug.hidden {
+	display: none;
+}
+
 a:link { 
     text-decoration: none; 
 }

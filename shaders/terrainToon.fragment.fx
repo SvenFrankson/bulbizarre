@@ -191,6 +191,19 @@ void main() {
    }
    */
    
+   /*
+   // show chunck borders
+   float dx = vPositionW.x - floor(vPositionW.x / 24.) * 24.;
+   float dz = vPositionW.z - floor(vPositionW.z / 24.) * 24.;
+
+   if (dx < 0.05 || dx > 23.95) {
+      color = vec3(0.1, 0., 0.1);
+   }
+   if (dz < 0.05 || dz > 23.95) {
+      color = vec3(0.1, 0., 0.1);
+   }
+   */
+
    if (level == 0) {
       float dy = vPositionW.y / blockSize_m - floor(vPositionW.y / blockSize_m);
       if (vNormalW.y > 0.8 && (dy < 0.1 || dy > 0.9)) {

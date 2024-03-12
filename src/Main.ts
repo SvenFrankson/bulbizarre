@@ -127,7 +127,7 @@ class Game {
                 maxDisplayedLevel: 0,
                 blockSizeIJ_m: 1,
                 blockSizeK_m: 1,
-                chunckLengthIJ: 32,
+                chunckLengthIJ: 24,
                 chunckLengthK: 256,
                 chunckCountIJ: 64,
                 useAnalytics: true
@@ -135,6 +135,7 @@ class Game {
 
             let mat = new TerrainMaterial("terrain", this.scene);
             this.terrain.materials = [mat];
+            mat.freeze();
 
             this.terrain.initialize();
             this.configuration.getElement("renderDist").forceInit();
@@ -180,6 +181,9 @@ class Game {
             }, 50);
             */
 
+            let debugTerrainPerf = new DebugTerrainPerf(this);
+            debugTerrainPerf.show();
+
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -188,6 +192,17 @@ class Game {
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
+                }
+                if (event.code === "KeyE") {
+                    let ijk = this.terrain.getChunckAndIJKAtPos(this.camera.position, 0);
+                    ijk.ijk.i = 0;
+                    ijk.ijk.j = 0;
+                    ijk.ijk.k--;
+                    this.terrainEditor.doAction(ijk.chunck, ijk.ijk, {
+                        brushSize: 1,
+                        brushBlock: Kulla.BlockType.Rock,
+                        mode: Kulla.TerrainEditionMode.Add
+                    })
                 }
             })
         });
