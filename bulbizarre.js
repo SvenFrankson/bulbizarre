@@ -259,10 +259,10 @@ class Game {
         this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
         this.vertexDataLoader = new Mummu.VertexDataLoader(this.scene);
         if (this.DEBUG_MODE) {
-            this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
+            this.scene.clearColor = BABYLON.Color4.FromHexString("#87CEEBFF");
         }
         else {
-            this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
+            this.scene.clearColor = BABYLON.Color4.FromHexString("#87CEEBFF");
         }
         this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 3, -2.5)).normalize(), this.scene);
         /*
@@ -301,36 +301,9 @@ class Game {
         }
         this.camera.attachControl();
         this.router = new GameRouter(this);
-        this.router.initialize();
-        this.router.optionPage.setConfiguration(this.configuration);
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
-            this.terrain = new Kulla.Terrain({
-                scene: this.scene,
-                generatorProps: {
-                    type: Kulla.GeneratorType.Map
-                },
-                /*
-                generatorProps: {
-                    type: Kulla.GeneratorType.PNG,
-                    url: "./datas/textures/test_terrain.png",
-                    squareSize: 2
-                },
-                */
-                maxDisplayedLevel: 0,
-                blockSizeIJ_m: 1,
-                blockSizeK_m: 1,
-                chunckLengthIJ: 24,
-                chunckLengthK: 256,
-                chunckCountIJ: 64,
-                useAnalytics: true
-            });
-            let mat = new TerrainMaterial("terrain", this.scene);
-            this.terrain.materials = [mat];
-            mat.freeze();
-            this.terrain.initialize();
-            this.configuration.getElement("renderDist").forceInit();
-            this.configuration.getElement("showRenderDistDebug").forceInit();
-            this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+            this.router.initialize();
+            this.router.optionPage.setConfiguration(this.configuration);
             /*
             let masterSeed = MasterSeed.GetFor("Paulita");
 
@@ -417,6 +390,72 @@ class Game {
             window.localStorage.setItem("camera-position", JSON.stringify({ x: camPos.x, y: camPos.y, z: camPos.z }));
             window.localStorage.setItem("camera-rotation", JSON.stringify({ x: camRot.x, y: camRot.y, z: camRot.z }));
         }
+    }
+    generateTerrainLarge() {
+        if (this.terrain) {
+            this.terrain.dispose();
+        }
+        this.terrain = new Kulla.Terrain({
+            scene: this.scene,
+            generatorProps: {
+                type: Kulla.GeneratorType.Map
+            },
+            /*
+            generatorProps: {
+                type: Kulla.GeneratorType.PNG,
+                url: "./datas/textures/test_terrain.png",
+                squareSize: 2
+            },
+            */
+            maxDisplayedLevel: 0,
+            blockSizeIJ_m: 1,
+            blockSizeK_m: 1,
+            chunckLengthIJ: 24,
+            chunckLengthK: 256,
+            chunckCountIJ: 64,
+            useAnalytics: true
+        });
+        let mat = new TerrainMaterial("terrain", this.scene);
+        this.terrain.materials = [mat];
+        mat.freeze();
+        this.terrain.initialize();
+        this.configuration.getElement("renderDist").forceInit();
+        this.configuration.getElement("showRenderDistDebug").forceInit();
+        this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+    }
+    generateTerrainSmall() {
+        if (this.terrain) {
+            this.terrain.dispose();
+        }
+        this.terrain = new Kulla.Terrain({
+            scene: this.scene,
+            generatorProps: {
+                type: Kulla.GeneratorType.Map
+            },
+            /*
+            generatorProps: {
+                type: Kulla.GeneratorType.PNG,
+                url: "./datas/textures/test_terrain.png",
+                squareSize: 2
+            },
+            */
+            maxDisplayedLevel: 0,
+            blockSizeIJ_m: 1,
+            blockSizeK_m: 1,
+            chunckLengthIJ: 24,
+            chunckLengthK: 256,
+            chunckCountIJ: 3,
+            useAnalytics: true
+        });
+        let mat = new TerrainMaterial("terrain", this.scene);
+        this.terrain.materials = [mat];
+        mat.freeze();
+        this.terrain.initialize();
+        this.configuration.getElement("renderDist").forceInit();
+        this.configuration.getElement("showRenderDistDebug").forceInit();
+        this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+        this.camera.position.x = 0;
+        this.camera.position.z = 0;
     }
 }
 window.addEventListener("DOMContentLoaded", () => {
@@ -681,6 +720,11 @@ class GameRouter extends Nabu.Router {
     async onHRefChange(page) {
         if (page.startsWith("#game")) {
             this.hideAll();
+            this.game.generateTerrainLarge();
+        }
+        else if (page.startsWith("#prop-creator")) {
+            this.hideAll();
+            this.game.generateTerrainSmall();
         }
         else if (page.startsWith("#options")) {
             this.show(this.optionPage);
