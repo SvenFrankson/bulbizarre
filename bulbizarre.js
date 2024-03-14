@@ -354,17 +354,6 @@ class Game {
                     a.click();
                     document.body.removeChild(a);
                 }
-                if (event.code === "KeyE") {
-                    let ijk = this.terrain.getChunckAndIJKAtPos(this.freeCamera.position, 0);
-                    ijk.ijk.i = 0;
-                    ijk.ijk.j = 0;
-                    ijk.ijk.k--;
-                    this.terrainEditor.doAction(ijk.chunck, ijk.ijk, {
-                        brushSize: 1,
-                        brushBlock: Kulla.BlockType.Rock,
-                        mode: Kulla.TerrainEditionMode.Add
-                    });
-                }
             });
         });
     }
@@ -466,22 +455,6 @@ class Game {
         this.configuration.getElement("renderDist").forceInit();
         this.configuration.getElement("showRenderDistDebug").forceInit();
         this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
-        window.addEventListener("keydown", (event) => {
-            if (event.code === "KeyQ") {
-                prop.shapes.push(new KullaGrid.RawShapeBox(3, 3, 3, -1, -1, 10));
-                prop.blocks.push(Kulla.BlockType.Regolith);
-                let chuncks = [
-                    this.terrain.getChunck(0, 0, 0),
-                    this.terrain.getChunck(0, 1, 0),
-                    this.terrain.getChunck(0, 1, 1),
-                    this.terrain.getChunck(0, 0, 1)
-                ];
-                chuncks.forEach(chunck => {
-                    chunck.reset();
-                    chunck.redrawMesh(true);
-                });
-            }
-        });
     }
 }
 window.addEventListener("DOMContentLoaded", () => {
@@ -493,46 +466,196 @@ window.addEventListener("DOMContentLoaded", () => {
     });
 });
 class PropShapeMesh extends BABYLON.Mesh {
-    constructor(shape) {
+    constructor(propEditor, shape, color) {
         super("prop-shape-mesh");
+        this.propEditor = propEditor;
+        this.shape = shape;
         if (shape instanceof Kulla.RawShapeBox) {
-            let box = BABYLON.MeshBuilder.CreateBox("box", {
-                width: shape.w,
-                height: shape.h,
-                depth: shape.d
+            this.childMesh = Mummu.CreateBeveledBox("box", {
+                width: shape.w + 0.1,
+                height: shape.h + 0.1,
+                depth: shape.d + 0.1,
+                flat: true,
+                color: color
             });
-            box.position.copyFromFloats(shape.w * 0.5, shape.h * 0.5, shape.d * 0.5);
-            box.parent = this;
-            this.position.x += shape.pi;
-            this.position.z += shape.pj;
-            this.position.y += shape.pk;
+            this.childMesh.position.copyFromFloats(shape.w * 0.5, shape.h * 0.5, shape.d * 0.5);
+            this.childMesh.material = this.propEditor.propShapeMaterial;
+            this.childMesh.parent = this;
         }
+        this.updatePosition();
+    }
+    select() {
+        this.childMesh.material = this.propEditor.propShapeMaterialSelected;
+    }
+    unselect() {
+        this.childMesh.material = this.propEditor.propShapeMaterial;
+    }
+    updatePosition() {
+        this.position.x = this.shape.pi;
+        this.position.z = this.shape.pj;
+        this.position.y = this.shape.pk + this.propEditor.alt;
     }
 }
+var CursorMode;
+(function (CursorMode) {
+    CursorMode[CursorMode["Select"] = 0] = "Select";
+    CursorMode[CursorMode["Box"] = 1] = "Box";
+    CursorMode[CursorMode["Sphere"] = 2] = "Sphere";
+    CursorMode[CursorMode["Dot"] = 3] = "Dot";
+})(CursorMode || (CursorMode = {}));
 class PropEditor {
     constructor(game) {
         this.game = game;
         this.propShapeMeshes = [];
+        this.mode = CursorMode.Select;
+        this.onPointerUp = () => {
+            if (this.mode === CursorMode.Select) {
+                let pick = this.game.scene.pick(this.game.scene.pointerX, this.game.scene.pointerY, (mesh) => {
+                    return mesh && mesh.parent instanceof PropShapeMesh;
+                });
+                if (pick.hit && pick.pickedMesh.parent instanceof PropShapeMesh) {
+                    this.setSelectedPropShape(pick.pickedMesh.parent);
+                }
+                else {
+                    this.setSelectedPropShape(undefined);
+                }
+            }
+            else {
+                let pick = this.game.scene.pick(this.game.scene.pointerX, this.game.scene.pointerY, (mesh) => {
+                    return mesh && mesh.parent instanceof PropShapeMesh;
+                });
+                if (pick.hit) {
+                    let p = pick.pickedPoint.add(pick.getNormal(true).scale(0.5));
+                    let i = Math.floor(p.x);
+                    let j = Math.floor(p.z);
+                    let k = Math.floor(p.y - this.alt);
+                    let newShape;
+                    if (this.mode === CursorMode.Box) {
+                        newShape = new Kulla.RawShapeBox(1, 1, 1, i, j, k);
+                        if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+                            this.game.terrain.chunckDataGenerator.prop.shapes.push(newShape);
+                            this.game.terrain.chunckDataGenerator.prop.blocks.push(Kulla.BlockType.Ice);
+                        }
+                        let propShapeMesh = new PropShapeMesh(this, newShape);
+                        this.propShapeMeshes.push(propShapeMesh);
+                        this.redraw();
+                        this.mode = CursorMode.Select;
+                    }
+                }
+            }
+        };
+        this.onKeyDown = (ev) => {
+            if (ev.code === "KeyW") {
+                this.onMove(0, 0, 1);
+            }
+            else if (ev.code === "KeyA") {
+                this.onMove(-1, 0, 0);
+            }
+            else if (ev.code === "KeyS") {
+                this.onMove(0, 0, -1);
+            }
+            else if (ev.code === "KeyD") {
+                this.onMove(1, 0, 0);
+            }
+            else if (ev.code === "KeyQ") {
+                this.onMove(0, -1, 0);
+            }
+            else if (ev.code === "KeyE") {
+                this.onMove(0, 1, 0);
+            }
+        };
+        let mat = new BABYLON.StandardMaterial("prop-shape-material");
+        mat.specularColor.copyFromFloats(0, 0, 0);
+        mat.alpha = 0.2;
+        this.propShapeMaterial = mat;
+        let matSelected = new BABYLON.StandardMaterial("prop-shape-material");
+        matSelected.diffuseColor.copyFromFloats(1, 1, 0);
+        matSelected.specularColor.copyFromFloats(0, 0, 0);
+        matSelected.alpha = 0.2;
+        this.propShapeMaterialSelected = matSelected;
+    }
+    setSelectedPropShape(s) {
+        if (this._selectedPropShape != s) {
+            if (this._selectedPropShape) {
+                this._selectedPropShape.unselect();
+            }
+            this._selectedPropShape = s;
+            if (this._selectedPropShape) {
+                this._selectedPropShape.select();
+            }
+        }
     }
     initialize() {
+        if (this.game.terrain) {
+            if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+                this.alt = this.game.terrain.chunckDataGenerator.altitude;
+            }
+        }
         this.boxButton = document.getElementById("prop-editor-box");
+        this.boxButton.onclick = () => {
+            if (this.mode === CursorMode.Box) {
+                this.mode = CursorMode.Select;
+            }
+            else {
+                this.mode = CursorMode.Box;
+            }
+        };
         this.sphereButton = document.getElementById("prop-editor-sphere");
+        this.sphereButton.onclick = () => {
+            if (this.mode === CursorMode.Sphere) {
+                this.mode = CursorMode.Select;
+            }
+            else {
+                this.mode = CursorMode.Sphere;
+            }
+        };
         this.dotButton = document.getElementById("prop-editor-dot");
+        this.dotButton.onclick = () => {
+            if (this.mode === CursorMode.Dot) {
+                this.mode = CursorMode.Select;
+            }
+            else {
+                this.mode = CursorMode.Dot;
+            }
+        };
         this.propShapeMeshes = [];
         if (this.game.terrain) {
             if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
-                let alt = this.game.terrain.chunckDataGenerator.altitude;
                 this.game.terrain.chunckDataGenerator.prop.shapes.forEach(shape => {
-                    let propShapeMesh = new PropShapeMesh(shape);
-                    propShapeMesh.position.y += alt;
+                    let propShapeMesh = new PropShapeMesh(this, shape);
                     this.propShapeMeshes.push(propShapeMesh);
                 });
             }
         }
+        this.game.canvas.addEventListener("keyup", this.onKeyDown);
+        this.game.canvas.addEventListener("pointerup", this.onPointerUp);
     }
     dispose() {
         while (this.propShapeMeshes.length > 0) {
             this.propShapeMeshes.pop().dispose();
+        }
+        this.game.canvas.removeEventListener("keydown", this.onKeyDown);
+        this.game.canvas.removeEventListener("pointerup", this.onPointerUp);
+    }
+    redraw() {
+        let chuncks = [
+            this.game.terrain.getChunck(0, 0, 0),
+            this.game.terrain.getChunck(0, 1, 0),
+            this.game.terrain.getChunck(0, 1, 1),
+            this.game.terrain.getChunck(0, 0, 1)
+        ];
+        chuncks.forEach(chunck => {
+            chunck.reset();
+            chunck.redrawMesh(true);
+        });
+    }
+    onMove(di = 0, dj = 0, dk = 0) {
+        if (this._selectedPropShape) {
+            this._selectedPropShape.shape.pi += di;
+            this._selectedPropShape.shape.pj += dj;
+            this._selectedPropShape.shape.pk += dk;
+            this._selectedPropShape.updatePosition();
+            this.redraw();
         }
     }
 }

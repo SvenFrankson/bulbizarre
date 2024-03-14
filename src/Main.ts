@@ -171,17 +171,6 @@ class Game {
                     a.click();
                     document.body.removeChild(a);
                 }
-                if (event.code === "KeyE") {
-                    let ijk = this.terrain.getChunckAndIJKAtPos(this.freeCamera.position, 0);
-                    ijk.ijk.i = 0;
-                    ijk.ijk.j = 0;
-                    ijk.ijk.k--;
-                    this.terrainEditor.doAction(ijk.chunck, ijk.ijk, {
-                        brushSize: 1,
-                        brushBlock: Kulla.BlockType.Rock,
-                        mode: Kulla.TerrainEditionMode.Add
-                    })
-                }
             })
         });
 	}
@@ -303,24 +292,6 @@ class Game {
         this.configuration.getElement("showRenderDistDebug").forceInit();
 
         this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
-
-        window.addEventListener("keydown", (event: KeyboardEvent) => {
-            if (event.code === "KeyQ") {
-                prop.shapes.push(new KullaGrid.RawShapeBox(3, 3, 3, - 1, - 1, 10));
-                prop.blocks.push(Kulla.BlockType.Regolith);
-
-                let chuncks = [
-                    this.terrain.getChunck(0, 0, 0),
-                    this.terrain.getChunck(0, 1, 0),
-                    this.terrain.getChunck(0, 1, 1),
-                    this.terrain.getChunck(0, 0, 1)
-                ]
-                chuncks.forEach(chunck => {
-                    chunck.reset();
-                    chunck.redrawMesh(true);
-                }) 
-            }
-        })
     }
 }
 
