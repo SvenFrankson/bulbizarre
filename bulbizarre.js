@@ -303,6 +303,7 @@ class Game {
             }
         }
         this.router = new GameRouter(this);
+        this.propEditor = new PropEditor(this);
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.router.initialize();
             this.router.optionPage.setConfiguration(this.configuration);
@@ -457,7 +458,7 @@ class Game {
         mat.freeze();
         this.terrain.initialize();
         let prop = new KullaGrid.RawCoumpoundProp();
-        prop.shapes = [new KullaGrid.RawShapeBox(3, 5, 3, -1, -1, 0), new KullaGrid.RawShapeBox(1, 5, 1, 0, 0, 5)];
+        prop.shapes = [new KullaGrid.RawShapeBox(3, 3, 3, -1, -1, 2), new KullaGrid.RawShapeBox(1, 5, 1, 0, 0, 5)];
         prop.blocks = [Kulla.BlockType.Basalt, Kulla.BlockType.Basalt];
         if (this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
             this.terrain.chunckDataGenerator.prop = prop;
@@ -491,6 +492,50 @@ window.addEventListener("DOMContentLoaded", () => {
         main.animate();
     });
 });
+class PropShapeMesh extends BABYLON.Mesh {
+    constructor(shape) {
+        super("prop-shape-mesh");
+        if (shape instanceof Kulla.RawShapeBox) {
+            let box = BABYLON.MeshBuilder.CreateBox("box", {
+                width: shape.w,
+                height: shape.h,
+                depth: shape.d
+            });
+            box.position.copyFromFloats(shape.w * 0.5, shape.h * 0.5, shape.d * 0.5);
+            box.parent = this;
+            this.position.x += shape.pi;
+            this.position.z += shape.pj;
+            this.position.y += shape.pk;
+        }
+    }
+}
+class PropEditor {
+    constructor(game) {
+        this.game = game;
+        this.propShapeMeshes = [];
+    }
+    initialize() {
+        this.boxButton = document.getElementById("prop-editor-box");
+        this.sphereButton = document.getElementById("prop-editor-sphere");
+        this.dotButton = document.getElementById("prop-editor-dot");
+        this.propShapeMeshes = [];
+        if (this.game.terrain) {
+            if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+                let alt = this.game.terrain.chunckDataGenerator.altitude;
+                this.game.terrain.chunckDataGenerator.prop.shapes.forEach(shape => {
+                    let propShapeMesh = new PropShapeMesh(shape);
+                    propShapeMesh.position.y += alt;
+                    this.propShapeMeshes.push(propShapeMesh);
+                });
+            }
+        }
+    }
+    dispose() {
+        while (this.propShapeMeshes.length > 0) {
+            this.propShapeMeshes.pop().dispose();
+        }
+    }
+}
 class TerrainMaterial extends BABYLON.ShaderMaterial {
     constructor(name, scene) {
         super(name, scene, {
@@ -744,6 +789,7 @@ class GameRouter extends Nabu.Router {
     onUpdate() {
     }
     async onHRefChange(page) {
+        this.game.propEditor.dispose();
         if (page.startsWith("#game")) {
             this.hideAll();
             this.game.generateTerrainLarge();
@@ -751,6 +797,7 @@ class GameRouter extends Nabu.Router {
         else if (page.startsWith("#prop-creator")) {
             this.show(this.propEditor);
             this.game.generateTerrainSmall();
+            this.game.propEditor.initialize();
         }
         else if (page.startsWith("#options")) {
             this.show(this.optionPage);

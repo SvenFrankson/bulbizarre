@@ -37,6 +37,7 @@ class Game {
 
     public terrain: Kulla.Terrain;
     public terrainEditor: Kulla.TerrainEditor;
+    public propEditor: PropEditor;
 
     public router: GameRouter;
 
@@ -111,6 +112,8 @@ class Game {
         }
 
         this.router = new GameRouter(this);
+
+        this.propEditor = new PropEditor(this);
 
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.router.initialize();
@@ -290,7 +293,7 @@ class Game {
         this.terrain.initialize();
         
         let prop = new KullaGrid.RawCoumpoundProp();
-        prop.shapes = [new KullaGrid.RawShapeBox(3, 5, 3, - 1, - 1, 0), new KullaGrid.RawShapeBox(1, 5, 1, 0, 0, 5)];
+        prop.shapes = [new KullaGrid.RawShapeBox(3, 3, 3, - 1, - 1, 2), new KullaGrid.RawShapeBox(1, 5, 1, 0, 0, 5)];
         prop.blocks = [Kulla.BlockType.Basalt, Kulla.BlockType.Basalt];
         if (this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
             this.terrain.chunckDataGenerator.prop = prop;

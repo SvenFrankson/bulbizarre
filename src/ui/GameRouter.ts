@@ -19,6 +19,7 @@ class GameRouter extends Nabu.Router {
     }
 
     protected async onHRefChange(page: string): Promise<void> {
+        this.game.propEditor.dispose();
         if (page.startsWith("#game")) {
             this.hideAll();
             this.game.generateTerrainLarge();
@@ -26,6 +27,7 @@ class GameRouter extends Nabu.Router {
         else if (page.startsWith("#prop-creator")) {
             this.show(this.propEditor);
             this.game.generateTerrainSmall();
+            this.game.propEditor.initialize();
         }
         else if (page.startsWith("#options")) {
             this.show(this.optionPage);
