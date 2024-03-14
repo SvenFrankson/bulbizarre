@@ -52,6 +52,7 @@ class PropEditor {
     public propShapeMaterialSelected: BABYLON.Material;
     public propShapeMeshes: PropShapeMesh[] = [];
 
+    private _gridMesh: BABYLON.Mesh;
     private _cursorMesh: BABYLON.Mesh;
     private _cursorMode: CursorMode = CursorMode.Select;
     private setCursorMode(mode: CursorMode): void {
@@ -77,6 +78,28 @@ class PropEditor {
         }
     }
 
+    private _draggedOffset: BABYLON.Vector3 = BABYLON.Vector3.Zero();
+    private _draggedPropShape: PropShapeMesh;
+    private setDraggedPropShape(s: PropShapeMesh) {
+        if (this._draggedPropShape != s) {
+            this._draggedPropShape = s;
+            if (this._draggedPropShape) {
+                this._gridMesh.isVisible = true;
+                let axis = this.game.arcCamera.getDirection(BABYLON.Axis.Z);
+                Mummu.GetClosestAxisToRef(axis, axis);
+                axis.scaleInPlace(-1);
+                Mummu.QuaternionFromYZAxisToRef(axis, BABYLON.Vector3.One(), this._gridMesh.rotationQuaternion);
+                this._gridMesh.position.copyFrom(this._draggedPropShape.childMesh.absolutePosition);
+                this._gridMesh.computeWorldMatrix(true);
+                this.game.arcCamera.detachControl();
+            }
+            else {
+                this._gridMesh.isVisible = false;
+                this.game.arcCamera.attachControl();
+            }
+        }
+    }
+
     public alt: number;
 
     constructor(public game: Game) {
@@ -92,6 +115,10 @@ class PropEditor {
         this.propShapeMaterialSelected = matSelected;
 
         this._cursorMesh = Mummu.CreateBeveledBox("cursor", { size: 1 });
+
+        this._gridMesh = BABYLON.MeshBuilder.CreateGround("grid", { width: 30, height: 30 });
+        this._gridMesh.rotationQuaternion = BABYLON.Quaternion.Identity();
+        this._gridMesh.material = mat;
     }
 
     public initialize(): void {
@@ -141,6 +168,7 @@ class PropEditor {
         }
 
         this.game.canvas.addEventListener("keyup", this.onKeyDown);
+        this.game.canvas.addEventListener("pointerdown", this.onPointerDown);
         this.game.canvas.addEventListener("pointermove", this.onPointerMove);
         this.game.canvas.addEventListener("pointerup", this.onPointerUp);
     }
@@ -167,9 +195,66 @@ class PropEditor {
         }) 
     }
 
+    public onPointerDown = () => {
+        if (this._cursorMode === CursorMode.Select) {
+            let pick = this.game.scene.pick(
+                this.game.scene.pointerX,
+                this.game.scene.pointerY,
+                (mesh) => {
+                    return mesh && mesh.parent instanceof PropShapeMesh;
+                }
+            );
+
+            if (pick.hit && pick.pickedMesh.parent === this._selectedPropShape) {
+                this.setDraggedPropShape(this._selectedPropShape);
+                let p = new BABYLON.Vector3(
+                    this._draggedPropShape.shape.pi,
+                    this._draggedPropShape.shape.pk + this.alt,
+                    this._draggedPropShape.shape.pj
+                ).addInPlaceFromFloats(0.5, 0.5, 0.5);
+                let gridPick = this.game.scene.pick(
+                    this.game.scene.pointerX,
+                    this.game.scene.pointerY,
+                    (mesh) => {
+                        return mesh === this._gridMesh;
+                    }
+                );
+                if (gridPick.hit) {
+                    this._draggedOffset.copyFrom(gridPick.pickedPoint).subtractInPlace(p);
+                }
+                else {
+                    this._draggedOffset.copyFromFloats(0, 0, 0);
+                }
+            }
+            else {
+                this.setDraggedPropShape(undefined);
+            }
+        }
+    }
+
     public onPointerMove = () => {
         if (this._cursorMode === CursorMode.Select) {
-            
+            if (this._draggedPropShape) {
+                let pick = this.game.scene.pick(
+                    this.game.scene.pointerX,
+                    this.game.scene.pointerY,
+                    (mesh) => {
+                        return mesh === this._gridMesh;
+                    }
+                );
+                if (pick.hit) {
+                    let p = pick.pickedPoint.subtract(this._draggedOffset);
+                    let i = Math.floor(p.x);
+                    let j = Math.floor(p.z);
+                    let k = Math.floor(p.y - this.alt);
+    
+                    let di = i - this._draggedPropShape.shape.pi;
+                    let dj = j - this._draggedPropShape.shape.pj;
+                    let dk = k - this._draggedPropShape.shape.pk;
+                    
+                    this.onMove(di, dj, dk);
+                }
+            }
         }
         else {
             let pick = this.game.scene.pick(
@@ -191,6 +276,7 @@ class PropEditor {
     }
 
     public onPointerUp = () => {
+        this.setDraggedPropShape(undefined);
         if (this._cursorMode === CursorMode.Select) {
             let pick = this.game.scene.pick(
                 this.game.scene.pointerX,
