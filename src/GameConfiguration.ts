@@ -52,10 +52,10 @@ class GameConfiguration extends Nabu.Configuration {
                 },
                 (newValue) => {
                     if (newValue === 1) {
-                        this.game.camera.speed = 1;
+                        this.game.freeCamera.speed = 1;
                     }
                     else {
-                        this.game.camera.speed = 0.2;
+                        this.game.freeCamera.speed = 0.2;
                     }
                 }
             ),

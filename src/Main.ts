@@ -27,12 +27,11 @@ class Game {
     public screenRatio: number = 1;
 
     //public camera: BABYLON.FreeCamera;
-    public camera: BABYLON.FreeCamera;
+    public freeCamera: BABYLON.FreeCamera;
+    public arcCamera: BABYLON.ArcRotateCamera;
     
     public light: BABYLON.HemisphericLight;
     public vertexDataLoader: Mummu.VertexDataLoader;
-
-    public cameraOrtho: boolean = false;
 
     public skybox: BABYLON.Mesh;
 
@@ -84,28 +83,32 @@ class Game {
         this.skybox.rotation.y = 0.16 * Math.PI;
         */
 
-        this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero());
-        this.camera.speed = 0.2;
+        this.freeCamera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero());
+        this.freeCamera.speed = 0.2;
         let godMode = this.configuration.getValue("godMode");
         if (godMode === 1) {
-            this.camera.speed = 1;
+            this.freeCamera.speed = 1;
         }
-        this.camera.minZ = 0.1;
+        this.freeCamera.minZ = 0.1;
+
+        this.arcCamera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 20, new BABYLON.Vector3(0, 10, 0));
+        this.arcCamera.speed = 0.2;
+        this.arcCamera.minZ = 0.1;
+
+        this.scene.activeCamera = this.freeCamera;
         
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-position")) {
                 let positionItem = JSON.parse(window.localStorage.getItem("camera-position"));
                 let position = new BABYLON.Vector3(positionItem.x, positionItem.y, positionItem.z);
-                this.camera.position = position;
+                this.freeCamera.position = position;
             }
             if (window.localStorage.getItem("camera-rotation")) {
                 let rotationItem = JSON.parse(window.localStorage.getItem("camera-rotation"));
                 let rotation = new BABYLON.Vector3(rotationItem.x, rotationItem.y, rotationItem.z);
-                this.camera.rotation = rotation;
+                this.freeCamera.rotation = rotation;
             }
         }
-
-        this.camera.attachControl();
 
         this.router = new GameRouter(this);
 
@@ -151,8 +154,10 @@ class Game {
             }, 50);
             */
 
+            /*
             let debugTerrainPerf = new DebugTerrainPerf(this);
             debugTerrainPerf.show();
+            */
 
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {
@@ -164,7 +169,7 @@ class Game {
                     document.body.removeChild(a);
                 }
                 if (event.code === "KeyE") {
-                    let ijk = this.terrain.getChunckAndIJKAtPos(this.camera.position, 0);
+                    let ijk = this.terrain.getChunckAndIJKAtPos(this.freeCamera.position, 0);
                     ijk.ijk.i = 0;
                     ijk.ijk.j = 0;
                     ijk.ijk.k--;
@@ -205,8 +210,8 @@ class Game {
         let dt = this.scene.deltaTime / 1000;
 
         if (this.DEBUG_MODE) {
-            let camPos = this.camera.position;
-            let camRot = this.camera.rotation;
+            let camPos = this.freeCamera.position;
+            let camRot = this.freeCamera.rotation;
             window.localStorage.setItem("camera-position", JSON.stringify({ x: camPos.x, y: camPos.y, z: camPos.z }));
             window.localStorage.setItem("camera-rotation", JSON.stringify({ x: camRot.x, y: camRot.y, z: camRot.z }));
         }
@@ -216,6 +221,10 @@ class Game {
         if (this.terrain) {
             this.terrain.dispose();
         }
+
+        this.arcCamera.detachControl();
+        this.scene.activeCamera = this.freeCamera;
+        this.freeCamera.attachControl();
             
         this.terrain = new Kulla.Terrain({
             scene: this.scene,
@@ -254,24 +263,23 @@ class Game {
             this.terrain.dispose();
         }
             
+        this.freeCamera.detachControl();
+        this.scene.activeCamera = this.arcCamera;
+        this.arcCamera.attachControl();
+
         this.terrain = new Kulla.Terrain({
             scene: this.scene,
             generatorProps: {
-                type: Kulla.GeneratorType.Map
+                type: Kulla.GeneratorType.Flat,
+                altitude: 10,
+                blockType: Kulla.BlockType.Grass
             },
-            /*
-            generatorProps: {
-                type: Kulla.GeneratorType.PNG,
-                url: "./datas/textures/test_terrain.png",
-                squareSize: 2
-            },
-            */
             maxDisplayedLevel: 0,
             blockSizeIJ_m: 1,
             blockSizeK_m: 1,
             chunckLengthIJ: 24,
             chunckLengthK: 256,
-            chunckCountIJ: 3,
+            chunckCountIJ: 2,
             useAnalytics: true
         });
 
@@ -280,13 +288,36 @@ class Game {
         mat.freeze();
 
         this.terrain.initialize();
+        
+        let prop = new KullaGrid.RawCoumpoundProp();
+        prop.shapes = [new KullaGrid.RawShapeBox(3, 5, 3, - 1, - 1, 0), new KullaGrid.RawShapeBox(1, 5, 1, 0, 0, 5)];
+        prop.blocks = [Kulla.BlockType.Basalt, Kulla.BlockType.Basalt];
+        if (this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+            this.terrain.chunckDataGenerator.prop = prop;
+        }
+
         this.configuration.getElement("renderDist").forceInit();
         this.configuration.getElement("showRenderDistDebug").forceInit();
 
         this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
 
-        this.camera.position.x = 0;
-        this.camera.position.z = 0;
+        window.addEventListener("keydown", (event: KeyboardEvent) => {
+            if (event.code === "KeyQ") {
+                prop.shapes.push(new KullaGrid.RawShapeBox(3, 3, 3, - 1, - 1, 10));
+                prop.blocks.push(Kulla.BlockType.Regolith);
+
+                let chuncks = [
+                    this.terrain.getChunck(0, 0, 0),
+                    this.terrain.getChunck(0, 1, 0),
+                    this.terrain.getChunck(0, 1, 1),
+                    this.terrain.getChunck(0, 0, 1)
+                ]
+                chuncks.forEach(chunck => {
+                    chunck.reset();
+                    chunck.redrawMesh(true);
+                }) 
+            }
+        })
     }
 }
 

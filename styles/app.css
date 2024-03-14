@@ -170,3 +170,9 @@ option-page .back-button {
     bottom: min(3svh, 3vw);
     right: min(6svh, 6vw);
 }
+
+.elements-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+}

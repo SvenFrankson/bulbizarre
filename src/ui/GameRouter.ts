@@ -2,6 +2,7 @@ class GameRouter extends Nabu.Router {
 
     public homePage: Nabu.PanelPage;
     public optionPage: Nabu.OptionPage;
+    public propEditor: Nabu.DefaultPage;
 
     constructor(public game: Game) {
         super();
@@ -10,6 +11,7 @@ class GameRouter extends Nabu.Router {
     protected onFindAllPages(): void {
         this.homePage = document.getElementById("home-page") as Nabu.PanelPage;
         this.optionPage = document.getElementById("option-page") as Nabu.OptionPage;
+        this.propEditor = document.getElementById("prop-editor-ui") as Nabu.DefaultPage;
     }
 
     protected onUpdate(): void {
@@ -22,7 +24,7 @@ class GameRouter extends Nabu.Router {
             this.game.generateTerrainLarge();
         }
         else if (page.startsWith("#prop-creator")) {
-            this.hideAll();
+            this.show(this.propEditor);
             this.game.generateTerrainSmall();
         }
         else if (page.startsWith("#options")) {
