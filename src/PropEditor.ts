@@ -52,10 +52,20 @@ class PropEditor {
     public propShapeMaterialSelected: BABYLON.Material;
     public propShapeMeshes: PropShapeMesh[] = [];
 
-    public mode: CursorMode = CursorMode.Select;
+    private _cursorMesh: BABYLON.Mesh;
+    private _cursorMode: CursorMode = CursorMode.Select;
+    private setCursorMode(mode: CursorMode): void {
+        this._cursorMode = mode;
+        if (this._cursorMode === CursorMode.Select) {
+            this._cursorMesh.isVisible = false;
+        }
+        else {
+            this._cursorMesh.isVisible = true;
+        }
+    }
 
     private _selectedPropShape: PropShapeMesh;
-    public setSelectedPropShape(s: PropShapeMesh) {
+    private setSelectedPropShape(s: PropShapeMesh) {
         if (this._selectedPropShape != s) {
             if (this._selectedPropShape) {
                 this._selectedPropShape.unselect();
@@ -80,6 +90,8 @@ class PropEditor {
         matSelected.specularColor.copyFromFloats(0, 0, 0);
         matSelected.alpha = 0.2;
         this.propShapeMaterialSelected = matSelected;
+
+        this._cursorMesh = Mummu.CreateBeveledBox("cursor", { size: 1 });
     }
 
     public initialize(): void {
@@ -92,29 +104,29 @@ class PropEditor {
 
         this.boxButton = document.getElementById("prop-editor-box") as HTMLButtonElement;
         this.boxButton.onclick = () => {
-            if (this.mode === CursorMode.Box) {
-                this.mode = CursorMode.Select;
+            if (this._cursorMode === CursorMode.Box) {
+                this.setCursorMode(CursorMode.Select);
             }
             else {
-                this.mode = CursorMode.Box;
+                this.setCursorMode(CursorMode.Box);
             }
         }
         this.sphereButton = document.getElementById("prop-editor-sphere") as HTMLButtonElement;
         this.sphereButton.onclick = () => {
-            if (this.mode === CursorMode.Sphere) {
-                this.mode = CursorMode.Select;
+            if (this._cursorMode === CursorMode.Sphere) {
+                this.setCursorMode(CursorMode.Select);
             }
             else {
-                this.mode = CursorMode.Sphere;
+                this.setCursorMode(CursorMode.Sphere);
             }
         }
         this.dotButton = document.getElementById("prop-editor-dot") as HTMLButtonElement;
         this.dotButton.onclick = () => {
-            if (this.mode === CursorMode.Dot) {
-                this.mode = CursorMode.Select;
+            if (this._cursorMode === CursorMode.Dot) {
+                this.setCursorMode(CursorMode.Select);
             }
             else {
-                this.mode = CursorMode.Dot;
+                this.setCursorMode(CursorMode.Dot);
             }
         }
 
@@ -129,6 +141,7 @@ class PropEditor {
         }
 
         this.game.canvas.addEventListener("keyup", this.onKeyDown);
+        this.game.canvas.addEventListener("pointermove", this.onPointerMove);
         this.game.canvas.addEventListener("pointerup", this.onPointerUp);
     }
 
@@ -154,8 +167,31 @@ class PropEditor {
         }) 
     }
 
+    public onPointerMove = () => {
+        if (this._cursorMode === CursorMode.Select) {
+            
+        }
+        else {
+            let pick = this.game.scene.pick(
+                this.game.scene.pointerX,
+                this.game.scene.pointerY,
+                (mesh) => {
+                    return mesh && mesh.parent instanceof PropShapeMesh;
+                }
+            );
+            if (pick.hit) {
+                let p = pick.pickedPoint.add(pick.getNormal(true).scale(0.5));
+                let i = Math.floor(p.x);
+                let j = Math.floor(p.z);
+                let k = Math.floor(p.y - this.alt);
+
+                this._cursorMesh.position.copyFromFloats(i, k + this.alt, j).addInPlaceFromFloats(0.5, 0.5, 0.5);
+            }
+        }
+    }
+
     public onPointerUp = () => {
-        if (this.mode === CursorMode.Select) {
+        if (this._cursorMode === CursorMode.Select) {
             let pick = this.game.scene.pick(
                 this.game.scene.pointerX,
                 this.game.scene.pointerY,
@@ -185,7 +221,7 @@ class PropEditor {
                 let k = Math.floor(p.y - this.alt);
 
                 let newShape: Kulla.RawShape;
-                if (this.mode === CursorMode.Box) {
+                if (this._cursorMode === CursorMode.Box) {
                     newShape = new Kulla.RawShapeBox(1, 1, 1, i, j, k);
                     if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
                         this.game.terrain.chunckDataGenerator.prop.shapes.push(newShape);
@@ -194,7 +230,7 @@ class PropEditor {
                     let propShapeMesh = new PropShapeMesh(this, newShape);
                     this.propShapeMeshes.push(propShapeMesh);
                     this.redraw();
-                    this.mode = CursorMode.Select;
+                    this.setCursorMode(CursorMode.Select);
                 }
             }
         }
