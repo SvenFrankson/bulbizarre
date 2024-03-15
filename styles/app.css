@@ -173,6 +173,25 @@ option-page .back-button {
 
 .elements-menu {
     position: fixed;
-    top: 0;
-    left: 0;
+    top: 10;
+    left: 10;
+    width: 20%;
+    outline: 1px solid white;
+}
+
+.prop-shape-button {
+    margin: 0.5vh;
+    width: 10vh;
+    height: 3vh;
+    font-size: 2vh;
+    vertical-align: bottom;
+}
+
+.prop-blocktype-button {
+    margin: 0.5vh;
+    width: 3vh;
+    height: 3vh;
+    font-size: 1vh;
+    vertical-align: bottom;
+    border: min(0.2svh, 0.2vw) solid white;
 }

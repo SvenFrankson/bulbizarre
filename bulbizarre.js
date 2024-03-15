@@ -594,6 +594,7 @@ class PropEditor {
     constructor(game) {
         this.game = game;
         this.propShapeMeshes = [];
+        this.currentBlockType = Kulla.BlockType.Grass;
         this._cursorMode = CursorMode.Select;
         this._draggedOffset = BABYLON.Vector3.Zero();
         this._pointerDownX = 0;
@@ -702,7 +703,7 @@ class PropEditor {
                         newShape = new Kulla.RawShapeBox(1, 1, 1, i, j, k);
                         if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
                             this.game.terrain.chunckDataGenerator.prop.shapes.push(newShape);
-                            this.game.terrain.chunckDataGenerator.prop.blocks.push(Kulla.BlockType.Ice);
+                            this.game.terrain.chunckDataGenerator.prop.blocks.push(this.currentBlockType);
                         }
                         let propShapeMesh = new PropShapeMesh(this, newShape);
                         this.propShapeMeshes.push(propShapeMesh);
@@ -828,6 +829,25 @@ class PropEditor {
                 this.setCursorMode(CursorMode.Dot);
             }
         };
+        this.blockTypeButtons = [...document.querySelectorAll(".prop-blocktype-button")];
+        this.blockTypeButtons.forEach((button, index) => {
+            let blocktype = index;
+            let name = Kulla.BlockTypeNames[index];
+            let color = Kulla.BlockTypeColors[index];
+            if (name && color) {
+                button.style.backgroundColor = color.toHexString();
+            }
+            button.onclick = () => {
+                this.currentBlockType = blocktype;
+                if (this._selectedPropShape) {
+                    let shapeIndex = this.propShapeMeshes.indexOf(this._selectedPropShape);
+                    if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+                        this.game.terrain.chunckDataGenerator.prop.blocks[shapeIndex] = this.currentBlockType;
+                    }
+                    this.redraw();
+                }
+            };
+        });
         this.propShapeMeshes = [];
         if (this.game.terrain) {
             if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {

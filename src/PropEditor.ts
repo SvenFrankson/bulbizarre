@@ -62,6 +62,7 @@ class PropEditor {
     public boxButton: HTMLButtonElement;
     public sphereButton: HTMLButtonElement;
     public dotButton: HTMLButtonElement;
+    public blockTypeButtons: HTMLButtonElement[];
 
     public propShapeMaterial: BABYLON.Material;
     public propShapeMaterialSelected: BABYLON.Material;
@@ -76,6 +77,7 @@ class PropEditor {
     public arrows: Arrow[];
 
     public gridMesh: BABYLON.Mesh;
+    public currentBlockType: Kulla.BlockType = Kulla.BlockType.Grass;
     private _cursorMesh: BABYLON.Mesh;
     private _cursorMode: CursorMode = CursorMode.Select;
     private setCursorMode(mode: CursorMode): void {
@@ -187,6 +189,26 @@ class PropEditor {
                 this.setCursorMode(CursorMode.Dot);
             }
         }
+
+        this.blockTypeButtons = [...document.querySelectorAll(".prop-blocktype-button")] as HTMLButtonElement[];
+        this.blockTypeButtons.forEach((button, index) => {
+            let blocktype = index;
+            let name = Kulla.BlockTypeNames[index];
+            let color = Kulla.BlockTypeColors[index];
+            if (name && color) {
+                button.style.backgroundColor = color.toHexString();
+            }
+            button.onclick = () => {
+                this.currentBlockType = blocktype;
+                if (this._selectedPropShape) {
+                    let shapeIndex = this.propShapeMeshes.indexOf(this._selectedPropShape);
+                    if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+                        this.game.terrain.chunckDataGenerator.prop.blocks[shapeIndex] = this.currentBlockType;
+                    }
+                    this.redraw();
+                }
+            }
+        })
 
         this.propShapeMeshes = [];
         if (this.game.terrain) {
@@ -486,7 +508,7 @@ class PropEditor {
                     newShape = new Kulla.RawShapeBox(1, 1, 1, i, j, k);
                     if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
                         this.game.terrain.chunckDataGenerator.prop.shapes.push(newShape);
-                        this.game.terrain.chunckDataGenerator.prop.blocks.push(Kulla.BlockType.Ice);
+                        this.game.terrain.chunckDataGenerator.prop.blocks.push(this.currentBlockType);
                     }
                     let propShapeMesh = new PropShapeMesh(this, newShape);
                     this.propShapeMeshes.push(propShapeMesh);
