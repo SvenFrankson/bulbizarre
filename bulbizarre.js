@@ -731,6 +731,9 @@ class PropEditor {
             else if (ev.code === "KeyE") {
                 this.onMove(0, 1, 0);
             }
+            else if (ev.code === "KeyX") {
+                this.onDelete();
+            }
         };
         let mat = new BABYLON.StandardMaterial("prop-shape-material");
         mat.specularColor.copyFromFloats(0, 0, 0);
@@ -984,6 +987,20 @@ class PropEditor {
             this.redraw();
             this.updateArrows();
         }
+    }
+    onDelete() {
+        if (this._selectedPropShape && this.propShapeMeshes.length > 0) {
+            let mesh = this._selectedPropShape;
+            let index = this.propShapeMeshes.indexOf(this._selectedPropShape);
+            this.setSelectedPropShape(undefined);
+            mesh.dispose();
+            this.propShapeMeshes.splice(index, 1);
+            if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+                this.game.terrain.chunckDataGenerator.prop.shapes.splice(index, 1);
+                this.game.terrain.chunckDataGenerator.prop.blocks.splice(index, 1);
+            }
+        }
+        this.redraw();
     }
 }
 class TerrainMaterial extends BABYLON.ShaderMaterial {
