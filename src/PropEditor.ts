@@ -358,7 +358,11 @@ class PropEditor {
         }) 
     }
 
+    private _pointerDownX: number = 0;
+    private _pointerDownY: number = 0;
     public onPointerDown = () => {
+        this._pointerDownX = this.game.scene.pointerX;
+        this._pointerDownY = this.game.scene.pointerY;
         if (this._cursorMode === CursorMode.Select) {
             let pick = this.game.scene.pick(
                 this.game.scene.pointerX,
@@ -454,8 +458,11 @@ class PropEditor {
             this.setDraggedPropShape(undefined);
             return;
         }
+        let dX = this._pointerDownX - this.game.scene.pointerX;
+        let dY = this._pointerDownY - this.game.scene.pointerY;
+        let d = Math.sqrt(dX * dX + dY * dY);
         this.setDraggedPropShape(undefined);
-        if (this._cursorMode === CursorMode.Select) {
+        if (this._cursorMode === CursorMode.Select && d < 5) {
             let pick = this.game.scene.pick(
                 this.game.scene.pointerX,
                 this.game.scene.pointerY,

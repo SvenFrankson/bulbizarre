@@ -596,7 +596,11 @@ class PropEditor {
         this.propShapeMeshes = [];
         this._cursorMode = CursorMode.Select;
         this._draggedOffset = BABYLON.Vector3.Zero();
+        this._pointerDownX = 0;
+        this._pointerDownY = 0;
         this.onPointerDown = () => {
+            this._pointerDownX = this.game.scene.pointerX;
+            this._pointerDownY = this.game.scene.pointerY;
             if (this._cursorMode === CursorMode.Select) {
                 let pick = this.game.scene.pick(this.game.scene.pointerX, this.game.scene.pointerY, (mesh) => {
                     if (mesh instanceof Arrow) {
@@ -666,8 +670,11 @@ class PropEditor {
                 this.setDraggedPropShape(undefined);
                 return;
             }
+            let dX = this._pointerDownX - this.game.scene.pointerX;
+            let dY = this._pointerDownY - this.game.scene.pointerY;
+            let d = Math.sqrt(dX * dX + dY * dY);
             this.setDraggedPropShape(undefined);
-            if (this._cursorMode === CursorMode.Select) {
+            if (this._cursorMode === CursorMode.Select && d < 5) {
                 let pick = this.game.scene.pick(this.game.scene.pointerX, this.game.scene.pointerY, (mesh) => {
                     if (mesh instanceof Arrow) {
                         return true;
