@@ -313,6 +313,15 @@ class PropEditor {
         this.game.canvas.addEventListener("pointerdown", this.onPointerDown);
         this.game.canvas.addEventListener("pointermove", this.onPointerMove);
         this.game.canvas.addEventListener("pointerup", this.onPointerUp);
+
+        if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+            let dataString = window.localStorage.getItem("current-prop");
+            if (dataString) {
+                let data = JSON.parse(dataString);
+                this.game.terrain.chunckDataGenerator.prop.deserialize(data);
+                this.redraw();
+            }
+        }
     }
 
     public dispose(): void {
@@ -364,7 +373,12 @@ class PropEditor {
         chuncks.forEach(chunck => {
             chunck.reset();
             chunck.redrawMesh(true);
-        }) 
+        })
+
+        if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+            let data = this.game.terrain.chunckDataGenerator.prop.serialize();
+            window.localStorage.setItem("current-prop", JSON.stringify(data));
+        }
     }
 
     private _pointerDownX: number = 0;
