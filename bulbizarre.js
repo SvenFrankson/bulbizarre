@@ -842,7 +842,7 @@ class PropEditor {
             let dW = -Math.round(delta.x);
             if (dW != 0 && this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
                 this._selectedPropShape.shape.w += dW;
-                this.wLeftArrow.initPos.x += Math.sign(dW);
+                this.wLeftArrow.initPos.x -= Math.sign(dW);
                 this.onMove(-dW, 0, 0);
                 this._selectedPropShape.updateShape();
                 this._selectedPropShape.updatePosition();
@@ -866,7 +866,7 @@ class PropEditor {
             let dH = -Math.round(delta.y);
             if (dH != 0 && this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
                 this._selectedPropShape.shape.h += dH;
-                this.hBottomArrow.initPos.y += Math.sign(dH);
+                this.hBottomArrow.initPos.y -= Math.sign(dH);
                 this.onMove(0, 0, -dH);
                 this._selectedPropShape.updateShape();
                 this._selectedPropShape.updatePosition();
@@ -890,7 +890,7 @@ class PropEditor {
             let dD = -Math.round(delta.z);
             if (dD != 0 && this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
                 this._selectedPropShape.shape.d += dD;
-                this.dBackwardArrow.initPos.z += Math.sign(dD);
+                this.dBackwardArrow.initPos.z -= Math.sign(dD);
                 this.onMove(0, -dD, 0);
                 this._selectedPropShape.updateShape();
                 this._selectedPropShape.updatePosition();
