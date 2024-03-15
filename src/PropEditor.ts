@@ -199,13 +199,11 @@ class PropEditor {
         }
 
         this.wLeftArrow = new Arrow(this, "wLeftArrow", this.game, 0.5, BABYLON.Vector3.Left());
-        this.wLeftArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
-            this.wLeftArrow.position.x = this.wLeftArrow.initPos.x + Math.round(delta.x);
-        }
-        this.wLeftArrow.onEndMove = (delta: BABYLON.Vector3) => {
+        this.wLeftArrow.onMove = (delta: BABYLON.Vector3) => {
             let dW = - Math.round(delta.x);
-            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+            if (dW != 0 && this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
                 this._selectedPropShape.shape.w += dW;
+                this.wLeftArrow.initPos.x += Math.sign(dW);
                 this.onMove(- dW, 0, 0);
                 this._selectedPropShape.updateShape();
                 this._selectedPropShape.updatePosition();
@@ -214,13 +212,11 @@ class PropEditor {
         }
 
         this.wRightArrow = new Arrow(this, "wRightArrow", this.game, 0.4, BABYLON.Vector3.Right());
-        this.wRightArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
-            this.wRightArrow.position.x = this.wRightArrow.initPos.x + Math.round(delta.x);
-        }
-        this.wRightArrow.onEndMove = (delta: BABYLON.Vector3) => {
+        this.wRightArrow.onMove = (delta: BABYLON.Vector3) => {
             let dW = Math.round(delta.x);
-            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+            if (dW != 0 && this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
                 this._selectedPropShape.shape.w += dW;
+                this.wRightArrow.initPos.x += Math.sign(dW);
                 this.onMove(0, 0, 0);
                 this._selectedPropShape.updateShape();
                 this._selectedPropShape.updatePosition();
@@ -229,14 +225,12 @@ class PropEditor {
         }
 
         this.hBottomArrow = new Arrow(this, "hBottomArrow", this.game, 0.4, BABYLON.Vector3.Down());
-        this.hBottomArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
-            this.hBottomArrow.position.y = this.hBottomArrow.initPos.y + Math.round(delta.y);
-        }
-        this.hBottomArrow.onEndMove = (delta: BABYLON.Vector3) => {
-            let dY = - Math.round(delta.y);
-            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
-                this._selectedPropShape.shape.h += dY;
-                this.onMove(0, 0, - dY);
+        this.hBottomArrow.onMove = (delta: BABYLON.Vector3) => {
+            let dH = - Math.round(delta.y);
+            if (dH != 0 && this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+                this._selectedPropShape.shape.h += dH;
+                this.hBottomArrow.initPos.y += Math.sign(dH);
+                this.onMove(0, 0, - dH);
                 this._selectedPropShape.updateShape();
                 this._selectedPropShape.updatePosition();
                 this.updateArrows();
@@ -245,27 +239,22 @@ class PropEditor {
 
         this.hTopArrow = new Arrow(this, "hTopArrow", this.game, 0.4, BABYLON.Vector3.Up());
         this.hTopArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
-            this.hTopArrow.position.y = this.hTopArrow.initPos.y + Math.round(delta.y);
-        }
-        this.hTopArrow.onEndMove = (delta: BABYLON.Vector3) => {
-            let dY = Math.round(delta.y);
-            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
-                this._selectedPropShape.shape.h += dY;
+            let dH = Math.round(delta.y);
+            if (dH != 0 && this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+                this._selectedPropShape.shape.h += dH;
+                this.hTopArrow.initPos.y += Math.sign(dH);
                 this.onMove(0, 0, 0);
                 this._selectedPropShape.updateShape();
                 this._selectedPropShape.updatePosition();
                 this.updateArrows();
             }
         }
-
         this.dBackwardArrow = new Arrow(this, "dBackwardArrow", this.game, 0.4, BABYLON.Vector3.Backward());
-        this.dBackwardArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
-            this.dBackwardArrow.position.z = this.dBackwardArrow.initPos.z + Math.round(delta.z);
-        }
-        this.dBackwardArrow.onEndMove = (delta: BABYLON.Vector3) => {
+        this.dBackwardArrow.onMove = (delta: BABYLON.Vector3) => {
             let dD = - Math.round(delta.z);
-            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+            if (dD != 0 && this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
                 this._selectedPropShape.shape.d += dD;
+                this.dBackwardArrow.initPos.z += Math.sign(dD);
                 this.onMove(0, - dD, 0);
                 this._selectedPropShape.updateShape();
                 this._selectedPropShape.updatePosition();
@@ -274,13 +263,11 @@ class PropEditor {
         }
 
         this.dForwardArrow = new Arrow(this, "dForwardArrow", this.game, 0.4, BABYLON.Vector3.Forward());
-        this.dForwardArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
-            this.dForwardArrow.position.z = this.dForwardArrow.initPos.z + Math.round(delta.z);
-        }
-        this.dForwardArrow.onEndMove = (delta: BABYLON.Vector3) => {
+        this.dForwardArrow.onMove = (delta: BABYLON.Vector3) => {
             let dD = Math.round(delta.z);
-            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+            if (dD != 0 && this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
                 this._selectedPropShape.shape.d += dD;
+                this.dForwardArrow.initPos.z += Math.sign(dD);
                 this.onMove(0, 0, 0);
                 this._selectedPropShape.updateShape();
                 this._selectedPropShape.updatePosition();
