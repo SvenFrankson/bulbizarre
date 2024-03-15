@@ -32,6 +32,21 @@ class PropShapeMesh extends BABYLON.Mesh {
         this.position.x = this.shape.pi;
         this.position.z = this.shape.pj;
         this.position.y = this.shape.pk + this.propEditor.alt;
+        this.computeWorldMatrix(true);
+        this.childMesh.computeWorldMatrix(true);
+    }
+
+    public updateShape(): void {
+        if (this.shape instanceof Kulla.RawShapeBox) {
+            let data = Mummu.CreateBeveledBoxVertexData({
+                width: this.shape.w + 0.1,
+                height: this.shape.h + 0.1,
+                depth: this.shape.d + 0.1,
+                flat: true
+            });
+            data.applyToMesh(this.childMesh);
+            this.childMesh.position.copyFromFloats(this.shape.w * 0.5, this.shape.h * 0.5, this.shape.d * 0.5);
+        }
     }
 }
 
@@ -52,7 +67,15 @@ class PropEditor {
     public propShapeMaterialSelected: BABYLON.Material;
     public propShapeMeshes: PropShapeMesh[] = [];
 
-    private _gridMesh: BABYLON.Mesh;
+    public wLeftArrow: Arrow;
+    public wRightArrow: Arrow;
+    public hBottomArrow: Arrow;
+    public hTopArrow: Arrow;
+    public dBackwardArrow: Arrow;
+    public dForwardArrow: Arrow;
+    public arrows: Arrow[];
+
+    public gridMesh: BABYLON.Mesh;
     private _cursorMesh: BABYLON.Mesh;
     private _cursorMode: CursorMode = CursorMode.Select;
     private setCursorMode(mode: CursorMode): void {
@@ -75,26 +98,28 @@ class PropEditor {
             if (this._selectedPropShape) {
                 this._selectedPropShape.select();
             }
+            this.updateArrows();
         }
     }
 
     private _draggedOffset: BABYLON.Vector3 = BABYLON.Vector3.Zero();
-    private _draggedPropShape: PropShapeMesh;
-    private setDraggedPropShape(s: PropShapeMesh) {
+    private _draggedPropShape: PropShapeMesh | Arrow;
+    private setDraggedPropShape(s: PropShapeMesh | Arrow) {
         if (this._draggedPropShape != s) {
             this._draggedPropShape = s;
-            if (this._draggedPropShape) {
-                this._gridMesh.isVisible = true;
+            if (this._draggedPropShape instanceof PropShapeMesh) {
                 let axis = this.game.arcCamera.getDirection(BABYLON.Axis.Z);
                 Mummu.GetClosestAxisToRef(axis, axis);
                 axis.scaleInPlace(-1);
-                Mummu.QuaternionFromYZAxisToRef(axis, BABYLON.Vector3.One(), this._gridMesh.rotationQuaternion);
-                this._gridMesh.position.copyFrom(this._draggedPropShape.childMesh.absolutePosition);
-                this._gridMesh.computeWorldMatrix(true);
+                Mummu.QuaternionFromYZAxisToRef(axis, BABYLON.Vector3.One(), this.gridMesh.rotationQuaternion);
+                this.gridMesh.position.copyFrom(this._draggedPropShape.childMesh.absolutePosition);
+                this.gridMesh.computeWorldMatrix(true);
                 this.game.arcCamera.detachControl();
             }
+            else if (this._draggedPropShape instanceof Arrow) {
+                this._draggedPropShape.onPointerDown();
+            }
             else {
-                this._gridMesh.isVisible = false;
                 this.game.arcCamera.attachControl();
             }
         }
@@ -105,7 +130,7 @@ class PropEditor {
     constructor(public game: Game) {
         let mat = new BABYLON.StandardMaterial("prop-shape-material");
         mat.specularColor.copyFromFloats(0, 0, 0);
-        mat.alpha = 0.2;
+        mat.alpha = 0.1;
         this.propShapeMaterial = mat;
 
         let matSelected = new BABYLON.StandardMaterial("prop-shape-material");
@@ -114,11 +139,17 @@ class PropEditor {
         matSelected.alpha = 0.2;
         this.propShapeMaterialSelected = matSelected;
 
-        this._cursorMesh = Mummu.CreateBeveledBox("cursor", { size: 1 });
+        let matCursor = new BABYLON.StandardMaterial("prop-shape-material");
+        matCursor.diffuseColor.copyFromFloats(0, 1, 1);
+        matCursor.specularColor.copyFromFloats(0, 0, 0);
+        matCursor.alpha = 0.2;
 
-        this._gridMesh = BABYLON.MeshBuilder.CreateGround("grid", { width: 30, height: 30 });
-        this._gridMesh.rotationQuaternion = BABYLON.Quaternion.Identity();
-        this._gridMesh.material = mat;
+        this._cursorMesh = Mummu.CreateBeveledBox("cursor", { size: 1 });
+        this._cursorMesh.material = matCursor;
+
+        this.gridMesh = BABYLON.MeshBuilder.CreateGround("grid", { width: 100, height: 100 });
+        this.gridMesh.rotationQuaternion = BABYLON.Quaternion.Identity();
+        this.gridMesh.isVisible = false;
     }
 
     public initialize(): void {
@@ -167,6 +198,108 @@ class PropEditor {
             }
         }
 
+        this.wLeftArrow = new Arrow(this, "wLeftArrow", this.game, 0.5, BABYLON.Vector3.Left());
+        this.wLeftArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
+            this.wLeftArrow.position.x = this.wLeftArrow.initPos.x + Math.round(delta.x);
+        }
+        this.wLeftArrow.onEndMove = (delta: BABYLON.Vector3) => {
+            let dW = - Math.round(delta.x);
+            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+                this._selectedPropShape.shape.w += dW;
+                this.onMove(- dW, 0, 0);
+                this._selectedPropShape.updateShape();
+                this._selectedPropShape.updatePosition();
+                this.updateArrows();
+            }
+        }
+
+        this.wRightArrow = new Arrow(this, "wRightArrow", this.game, 0.4, BABYLON.Vector3.Right());
+        this.wRightArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
+            this.wRightArrow.position.x = this.wRightArrow.initPos.x + Math.round(delta.x);
+        }
+        this.wRightArrow.onEndMove = (delta: BABYLON.Vector3) => {
+            let dW = Math.round(delta.x);
+            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+                this._selectedPropShape.shape.w += dW;
+                this.onMove(0, 0, 0);
+                this._selectedPropShape.updateShape();
+                this._selectedPropShape.updatePosition();
+                this.updateArrows();
+            }
+        }
+
+        this.hBottomArrow = new Arrow(this, "hBottomArrow", this.game, 0.4, BABYLON.Vector3.Down());
+        this.hBottomArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
+            this.hBottomArrow.position.y = this.hBottomArrow.initPos.y + Math.round(delta.y);
+        }
+        this.hBottomArrow.onEndMove = (delta: BABYLON.Vector3) => {
+            let dY = - Math.round(delta.y);
+            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+                this._selectedPropShape.shape.h += dY;
+                this.onMove(0, 0, - dY);
+                this._selectedPropShape.updateShape();
+                this._selectedPropShape.updatePosition();
+                this.updateArrows();
+            }
+        }
+
+        this.hTopArrow = new Arrow(this, "hTopArrow", this.game, 0.4, BABYLON.Vector3.Up());
+        this.hTopArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
+            this.hTopArrow.position.y = this.hTopArrow.initPos.y + Math.round(delta.y);
+        }
+        this.hTopArrow.onEndMove = (delta: BABYLON.Vector3) => {
+            let dY = Math.round(delta.y);
+            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+                this._selectedPropShape.shape.h += dY;
+                this.onMove(0, 0, 0);
+                this._selectedPropShape.updateShape();
+                this._selectedPropShape.updatePosition();
+                this.updateArrows();
+            }
+        }
+
+        this.dBackwardArrow = new Arrow(this, "dBackwardArrow", this.game, 0.4, BABYLON.Vector3.Backward());
+        this.dBackwardArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
+            this.dBackwardArrow.position.z = this.dBackwardArrow.initPos.z + Math.round(delta.z);
+        }
+        this.dBackwardArrow.onEndMove = (delta: BABYLON.Vector3) => {
+            let dD = - Math.round(delta.z);
+            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+                this._selectedPropShape.shape.d += dD;
+                this.onMove(0, - dD, 0);
+                this._selectedPropShape.updateShape();
+                this._selectedPropShape.updatePosition();
+                this.updateArrows();
+            }
+        }
+
+        this.dForwardArrow = new Arrow(this, "dForwardArrow", this.game, 0.4, BABYLON.Vector3.Forward());
+        this.dForwardArrow.onMove = (delta: BABYLON.Vector3, pos: BABYLON.Vector3) => {
+            this.dForwardArrow.position.z = this.dForwardArrow.initPos.z + Math.round(delta.z);
+        }
+        this.dForwardArrow.onEndMove = (delta: BABYLON.Vector3) => {
+            let dD = Math.round(delta.z);
+            if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+                this._selectedPropShape.shape.d += dD;
+                this.onMove(0, 0, 0);
+                this._selectedPropShape.updateShape();
+                this._selectedPropShape.updatePosition();
+                this.updateArrows();
+            }
+        }
+
+        this.arrows = [
+            this.wLeftArrow,
+            this.wRightArrow,
+            this.hBottomArrow,
+            this.hTopArrow,
+            this.dBackwardArrow,
+            this.dForwardArrow
+        ];
+        this.arrows.forEach(arrow => {
+            arrow.instantiate();
+        })
+
         this.game.canvas.addEventListener("keyup", this.onKeyDown);
         this.game.canvas.addEventListener("pointerdown", this.onPointerDown);
         this.game.canvas.addEventListener("pointermove", this.onPointerMove);
@@ -180,6 +313,36 @@ class PropEditor {
 
         this.game.canvas.removeEventListener("keydown", this.onKeyDown);
         this.game.canvas.removeEventListener("pointerup", this.onPointerUp);
+    }
+
+    public updateArrows(): void {
+        this.arrows.forEach(arrow => {
+            arrow.isVisible = false;
+        })
+
+        if (this._selectedPropShape && this._selectedPropShape.shape instanceof Kulla.RawShapeBox) {
+            this.arrows.forEach(arrow => {
+                arrow.isVisible = true;
+            });
+
+            this.wRightArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
+            this.wRightArrow.position.x += 0.5 + this._selectedPropShape.shape.w * 0.5;
+            
+            this.wLeftArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
+            this.wLeftArrow.position.x -= 0.5 + this._selectedPropShape.shape.w * 0.5;
+
+            this.hTopArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
+            this.hTopArrow.position.y += 0.5 + this._selectedPropShape.shape.h * 0.5;
+            
+            this.hBottomArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
+            this.hBottomArrow.position.y -= 0.5 + this._selectedPropShape.shape.h * 0.5;
+
+            this.dForwardArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
+            this.dForwardArrow.position.z += 0.5 + this._selectedPropShape.shape.d * 0.5;
+            
+            this.dBackwardArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
+            this.dBackwardArrow.position.z -= 0.5 + this._selectedPropShape.shape.d * 0.5;
+        }
     }
 
     public redraw(): void {
@@ -201,6 +364,9 @@ class PropEditor {
                 this.game.scene.pointerX,
                 this.game.scene.pointerY,
                 (mesh) => {
+                    if (mesh instanceof Arrow) {
+                        return true;
+                    }
                     return mesh && mesh.parent instanceof PropShapeMesh;
                 }
             );
@@ -208,15 +374,15 @@ class PropEditor {
             if (pick.hit && pick.pickedMesh.parent === this._selectedPropShape) {
                 this.setDraggedPropShape(this._selectedPropShape);
                 let p = new BABYLON.Vector3(
-                    this._draggedPropShape.shape.pi,
-                    this._draggedPropShape.shape.pk + this.alt,
-                    this._draggedPropShape.shape.pj
+                    this._selectedPropShape.shape.pi,
+                    this._selectedPropShape.shape.pk + this.alt,
+                    this._selectedPropShape.shape.pj
                 ).addInPlaceFromFloats(0.5, 0.5, 0.5);
                 let gridPick = this.game.scene.pick(
                     this.game.scene.pointerX,
                     this.game.scene.pointerY,
                     (mesh) => {
-                        return mesh === this._gridMesh;
+                        return mesh === this.gridMesh;
                     }
                 );
                 if (gridPick.hit) {
@@ -226,6 +392,10 @@ class PropEditor {
                     this._draggedOffset.copyFromFloats(0, 0, 0);
                 }
             }
+            else if (pick.hit && pick.pickedMesh instanceof Arrow) {
+                this.setDraggedPropShape(pick.pickedMesh);
+                this._draggedOffset.copyFromFloats(0, 0, 0);
+            }
             else {
                 this.setDraggedPropShape(undefined);
             }
@@ -234,12 +404,12 @@ class PropEditor {
 
     public onPointerMove = () => {
         if (this._cursorMode === CursorMode.Select) {
-            if (this._draggedPropShape) {
+            if (this._draggedPropShape instanceof PropShapeMesh) {
                 let pick = this.game.scene.pick(
                     this.game.scene.pointerX,
                     this.game.scene.pointerY,
                     (mesh) => {
-                        return mesh === this._gridMesh;
+                        return mesh === this.gridMesh;
                     }
                 );
                 if (pick.hit) {
@@ -254,6 +424,9 @@ class PropEditor {
                     
                     this.onMove(di, dj, dk);
                 }
+            }
+            else if (this._draggedPropShape instanceof Arrow) {
+                this._draggedPropShape.onPointerMove();
             }
         }
         else {
@@ -276,12 +449,20 @@ class PropEditor {
     }
 
     public onPointerUp = () => {
+        if (this._draggedPropShape instanceof Arrow) {
+            this._draggedPropShape.onPointerUp();
+            this.setDraggedPropShape(undefined);
+            return;
+        }
         this.setDraggedPropShape(undefined);
         if (this._cursorMode === CursorMode.Select) {
             let pick = this.game.scene.pick(
                 this.game.scene.pointerX,
                 this.game.scene.pointerY,
                 (mesh) => {
+                    if (mesh instanceof Arrow) {
+                        return true;
+                    }
                     return mesh && mesh.parent instanceof PropShapeMesh;
                 }
             );
@@ -350,6 +531,7 @@ class PropEditor {
             this._selectedPropShape.shape.pk += dk;
             this._selectedPropShape.updatePosition();
             this.redraw();
+            this.updateArrows();
         }
     }
 }
