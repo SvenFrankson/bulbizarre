@@ -25,6 +25,7 @@ class Arrow extends BABYLON.Mesh {
 
     public async instantiate(): Promise<void> {
         Mummu.CreateBeveledBoxVertexData({ size: 1 }).applyToMesh(this);
+        this.layerMask = 0x10000000;
 
         //this.game.scene.onBeforeRenderObservable.add(this._update);
     }
@@ -53,6 +54,10 @@ class Arrow extends BABYLON.Mesh {
         let axis = this.game.arcCamera.getDirection(BABYLON.Axis.Z);
         Mummu.GetClosestAxisToRef(axis, axis);
         axis.scaleInPlace(-1);
+        if (Math.abs(BABYLON.Vector3.Dot(this.dir, axis)) > 0.9) {
+            axis = this.game.arcCamera.getDirection(BABYLON.Axis.Y);
+        }
+        console.log(this.dir.toString() + " " + axis.toString());
         Mummu.QuaternionFromZYAxisToRef(this.dir, axis, this.propEditor.gridMesh.rotationQuaternion);
         this.propEditor.gridMesh.position.copyFrom(this.absolutePosition);
         this.propEditor.gridMesh.computeWorldMatrix(true);

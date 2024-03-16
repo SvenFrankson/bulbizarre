@@ -29,6 +29,7 @@ class Game {
     //public camera: BABYLON.FreeCamera;
     public freeCamera: BABYLON.FreeCamera;
     public arcCamera: BABYLON.ArcRotateCamera;
+    public uiCamera: BABYLON.FreeCamera;
     
     public light: BABYLON.HemisphericLight;
     public vertexDataLoader: Mummu.VertexDataLoader;
@@ -96,7 +97,11 @@ class Game {
         this.arcCamera.speed = 0.2;
         this.arcCamera.minZ = 0.1;
 
-        this.scene.activeCamera = this.freeCamera;
+        this.uiCamera = new BABYLON.FreeCamera("background-camera", BABYLON.Vector3.Zero());
+        this.uiCamera.parent = this.freeCamera;
+        this.uiCamera.layerMask = 0x10000000;
+
+        this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-position")) {
@@ -214,8 +219,9 @@ class Game {
             this.terrain.dispose();
         }
 
+        this.uiCamera.parent = this.freeCamera;
         this.arcCamera.detachControl();
-        this.scene.activeCamera = this.freeCamera;
+        this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         this.freeCamera.attachControl();
             
         this.terrain = new Kulla.Terrain({
@@ -255,8 +261,9 @@ class Game {
             this.terrain.dispose();
         }
             
+        this.uiCamera.parent = this.arcCamera;
         this.freeCamera.detachControl();
-        this.scene.activeCamera = this.arcCamera;
+        this.scene.activeCameras = [this.arcCamera, this.uiCamera];
         this.arcCamera.attachControl();
 
         this.terrain = new Kulla.Terrain({
