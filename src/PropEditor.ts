@@ -719,7 +719,7 @@ class PropEditor {
     }
 
     public onDelete(): void {
-        if (this._selectedPropShape && this.propShapeMeshes.length > 0) {
+        if (this._selectedPropShape && this.propShapeMeshes.length > 1) {
             let mesh = this._selectedPropShape;
             let index = this.propShapeMeshes.indexOf(this._selectedPropShape);
             this.setSelectedPropShape(undefined);
