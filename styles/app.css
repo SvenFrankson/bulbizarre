@@ -126,7 +126,7 @@ option-page .option-button {
     background-position: center;
 }
 
-option-page .boolean-checkbox[value="1"] {
+nabu-checkbox[value="1"] {
     background-image: url("../datas/icons/checked.svg");
 }
 
@@ -194,4 +194,30 @@ option-page .back-button {
     font-size: 1vh;
     vertical-align: bottom;
     border: min(0.2svh, 0.2vw) solid white;
+}
+
+.elements-menu {
+    font-family: Arial, Helvetica, sans-serif;
+    color: white;
+}
+
+.elements-menu .label {
+    display: inline-block;
+    font-size: 2.5vh;
+    width: 20vh;    
+}
+
+nabu-checkbox {
+    vertical-align: top;
+    display: inline-block;
+    padding: 0;
+    width: min(3svh, 3vw);
+    height: min(3svh, 3vw);
+    border: min(0.3svh, 0.3vw) solid white;
+    border-radius: min(1svh, 1vw);
+    color: white;
+    text-align: center;
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center;
 }

@@ -566,6 +566,7 @@ class PropShapeMesh extends BABYLON.Mesh {
             this.childMesh.parent = this;
         }
         this.updatePosition();
+        this.updateVisibility();
     }
     select() {
         this.childMesh.material = this.propEditor.propShapeMaterialSelected;
@@ -592,6 +593,9 @@ class PropShapeMesh extends BABYLON.Mesh {
             this.childMesh.position.copyFromFloats(this.shape.w * 0.5, this.shape.h * 0.5, this.shape.d * 0.5);
         }
     }
+    updateVisibility() {
+        this.childMesh.isVisible = this.propEditor.showSelectors;
+    }
 }
 var CursorMode;
 (function (CursorMode) {
@@ -603,6 +607,7 @@ var CursorMode;
 class PropEditor {
     constructor(game) {
         this.game = game;
+        this.showSelectors = true;
         this.propShapeMeshes = [];
         this.currentBlockType = Kulla.BlockType.Grass;
         this._cursorMode = CursorMode.Select;
@@ -847,6 +852,14 @@ class PropEditor {
             else {
                 this.setCursorMode(CursorMode.Dot);
             }
+        };
+        let toggleShowSelector = document.getElementById("show-selector-toggle");
+        toggleShowSelector.setValue(true);
+        toggleShowSelector.onChange = () => {
+            this.showSelectors = toggleShowSelector.valueBool;
+            this.propShapeMeshes.forEach(propShapeMesh => {
+                propShapeMesh.updateVisibility();
+            });
         };
         this.blockTypeButtons = [...document.querySelectorAll(".prop-blocktype-button")];
         this.blockTypeButtons.forEach((button, index) => {

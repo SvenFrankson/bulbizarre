@@ -18,6 +18,7 @@ class PropShapeMesh extends BABYLON.Mesh {
         }
 
         this.updatePosition();
+        this.updateVisibility();
     }
 
     public select(): void {
@@ -48,6 +49,10 @@ class PropShapeMesh extends BABYLON.Mesh {
             this.childMesh.position.copyFromFloats(this.shape.w * 0.5, this.shape.h * 0.5, this.shape.d * 0.5);
         }
     }
+
+    public updateVisibility(): void {
+        this.childMesh.isVisible = this.propEditor.showSelectors;
+    }
 }
 
 enum CursorMode {
@@ -64,6 +69,7 @@ class PropEditor {
     public dotButton: HTMLButtonElement;
     public blockTypeButtons: HTMLButtonElement[];
 
+    public showSelectors: boolean = true;
     public propShapeMaterial: BABYLON.Material;
     public propShapeMaterialSelected: BABYLON.Material;
     public propShapeMeshes: PropShapeMesh[] = [];
@@ -194,6 +200,15 @@ class PropEditor {
             else {
                 this.setCursorMode(CursorMode.Dot);
             }
+        }
+
+        let toggleShowSelector = document.getElementById("show-selector-toggle") as Nabu.NabuCheckBox;
+        toggleShowSelector.setValue(true);
+        toggleShowSelector.onChange = () => {
+            this.showSelectors = toggleShowSelector.valueBool;
+            this.propShapeMeshes.forEach(propShapeMesh => {
+                propShapeMesh.updateVisibility();
+            })
         }
 
         this.blockTypeButtons = [...document.querySelectorAll(".prop-blocktype-button")] as HTMLButtonElement[];
