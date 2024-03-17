@@ -4,24 +4,23 @@ class PropShapeMesh extends BABYLON.Mesh {
 
     constructor(public propEditor: PropEditor, public shape: Kulla.RawShape, color?: BABYLON.Color4) {
         super("prop-shape-mesh");
-        if (shape instanceof Kulla.RawShapeBox) {
+        if (this.shape instanceof Kulla.RawShapeBox) {
             this.childMesh = Mummu.CreateBeveledBox("box", {
-                width: shape.w + 0.1,
-                height: shape.h + 0.1,
-                depth: shape.d + 0.1,
+                width: this.shape.w + 0.1,
+                height: this.shape.h + 0.1,
+                depth: this.shape.d + 0.1,
                 flat: true,
                 color: color
             });
-            this.childMesh.position.copyFromFloats(shape.w * 0.5, shape.h * 0.5, shape.d * 0.5);
+            this.childMesh.position.copyFromFloats(this.shape.w * 0.5, this.shape.h * 0.5, this.shape.d * 0.5);
             this.childMesh.material = this.propEditor.propShapeMaterial;
             this.childMesh.parent = this;
         }
-        else if (shape instanceof Kulla.RawShapeSphere) {
-            console.log("hey ! " + (shape.r * 0.5));
+        else if (this.shape instanceof Kulla.RawShapeSphere) {
             this.childMesh = Mummu.CreateBeveledBox("box", {
-                width: shape.r * 2 + 0.1,
-                height: shape.r * 2 + 0.1,
-                depth: shape.r * 2 + 0.1,
+                width: this.shape.rX * 2 + 1 + 0.1,
+                height: this.shape.rY * 2 + 1 + 0.1,
+                depth: this.shape.rZ * 2 + 1 + 0.1,
                 flat: true,
                 color: color
             });
@@ -63,9 +62,9 @@ class PropShapeMesh extends BABYLON.Mesh {
         }
         else if (this.shape instanceof Kulla.RawShapeSphere) {
             let data = Mummu.CreateBeveledBoxVertexData({
-                width: this.shape.r * 2 + 0.1,
-                height: this.shape.r * 2 + 0.1,
-                depth: this.shape.r * 2 + 0.1,
+                width: this.shape.rX * 2 + 1 + 0.1,
+                height: this.shape.rY * 2 + 1 + 0.1,
+                depth: this.shape.rZ * 2 + 1 + 0.1,
                 flat: true
             });
             data.applyToMesh(this.childMesh);
@@ -269,7 +268,7 @@ class PropEditor {
                     this.updateArrows();
                 }
                 else if (this._selectedPropShape.shape instanceof Kulla.RawShapeSphere) {
-                    this._selectedPropShape.shape.r += dW;
+                    this._selectedPropShape.shape.rX += dW;
                     this.wLeftArrow.initPos.x -= Math.sign(dW);
                     this.onMove(0, 0, 0);
                     this._selectedPropShape.updateShape();
@@ -292,7 +291,7 @@ class PropEditor {
                     this.updateArrows();
                 }
                 else if (this._selectedPropShape.shape instanceof Kulla.RawShapeSphere) {
-                    this._selectedPropShape.shape.r += dW;
+                    this._selectedPropShape.shape.rX += dW;
                     this.wRightArrow.initPos.x += Math.sign(dW);
                     this.onMove(0, 0, 0);
                     this._selectedPropShape.updateShape();
@@ -315,7 +314,7 @@ class PropEditor {
                     this.updateArrows();
                 }
                 else if (this._selectedPropShape.shape instanceof Kulla.RawShapeSphere) {
-                    this._selectedPropShape.shape.r += dH;
+                    this._selectedPropShape.shape.rY += dH;
                     this.hBottomArrow.initPos.y -= Math.sign(dH);
                     this.onMove(0, 0, 0);
                     this._selectedPropShape.updateShape();
@@ -338,7 +337,7 @@ class PropEditor {
                     this.updateArrows();
                 }
                 else if (this._selectedPropShape.shape instanceof Kulla.RawShapeSphere) {
-                    this._selectedPropShape.shape.r += dH;
+                    this._selectedPropShape.shape.rY += dH;
                     this.hTopArrow.initPos.y += Math.sign(dH);
                     this.onMove(0, 0, 0);
                     this._selectedPropShape.updateShape();
@@ -360,7 +359,7 @@ class PropEditor {
                     this.updateArrows();
                 }
                 else if (this._selectedPropShape.shape instanceof Kulla.RawShapeSphere) {
-                    this._selectedPropShape.shape.r += dD;
+                    this._selectedPropShape.shape.rZ += dD;
                     this.dBackwardArrow.initPos.z -= Math.sign(dD);
                     this.onMove(0, 0, 0);
                     this._selectedPropShape.updateShape();
@@ -383,7 +382,7 @@ class PropEditor {
                     this.updateArrows();
                 }
                 else if (this._selectedPropShape.shape instanceof Kulla.RawShapeSphere) {
-                    this._selectedPropShape.shape.r += dD;
+                    this._selectedPropShape.shape.rZ += dD;
                     this.dForwardArrow.initPos.z += Math.sign(dD);
                     this.onMove(0, 0, 0);
                     this._selectedPropShape.updateShape();
@@ -475,22 +474,22 @@ class PropEditor {
             });
 
             this.wRightArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
-            this.wRightArrow.position.x += 0.5 + this._selectedPropShape.shape.r;
+            this.wRightArrow.position.x += 1 + this._selectedPropShape.shape.rX;
             
             this.wLeftArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
-            this.wLeftArrow.position.x -= 0.5 + this._selectedPropShape.shape.r;
+            this.wLeftArrow.position.x -= 1 + this._selectedPropShape.shape.rX;
 
             this.hTopArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
-            this.hTopArrow.position.y += 0.5 + this._selectedPropShape.shape.r;
+            this.hTopArrow.position.y += 1 + this._selectedPropShape.shape.rY;
             
             this.hBottomArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
-            this.hBottomArrow.position.y -= 0.5 + this._selectedPropShape.shape.r;
+            this.hBottomArrow.position.y -= 1 + this._selectedPropShape.shape.rY;
 
             this.dForwardArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
-            this.dForwardArrow.position.z += 0.5 + this._selectedPropShape.shape.r;
+            this.dForwardArrow.position.z += 1 + this._selectedPropShape.shape.rZ;
             
             this.dBackwardArrow.position.copyFrom(this._selectedPropShape.childMesh.absolutePosition);
-            this.dBackwardArrow.position.z -= 0.5 + this._selectedPropShape.shape.r;
+            this.dBackwardArrow.position.z -= 1 + this._selectedPropShape.shape.rZ;
         }
     }
 
@@ -670,7 +669,7 @@ class PropEditor {
                     this.setCursorMode(CursorMode.Select);
                 }
                 else if (this._cursorMode === CursorMode.Sphere) {
-                    newShape = new Kulla.RawShapeSphere(1.5, i, j, k);
+                    newShape = new Kulla.RawShapeSphere(1, 1, 1, i, j, k);
                     if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
                         this.game.terrain.chunckDataGenerator.prop.shapes.push(newShape);
                         this.game.terrain.chunckDataGenerator.prop.blocks.push(this.currentBlockType);
