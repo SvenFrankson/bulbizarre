@@ -756,12 +756,12 @@ class PropEditor {
         };
         let mat = new BABYLON.StandardMaterial("prop-shape-material");
         mat.specularColor.copyFromFloats(0, 0, 0);
-        mat.alpha = 0.1;
+        mat.alpha = 0.2;
         this.propShapeMaterial = mat;
         let matSelected = new BABYLON.StandardMaterial("prop-shape-material");
         matSelected.diffuseColor.copyFromFloats(1, 1, 0);
         matSelected.specularColor.copyFromFloats(0, 0, 0);
-        matSelected.alpha = 0.2;
+        matSelected.alpha = 0.3;
         this.propShapeMaterialSelected = matSelected;
         let matCursor = new BABYLON.StandardMaterial("prop-shape-material");
         matCursor.diffuseColor.copyFromFloats(0, 1, 1);
@@ -778,6 +778,7 @@ class PropEditor {
         });
         this.gridMesh.rotationQuaternion = BABYLON.Quaternion.Identity();
         this.gridMesh.isVisible = false;
+        this.setCursorMode(CursorMode.Select);
     }
     setCursorMode(mode) {
         this._cursorMode = mode;
@@ -984,6 +985,7 @@ class PropEditor {
                 });
             }
         }
+        this.updateArrows();
     }
     dispose() {
         while (this.propShapeMeshes.length > 0) {

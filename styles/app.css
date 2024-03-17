@@ -199,6 +199,7 @@ option-page .back-button {
 .elements-menu {
     font-family: Arial, Helvetica, sans-serif;
     color: white;
+    padding: 1vh;
 }
 
 .elements-menu .label {
