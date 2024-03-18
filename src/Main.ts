@@ -162,11 +162,9 @@ class Game {
             }, 50);
             */
 
-            /*
             let debugTerrainPerf = new DebugTerrainPerf(this);
             debugTerrainPerf.show();
-            */
-
+            
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");

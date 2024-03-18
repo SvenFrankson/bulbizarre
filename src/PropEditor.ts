@@ -2,6 +2,9 @@ class PropShapeMesh extends BABYLON.Mesh {
 
     public childMesh: BABYLON.Mesh;
 
+    public pointAMesh: BABYLON.Mesh;
+    public pointBMesh: BABYLON.Mesh;
+
     constructor(public propEditor: PropEditor, public shape: Kulla.RawShape, color?: BABYLON.Color4) {
         super("prop-shape-mesh");
         if (this.shape instanceof Kulla.RawShapeBox) {
@@ -28,17 +31,76 @@ class PropShapeMesh extends BABYLON.Mesh {
             this.childMesh.material = this.propEditor.propShapeMaterial;
             this.childMesh.parent = this;
         }
+        else if (this.shape instanceof Kulla.RawShapeLine) {
+            let pA = new BABYLON.Vector3(this.shape.Ai, this.shape.Ak, this.shape.Aj);
+            let pB = new BABYLON.Vector3(this.shape.Bi, this.shape.Bk, this.shape.Bj);
+            let dir = pB.subtract(pA);
+            let l = dir.length();
+            dir.scaleInPlace(1 / l);
+            this.childMesh = Mummu.CreateBeveledBox("box", {
+                width: 1 + 0.1,
+                height: l + 0.1,
+                depth: 1 + 0.1,
+                flat: true,
+                color: color
+            });
+            if (Math.abs(BABYLON.Vector3.Dot(dir, BABYLON.Axis.Z)) < 0.9) {
+                this.childMesh.rotationQuaternion = Mummu.QuaternionFromYZAxis(dir, BABYLON.Axis.Z);
+            }
+            else {
+                this.childMesh.rotationQuaternion = Mummu.QuaternionFromYZAxis(dir, BABYLON.Axis.X);
+            }
+            this.childMesh.position.copyFrom(pA).addInPlace(pB).scaleInPlace(0.5);
+            this.childMesh.material = this.propEditor.propShapeMaterial;
+            this.childMesh.parent = this;
+            
+            this.pointAMesh = Mummu.CreateBeveledBox("pointA", {
+                width: 1.2,
+                height: 1.2,
+                depth: 1.2,
+                flat: true,
+                color: color
+            });
+            this.pointAMesh.position.copyFrom(pA).addInPlaceFromFloats(0.5, 0.5, 0.5);
+            this.pointAMesh.material = this.propEditor.propShapeMaterial;
+            this.pointAMesh.parent = this;
+            this.pointAMesh.isVisible = false;
+            
+            this.pointBMesh = Mummu.CreateBeveledBox("pointB", {
+                width: 1.2,
+                height: 1.2,
+                depth: 1.2,
+                flat: true,
+                color: color
+            });
+            this.pointBMesh.position.copyFrom(pB).addInPlaceFromFloats(0.5, 0.5, 0.5);
+            this.pointBMesh.material = this.propEditor.propShapeMaterial;
+            this.pointBMesh.parent = this;
+            this.pointBMesh.isVisible = false;
+        }
 
         this.updatePosition();
         this.updateVisibility();
     }
 
     public select(): void {
-        this.childMesh.material = this.propEditor.propShapeMaterialSelected;
+        if (this.shape instanceof Kulla.RawShapeLine) {
+            this.pointAMesh.isVisible = true;
+            this.pointBMesh.isVisible = true;
+        }
+        else {
+            this.childMesh.material = this.propEditor.propShapeMaterialSelected;
+        }
     }
 
     public unselect(): void {
-        this.childMesh.material = this.propEditor.propShapeMaterial;
+        if (this.shape instanceof Kulla.RawShapeLine) {
+            this.pointAMesh.isVisible = false;
+            this.pointBMesh.isVisible = false;
+        }
+        else {
+            this.childMesh.material = this.propEditor.propShapeMaterial;
+        }
     }
 
     public updatePosition(): void {
@@ -47,6 +109,29 @@ class PropShapeMesh extends BABYLON.Mesh {
         this.position.y = this.shape.pk + this.propEditor.alt;
         this.computeWorldMatrix(true);
         this.childMesh.computeWorldMatrix(true);
+        if (this.shape instanceof Kulla.RawShapeLine) {
+            let pA = new BABYLON.Vector3(this.shape.Ai, this.shape.Ak, this.shape.Aj);
+            let pB = new BABYLON.Vector3(this.shape.Bi, this.shape.Bk, this.shape.Bj);
+            let dir = pB.subtract(pA);
+            let l = dir.length();
+            dir.scaleInPlace(1 / l);
+            let data = Mummu.CreateBeveledBoxVertexData({
+                width: 1 + 0.1,
+                height: l - 0.5 + 0.1,
+                depth: 1 + 0.1,
+                flat: true
+            });
+            data.applyToMesh(this.childMesh);
+            if (Math.abs(BABYLON.Vector3.Dot(dir, BABYLON.Axis.Z)) < 0.9) {
+                Mummu.QuaternionFromYZAxisToRef(dir, BABYLON.Axis.Z, this.childMesh.rotationQuaternion);
+            }
+            else {
+                Mummu.QuaternionFromYZAxisToRef(dir, BABYLON.Axis.X, this.childMesh.rotationQuaternion);
+            }
+            this.childMesh.position.copyFrom(pA).addInPlace(pB).scaleInPlace(0.5).addInPlaceFromFloats(0.5, 0.5, 0.5);
+            this.pointAMesh.position.copyFrom(pA).addInPlaceFromFloats(0.5, 0.5, 0.5);
+            this.pointBMesh.position.copyFrom(pB).addInPlaceFromFloats(0.5, 0.5, 0.5);
+        }
     }
 
     public updateShape(): void {
@@ -81,15 +166,19 @@ enum CursorMode {
     Select,
     Box,
     Sphere,
-    Dot
+    Dot,
+    Line
 }
 
 class PropEditor {
 
     public boxButton: HTMLButtonElement;
     public sphereButton: HTMLButtonElement;
+    public lineButton: HTMLButtonElement;
     public dotButton: HTMLButtonElement;
     public blockTypeButtons: HTMLButtonElement[];
+    public saveButton: HTMLButtonElement;
+    public loadButton: HTMLInputElement;
 
     public showSelectors: boolean = true;
     public propShapeMaterial: BABYLON.Material;
@@ -134,15 +223,25 @@ class PropEditor {
 
     private _draggedOffset: BABYLON.Vector3 = BABYLON.Vector3.Zero();
     private _draggedPropShape: PropShapeMesh | Arrow;
-    private setDraggedPropShape(s: PropShapeMesh | Arrow) {
-        if (this._draggedPropShape != s) {
+    private _draggedPoint: number = 0;
+    private setDraggedPropShape(s: PropShapeMesh | Arrow, point: number = 0) {
+        if (this._draggedPropShape != s || this._draggedPoint != point) {
             this._draggedPropShape = s;
+            this._draggedPoint = point;
             if (this._draggedPropShape instanceof PropShapeMesh) {
                 let axis = this.game.arcCamera.getDirection(BABYLON.Axis.Z);
                 Mummu.GetClosestAxisToRef(axis, axis);
                 axis.scaleInPlace(-1);
                 Mummu.QuaternionFromYZAxisToRef(axis, BABYLON.Vector3.One(), this.gridMesh.rotationQuaternion);
-                this.gridMesh.position.copyFrom(this._draggedPropShape.childMesh.absolutePosition);
+                if (this._draggedPoint === 0) {
+                    this.gridMesh.position.copyFrom(this._draggedPropShape.childMesh.absolutePosition);
+                }
+                else if (this._draggedPoint === 1) {
+                    this.gridMesh.position.copyFrom(this._draggedPropShape.pointAMesh.absolutePosition);
+                }
+                else if (this._draggedPoint === 2) {
+                    this.gridMesh.position.copyFrom(this._draggedPropShape.pointBMesh.absolutePosition);
+                }
                 this.gridMesh.computeWorldMatrix(true);
                 this.game.arcCamera.detachControl();
             }
@@ -214,6 +313,15 @@ class PropEditor {
             }
             else {
                 this.setCursorMode(CursorMode.Sphere);
+            }
+        }
+        this.lineButton = document.getElementById("prop-editor-line") as HTMLButtonElement;
+        this.lineButton.onclick = () => {
+            if (this._cursorMode === CursorMode.Line) {
+                this.setCursorMode(CursorMode.Select);
+            }
+            else {
+                this.setCursorMode(CursorMode.Line);
             }
         }
         this.dotButton = document.getElementById("prop-editor-dot") as HTMLButtonElement;
@@ -404,6 +512,36 @@ class PropEditor {
             arrow.instantiate();
         })
 
+        this.saveButton = document.querySelector("#prop-editor-save");
+        this.saveButton.addEventListener("click", () => {
+            if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+                let data = this.game.terrain.chunckDataGenerator.prop.serialize();
+                Nabu.download("new_prop.json", JSON.stringify(data));
+            }
+        })
+
+        this.loadButton = document.querySelector("#prop-editor-load");
+        this.loadButton.addEventListener("change", (event: Event) => {
+            console.log("alpha");
+            let files = (event.target as HTMLInputElement).files;
+            let file = files[0];
+            if (file) {
+                console.log("bravo");
+                const reader = new FileReader();
+                reader.addEventListener('load', (event) => {
+                    console.log("charly");
+                    if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+                        console.log("delta");
+                        let data = JSON.parse(event.target.result as string);
+                        this.game.terrain.chunckDataGenerator.prop.deserialize(data);
+                        this.redraw();
+                        this.regeneratePropMeshes();
+                    }
+                });
+                reader.readAsText(file);
+            }
+        })
+
         this.game.canvas.addEventListener("keyup", this.onKeyDown);
         this.game.canvas.addEventListener("pointerdown", this.onPointerDown);
         this.game.canvas.addEventListener("pointermove", this.onPointerMove);
@@ -418,6 +556,16 @@ class PropEditor {
             }
         }
 
+        this.regeneratePropMeshes();
+
+        this.updateArrows();
+    }
+
+    public regeneratePropMeshes(): void {
+        while (this.propShapeMeshes.length > 0) {
+            this.propShapeMeshes.pop().dispose();
+        }
+
         this.propShapeMeshes = [];
         if (this.game.terrain) {
             if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
@@ -427,8 +575,6 @@ class PropEditor {
                 });
             }
         }
-
-        this.updateArrows();
     }
 
     public dispose(): void {
@@ -536,18 +682,38 @@ class PropEditor {
                 );
             }
 
-            console.log(pick.pickedMesh);
             if (pick.hit && pick.pickedMesh instanceof Arrow) {
                 this.setDraggedPropShape(pick.pickedMesh);
                 this._draggedOffset.copyFromFloats(0, 0, 0);
             }
             else if (pick.hit && pick.pickedMesh.parent === this._selectedPropShape) {
-                this.setDraggedPropShape(this._selectedPropShape);
+                let point = 0;
                 let p = new BABYLON.Vector3(
                     this._selectedPropShape.shape.pi,
                     this._selectedPropShape.shape.pk + this.alt,
                     this._selectedPropShape.shape.pj
                 ).addInPlaceFromFloats(0.5, 0.5, 0.5);
+                if (pick.pickedMesh.name === "pointA") {
+                    if (this._selectedPropShape.shape instanceof Kulla.RawShapeLine) {
+                        p = new BABYLON.Vector3(
+                            this._selectedPropShape.shape.Ai,
+                            this._selectedPropShape.shape.Ak,
+                            this._selectedPropShape.shape.Aj
+                        ).addInPlaceFromFloats(0.5, 0.5, 0.5);
+                    }
+                    point = 1;
+                }
+                else if (pick.pickedMesh.name === "pointB") {
+                    if (this._selectedPropShape.shape instanceof Kulla.RawShapeLine) {
+                        p = new BABYLON.Vector3(
+                            this._selectedPropShape.shape.Bi,
+                            this._selectedPropShape.shape.Bk,
+                            this._selectedPropShape.shape.Bj
+                        ).addInPlaceFromFloats(0.5, 0.5, 0.5);
+                    }
+                    point = 2;
+                }
+                this.setDraggedPropShape(this._selectedPropShape, point);
                 let gridPick = this.game.scene.pick(
                     this.game.scene.pointerX,
                     this.game.scene.pointerY,
@@ -584,11 +750,36 @@ class PropEditor {
                     let j = Math.floor(p.z);
                     let k = Math.floor(p.y - this.alt);
     
-                    let di = i - this._draggedPropShape.shape.pi;
-                    let dj = j - this._draggedPropShape.shape.pj;
-                    let dk = k - this._draggedPropShape.shape.pk;
-                    
-                    this.onMove(di, dj, dk);
+                    if (this._draggedPoint === 0) {
+                        let di = i - this._draggedPropShape.shape.pi;
+                        let dj = j - this._draggedPropShape.shape.pj;
+                        let dk = k - this._draggedPropShape.shape.pk;
+                        this.onMove(di, dj, dk);
+                    }
+                    else if (this._draggedPoint === 1) {
+                        if (this._draggedPropShape.shape instanceof Kulla.RawShapeLine) {
+                            let k = Math.floor(p.y);
+                            let di = i - this._draggedPropShape.shape.Ai;
+                            let dj = j - this._draggedPropShape.shape.Aj;
+                            let dk = k - this._draggedPropShape.shape.Ak;
+                            this._draggedPropShape.shape.Ai += di;
+                            this._draggedPropShape.shape.Aj += dj;
+                            this._draggedPropShape.shape.Ak += dk;
+                            this.onMove(0, 0, 0);
+                        }
+                    }
+                    else if (this._draggedPoint === 2) {
+                        if (this._draggedPropShape.shape instanceof Kulla.RawShapeLine) {
+                            let k = Math.floor(p.y);
+                            let di = i - this._draggedPropShape.shape.Bi;
+                            let dj = j - this._draggedPropShape.shape.Bj;
+                            let dk = k - this._draggedPropShape.shape.Bk;
+                            this._draggedPropShape.shape.Bi += di;
+                            this._draggedPropShape.shape.Bj += dj;
+                            this._draggedPropShape.shape.Bk += dk;
+                            this.onMove(0, 0, 0);
+                        }
+                    }
                 }
             }
             else if (this._draggedPropShape instanceof Arrow) {
@@ -670,6 +861,21 @@ class PropEditor {
                 }
                 else if (this._cursorMode === CursorMode.Sphere) {
                     newShape = new Kulla.RawShapeSphere(1, 1, 1, i, j, k);
+                    if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
+                        this.game.terrain.chunckDataGenerator.prop.shapes.push(newShape);
+                        this.game.terrain.chunckDataGenerator.prop.blocks.push(this.currentBlockType);
+                    }
+                    let propShapeMesh = new PropShapeMesh(this, newShape);
+                    this.propShapeMeshes.push(propShapeMesh);
+                    this.redraw();
+                    this.setCursorMode(CursorMode.Select);
+                }
+                else if (this._cursorMode === CursorMode.Line) {
+                    let n = pick.getNormal();
+                    n.x = Math.round(n.x);
+                    n.y = Math.round(n.y);
+                    n.z = Math.round(n.z);
+                    newShape = new Kulla.RawShapeLine(i, j, k, i + n.x, j + n.z, k + n.y);
                     if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
                         this.game.terrain.chunckDataGenerator.prop.shapes.push(newShape);
                         this.game.terrain.chunckDataGenerator.prop.blocks.push(this.currentBlockType);
