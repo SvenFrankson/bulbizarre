@@ -39,6 +39,7 @@ class Game {
     public terrain: Kulla.Terrain;
     public terrainEditor: Kulla.TerrainEditor;
     public propEditor: PropEditor;
+    public player: Player;
 
     public router: GameRouter;
 
@@ -164,6 +165,9 @@ class Game {
 
             let debugTerrainPerf = new DebugTerrainPerf(this);
             debugTerrainPerf.show();
+
+            this.player = new Player(this);
+            this.player.position.copyFrom(this.freeCamera.position);
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {
@@ -203,6 +207,9 @@ class Game {
 
     public update(): void {
         let dt = this.scene.deltaTime / 1000;
+        if (this.player && this.terrain) {
+            this.player.update(dt);
+        }
 
         if (this.DEBUG_MODE) {
             let camPos = this.freeCamera.position;
@@ -240,6 +247,43 @@ class Game {
             chunckLengthIJ: 24,
             chunckLengthK: 256,
             chunckCountIJ: 64,
+            useAnalytics: true
+        });
+
+        let mat = new TerrainMaterial("terrain", this.scene);
+        this.terrain.materials = [mat];
+        mat.freeze();
+
+        this.terrain.initialize();
+        this.configuration.getElement("renderDist").forceInit();
+        this.configuration.getElement("showRenderDistDebug").forceInit();
+
+        this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+    }
+
+    public generateTerrainBrick(): void {
+        if (this.terrain) {
+            this.terrain.dispose();
+        }
+
+        this.uiCamera.parent = this.freeCamera;
+        this.arcCamera.detachControl();
+        this.scene.activeCameras = [this.freeCamera, this.uiCamera];
+        this.freeCamera.attachControl();
+            
+        this.terrain = new Kulla.Terrain({
+            scene: this.scene,
+            generatorProps: {
+                type: Kulla.GeneratorType.Flat,
+                altitude: 64,
+                blockType: Kulla.BlockType.Dirt
+            },
+            maxDisplayedLevel: 0,
+            blockSizeIJ_m: 0.78,
+            blockSizeK_m: 0.96,
+            chunckLengthIJ: 24,
+            chunckLengthK: 256,
+            chunckCountIJ: 512,
             useAnalytics: true
         });
 

@@ -88,7 +88,7 @@ class PropShapeMesh extends BABYLON.Mesh {
             this.pointAMesh.isVisible = true;
             this.pointBMesh.isVisible = true;
         }
-        else {
+        else if (this.childMesh) {
             this.childMesh.material = this.propEditor.propShapeMaterialSelected;
         }
     }
@@ -98,39 +98,41 @@ class PropShapeMesh extends BABYLON.Mesh {
             this.pointAMesh.isVisible = false;
             this.pointBMesh.isVisible = false;
         }
-        else {
+        else if (this.childMesh) {
             this.childMesh.material = this.propEditor.propShapeMaterial;
         }
     }
 
     public updatePosition(): void {
-        this.position.x = this.shape.pi;
-        this.position.z = this.shape.pj;
-        this.position.y = this.shape.pk + this.propEditor.alt;
-        this.computeWorldMatrix(true);
-        this.childMesh.computeWorldMatrix(true);
-        if (this.shape instanceof Kulla.RawShapeLine) {
-            let pA = new BABYLON.Vector3(this.shape.Ai, this.shape.Ak, this.shape.Aj);
-            let pB = new BABYLON.Vector3(this.shape.Bi, this.shape.Bk, this.shape.Bj);
-            let dir = pB.subtract(pA);
-            let l = dir.length();
-            dir.scaleInPlace(1 / l);
-            let data = Mummu.CreateBeveledBoxVertexData({
-                width: 1 + 0.1,
-                height: l - 0.5 + 0.1,
-                depth: 1 + 0.1,
-                flat: true
-            });
-            data.applyToMesh(this.childMesh);
-            if (Math.abs(BABYLON.Vector3.Dot(dir, BABYLON.Axis.Z)) < 0.9) {
-                Mummu.QuaternionFromYZAxisToRef(dir, BABYLON.Axis.Z, this.childMesh.rotationQuaternion);
+        if (this.childMesh) {
+            this.position.x = this.shape.pi;
+            this.position.z = this.shape.pj;
+            this.position.y = this.shape.pk + this.propEditor.alt;
+            this.computeWorldMatrix(true);
+            this.childMesh.computeWorldMatrix(true);
+            if (this.shape instanceof Kulla.RawShapeLine) {
+                let pA = new BABYLON.Vector3(this.shape.Ai, this.shape.Ak, this.shape.Aj);
+                let pB = new BABYLON.Vector3(this.shape.Bi, this.shape.Bk, this.shape.Bj);
+                let dir = pB.subtract(pA);
+                let l = dir.length();
+                dir.scaleInPlace(1 / l);
+                let data = Mummu.CreateBeveledBoxVertexData({
+                    width: 1 + 0.1,
+                    height: l - 0.5 + 0.1,
+                    depth: 1 + 0.1,
+                    flat: true
+                });
+                data.applyToMesh(this.childMesh);
+                if (Math.abs(BABYLON.Vector3.Dot(dir, BABYLON.Axis.Z)) < 0.9) {
+                    Mummu.QuaternionFromYZAxisToRef(dir, BABYLON.Axis.Z, this.childMesh.rotationQuaternion);
+                }
+                else {
+                    Mummu.QuaternionFromYZAxisToRef(dir, BABYLON.Axis.X, this.childMesh.rotationQuaternion);
+                }
+                this.childMesh.position.copyFrom(pA).addInPlace(pB).scaleInPlace(0.5).addInPlaceFromFloats(0.5, 0.5, 0.5);
+                this.pointAMesh.position.copyFrom(pA).addInPlaceFromFloats(0.5, 0.5, 0.5);
+                this.pointBMesh.position.copyFrom(pB).addInPlaceFromFloats(0.5, 0.5, 0.5);
             }
-            else {
-                Mummu.QuaternionFromYZAxisToRef(dir, BABYLON.Axis.X, this.childMesh.rotationQuaternion);
-            }
-            this.childMesh.position.copyFrom(pA).addInPlace(pB).scaleInPlace(0.5).addInPlaceFromFloats(0.5, 0.5, 0.5);
-            this.pointAMesh.position.copyFrom(pA).addInPlaceFromFloats(0.5, 0.5, 0.5);
-            this.pointBMesh.position.copyFrom(pB).addInPlaceFromFloats(0.5, 0.5, 0.5);
         }
     }
 
@@ -158,7 +160,9 @@ class PropShapeMesh extends BABYLON.Mesh {
     }
 
     public updateVisibility(): void {
-        this.childMesh.isVisible = this.propEditor.showSelectors;
+        if (this.childMesh) {
+            this.childMesh.isVisible = this.propEditor.showSelectors;
+        }
     }
 }
 
@@ -185,6 +189,7 @@ class PropEditor {
     public propShapeMaterialSelected: BABYLON.Material;
     public propShapeMeshes: PropShapeMesh[] = [];
 
+    private _shiftDown: boolean = false;
     public wLeftArrow: Arrow;
     public wRightArrow: Arrow;
     public hBottomArrow: Arrow;
@@ -857,7 +862,9 @@ class PropEditor {
                     let propShapeMesh = new PropShapeMesh(this, newShape);
                     this.propShapeMeshes.push(propShapeMesh);
                     this.redraw();
-                    this.setCursorMode(CursorMode.Select);
+                    if (!this._shiftDown) {
+                        this.setCursorMode(CursorMode.Select);
+                    }
                 }
                 else if (this._cursorMode === CursorMode.Sphere) {
                     newShape = new Kulla.RawShapeSphere(1, 1, 1, i, j, k);
@@ -868,7 +875,9 @@ class PropEditor {
                     let propShapeMesh = new PropShapeMesh(this, newShape);
                     this.propShapeMeshes.push(propShapeMesh);
                     this.redraw();
-                    this.setCursorMode(CursorMode.Select);
+                    if (!this._shiftDown) {
+                        this.setCursorMode(CursorMode.Select);
+                    }
                 }
                 else if (this._cursorMode === CursorMode.Line) {
                     let n = pick.getNormal();
@@ -883,7 +892,12 @@ class PropEditor {
                     let propShapeMesh = new PropShapeMesh(this, newShape);
                     this.propShapeMeshes.push(propShapeMesh);
                     this.redraw();
-                    this.setCursorMode(CursorMode.Select);
+                    if (!this._shiftDown) {
+                        this.setCursorMode(CursorMode.Select);
+                    }
+                }
+                else if (this._cursorMode === CursorMode.Dot) {
+
                 }
             }
         }
@@ -911,6 +925,15 @@ class PropEditor {
         else if (ev.code === "KeyX") {
             this.onDelete();
         } 
+        else if (ev.code === "ShiftLeft") {
+            this._shiftDown = true;
+        }
+    }
+
+    public onKeyUp = (ev: KeyboardEvent) => {
+        if (ev.code === "ShiftLeft") {
+            this._shiftDown = false;
+        }
     }
 
     public onMove(di: number = 0, dj: number = 0, dk: number = 0): void {

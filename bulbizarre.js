@@ -424,6 +424,8 @@ class Game {
             */
             let debugTerrainPerf = new DebugTerrainPerf(this);
             debugTerrainPerf.show();
+            this.player = new Player(this);
+            this.player.position.copyFrom(this.freeCamera.position);
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -457,6 +459,9 @@ class Game {
     }
     update() {
         let dt = this.scene.deltaTime / 1000;
+        if (this.player && this.terrain) {
+            this.player.update(dt);
+        }
         if (this.DEBUG_MODE) {
             let camPos = this.freeCamera.position;
             let camRot = this.freeCamera.rotation;
@@ -490,6 +495,37 @@ class Game {
             chunckLengthIJ: 24,
             chunckLengthK: 256,
             chunckCountIJ: 64,
+            useAnalytics: true
+        });
+        let mat = new TerrainMaterial("terrain", this.scene);
+        this.terrain.materials = [mat];
+        mat.freeze();
+        this.terrain.initialize();
+        this.configuration.getElement("renderDist").forceInit();
+        this.configuration.getElement("showRenderDistDebug").forceInit();
+        this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+    }
+    generateTerrainBrick() {
+        if (this.terrain) {
+            this.terrain.dispose();
+        }
+        this.uiCamera.parent = this.freeCamera;
+        this.arcCamera.detachControl();
+        this.scene.activeCameras = [this.freeCamera, this.uiCamera];
+        this.freeCamera.attachControl();
+        this.terrain = new Kulla.Terrain({
+            scene: this.scene,
+            generatorProps: {
+                type: Kulla.GeneratorType.Flat,
+                altitude: 64,
+                blockType: Kulla.BlockType.Dirt
+            },
+            maxDisplayedLevel: 0,
+            blockSizeIJ_m: 0.78,
+            blockSizeK_m: 0.96,
+            chunckLengthIJ: 24,
+            chunckLengthK: 256,
+            chunckCountIJ: 512,
             useAnalytics: true
         });
         let mat = new TerrainMaterial("terrain", this.scene);
@@ -546,6 +582,107 @@ window.addEventListener("DOMContentLoaded", () => {
         main.animate();
     });
 });
+class Player extends BABYLON.Mesh {
+    constructor(game) {
+        super("player");
+        this.game = game;
+        this.mass = 2;
+        this.height = 2;
+        this.velocity = BABYLON.Vector3.Zero();
+        this.frozen = true;
+        this.speed = 3;
+        this.inputZ = 0;
+        this.inputX = 0;
+        this.currentChuncks = [];
+        let body = Mummu.CreateBeveledBox("body", { width: 1, height: this.height - 0.2, depth: 1 });
+        body.position.y = -this.height * 0.5 - 0.1;
+        body.parent = this;
+        window.addEventListener("keydown", (event) => {
+            if (event.code === "KeyW") {
+                this.inputZ += 1;
+                this.inputZ = Nabu.MinMax(this.inputZ, 0, 1);
+            }
+            else if (event.code === "KeyS") {
+                this.inputZ -= 1;
+                this.inputZ = Nabu.MinMax(this.inputZ, -1, 0);
+            }
+            else if (event.code === "KeyA") {
+                this.inputX -= 1;
+                this.inputX = Nabu.MinMax(this.inputX, -1, 0);
+            }
+            else if (event.code === "KeyD") {
+                this.inputX += 1;
+                this.inputX = Nabu.MinMax(this.inputX, 0, 1);
+            }
+        });
+        window.addEventListener("keyup", (event) => {
+            if (event.code === "KeyW") {
+                this.inputZ -= 1;
+                this.inputZ = Nabu.MinMax(this.inputZ, -1, 0);
+            }
+            else if (event.code === "KeyS") {
+                this.inputZ += 1;
+                this.inputZ = Nabu.MinMax(this.inputZ, 0, 1);
+            }
+            else if (event.code === "KeyA") {
+                this.inputX += 1;
+                this.inputX = Nabu.MinMax(this.inputX, 0, 1);
+            }
+            else if (event.code === "KeyD") {
+                this.inputX -= 1;
+                this.inputX = Nabu.MinMax(this.inputX, -1, 0);
+            }
+        });
+    }
+    update(dt) {
+        let currentChunck = this.game.terrain.getChunckAtPos(this.position, 0);
+        if (currentChunck != this.currentChunck) {
+            this.currentChunck = currentChunck;
+            this.updateCurrentChuncks();
+        }
+        let ray = new BABYLON.Ray(this.position, new BABYLON.Vector3(0, -1, 0));
+        let bestPick;
+        for (let i = 0; i < this.currentChuncks.length; i++) {
+            let chunck = this.currentChuncks[i];
+            if (chunck && chunck.mesh) {
+                let pick = ray.intersectsMesh(chunck.mesh);
+                if (pick.hit) {
+                    bestPick = pick;
+                    break;
+                }
+            }
+        }
+        this.velocity.x = 0;
+        this.velocity.z = 0;
+        let inputL = Math.sqrt(this.inputX * this.inputX + this.inputZ * this.inputZ);
+        if (inputL > this.speed) {
+            this.inputX /= inputL * this.speed;
+            this.inputZ /= inputL * this.speed;
+        }
+        this.velocity.addInPlace(this.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
+        this.velocity.addInPlace(this.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
+        if (bestPick && bestPick.hit) {
+            if (bestPick.distance <= this.height) {
+                this.velocity.y = 0;
+                this.position.copyFrom(bestPick.pickedPoint).addInPlaceFromFloats(0, this.height, 0);
+            }
+            else {
+                this.velocity.y -= this.mass * 9.2 * dt * 0.1;
+            }
+            this.position.addInPlace(this.velocity.scale(dt));
+        }
+    }
+    updateCurrentChuncks() {
+        this.currentChuncks = [];
+        if (this.currentChunck) {
+            for (let i = 0; i <= 2; i++) {
+                for (let j = 0; j <= 2; j++) {
+                    this.currentChuncks[i + 3 * j] = this.game.terrain.getChunck(0, this.currentChunck.iPos - 1 + i, this.currentChunck.jPos - 1 + j);
+                }
+            }
+        }
+    }
+}
 class PropShapeMesh extends BABYLON.Mesh {
     constructor(propEditor, shape, color) {
         super("prop-shape-mesh");
@@ -628,7 +765,7 @@ class PropShapeMesh extends BABYLON.Mesh {
             this.pointAMesh.isVisible = true;
             this.pointBMesh.isVisible = true;
         }
-        else {
+        else if (this.childMesh) {
             this.childMesh.material = this.propEditor.propShapeMaterialSelected;
         }
     }
@@ -637,38 +774,40 @@ class PropShapeMesh extends BABYLON.Mesh {
             this.pointAMesh.isVisible = false;
             this.pointBMesh.isVisible = false;
         }
-        else {
+        else if (this.childMesh) {
             this.childMesh.material = this.propEditor.propShapeMaterial;
         }
     }
     updatePosition() {
-        this.position.x = this.shape.pi;
-        this.position.z = this.shape.pj;
-        this.position.y = this.shape.pk + this.propEditor.alt;
-        this.computeWorldMatrix(true);
-        this.childMesh.computeWorldMatrix(true);
-        if (this.shape instanceof Kulla.RawShapeLine) {
-            let pA = new BABYLON.Vector3(this.shape.Ai, this.shape.Ak, this.shape.Aj);
-            let pB = new BABYLON.Vector3(this.shape.Bi, this.shape.Bk, this.shape.Bj);
-            let dir = pB.subtract(pA);
-            let l = dir.length();
-            dir.scaleInPlace(1 / l);
-            let data = Mummu.CreateBeveledBoxVertexData({
-                width: 1 + 0.1,
-                height: l - 0.5 + 0.1,
-                depth: 1 + 0.1,
-                flat: true
-            });
-            data.applyToMesh(this.childMesh);
-            if (Math.abs(BABYLON.Vector3.Dot(dir, BABYLON.Axis.Z)) < 0.9) {
-                Mummu.QuaternionFromYZAxisToRef(dir, BABYLON.Axis.Z, this.childMesh.rotationQuaternion);
+        if (this.childMesh) {
+            this.position.x = this.shape.pi;
+            this.position.z = this.shape.pj;
+            this.position.y = this.shape.pk + this.propEditor.alt;
+            this.computeWorldMatrix(true);
+            this.childMesh.computeWorldMatrix(true);
+            if (this.shape instanceof Kulla.RawShapeLine) {
+                let pA = new BABYLON.Vector3(this.shape.Ai, this.shape.Ak, this.shape.Aj);
+                let pB = new BABYLON.Vector3(this.shape.Bi, this.shape.Bk, this.shape.Bj);
+                let dir = pB.subtract(pA);
+                let l = dir.length();
+                dir.scaleInPlace(1 / l);
+                let data = Mummu.CreateBeveledBoxVertexData({
+                    width: 1 + 0.1,
+                    height: l - 0.5 + 0.1,
+                    depth: 1 + 0.1,
+                    flat: true
+                });
+                data.applyToMesh(this.childMesh);
+                if (Math.abs(BABYLON.Vector3.Dot(dir, BABYLON.Axis.Z)) < 0.9) {
+                    Mummu.QuaternionFromYZAxisToRef(dir, BABYLON.Axis.Z, this.childMesh.rotationQuaternion);
+                }
+                else {
+                    Mummu.QuaternionFromYZAxisToRef(dir, BABYLON.Axis.X, this.childMesh.rotationQuaternion);
+                }
+                this.childMesh.position.copyFrom(pA).addInPlace(pB).scaleInPlace(0.5).addInPlaceFromFloats(0.5, 0.5, 0.5);
+                this.pointAMesh.position.copyFrom(pA).addInPlaceFromFloats(0.5, 0.5, 0.5);
+                this.pointBMesh.position.copyFrom(pB).addInPlaceFromFloats(0.5, 0.5, 0.5);
             }
-            else {
-                Mummu.QuaternionFromYZAxisToRef(dir, BABYLON.Axis.X, this.childMesh.rotationQuaternion);
-            }
-            this.childMesh.position.copyFrom(pA).addInPlace(pB).scaleInPlace(0.5).addInPlaceFromFloats(0.5, 0.5, 0.5);
-            this.pointAMesh.position.copyFrom(pA).addInPlaceFromFloats(0.5, 0.5, 0.5);
-            this.pointBMesh.position.copyFrom(pB).addInPlaceFromFloats(0.5, 0.5, 0.5);
         }
     }
     updateShape() {
@@ -694,7 +833,9 @@ class PropShapeMesh extends BABYLON.Mesh {
         }
     }
     updateVisibility() {
-        this.childMesh.isVisible = this.propEditor.showSelectors;
+        if (this.childMesh) {
+            this.childMesh.isVisible = this.propEditor.showSelectors;
+        }
     }
 }
 var CursorMode;
@@ -710,6 +851,7 @@ class PropEditor {
         this.game = game;
         this.showSelectors = true;
         this.propShapeMeshes = [];
+        this._shiftDown = false;
         this.currentBlockType = Kulla.BlockType.Grass;
         this._cursorMode = CursorMode.Select;
         this._draggedOffset = BABYLON.Vector3.Zero();
@@ -866,7 +1008,9 @@ class PropEditor {
                         let propShapeMesh = new PropShapeMesh(this, newShape);
                         this.propShapeMeshes.push(propShapeMesh);
                         this.redraw();
-                        this.setCursorMode(CursorMode.Select);
+                        if (!this._shiftDown) {
+                            this.setCursorMode(CursorMode.Select);
+                        }
                     }
                     else if (this._cursorMode === CursorMode.Sphere) {
                         newShape = new Kulla.RawShapeSphere(1, 1, 1, i, j, k);
@@ -877,7 +1021,9 @@ class PropEditor {
                         let propShapeMesh = new PropShapeMesh(this, newShape);
                         this.propShapeMeshes.push(propShapeMesh);
                         this.redraw();
-                        this.setCursorMode(CursorMode.Select);
+                        if (!this._shiftDown) {
+                            this.setCursorMode(CursorMode.Select);
+                        }
                     }
                     else if (this._cursorMode === CursorMode.Line) {
                         let n = pick.getNormal();
@@ -892,7 +1038,11 @@ class PropEditor {
                         let propShapeMesh = new PropShapeMesh(this, newShape);
                         this.propShapeMeshes.push(propShapeMesh);
                         this.redraw();
-                        this.setCursorMode(CursorMode.Select);
+                        if (!this._shiftDown) {
+                            this.setCursorMode(CursorMode.Select);
+                        }
+                    }
+                    else if (this._cursorMode === CursorMode.Dot) {
                     }
                 }
             }
@@ -918,6 +1068,14 @@ class PropEditor {
             }
             else if (ev.code === "KeyX") {
                 this.onDelete();
+            }
+            else if (ev.code === "ShiftLeft") {
+                this._shiftDown = true;
+            }
+        };
+        this.onKeyUp = (ev) => {
+            if (ev.code === "ShiftLeft") {
+                this._shiftDown = false;
             }
         };
         let mat = new BABYLON.StandardMaterial("prop-shape-material");
@@ -1611,6 +1769,10 @@ class GameRouter extends Nabu.Router {
         if (page.startsWith("#game")) {
             this.hideAll();
             this.game.generateTerrainLarge();
+        }
+        else if (page.startsWith("#brick")) {
+            this.hideAll();
+            this.game.generateTerrainBrick();
         }
         else if (page.startsWith("#prop-creator")) {
             this.show(this.propEditor);
