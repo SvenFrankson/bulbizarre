@@ -9,6 +9,7 @@ class PlayerActionView {
 
     public isOpened: boolean = false;
     public tiles: HTMLDivElement[];
+    private _equipedSlotIndex: number = - 1;
 
     constructor(public player: Player, public game: Game) {
         
@@ -33,7 +34,6 @@ class PlayerActionView {
         }
     }
 
-    private _equipedSlotIndex: number = - 1;
     public onActionEquiped(action: PlayerAction, slotIndex: number): void {
         if (this._equipedSlotIndex >= 0 && this._equipedSlotIndex <= 9) {
             this.unlit(this._equipedSlotIndex);

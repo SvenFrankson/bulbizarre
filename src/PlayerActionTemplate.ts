@@ -74,7 +74,7 @@ class PlayerActionTemplate {
             if (/*!player.game.inventoryView.isOpened*/true) {
                 let x: number;
                 let y: number;
-                if (player.controler.gamepadInControl) {
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
                     x = player.game.canvas.clientWidth * 0.5;
                     y = player.game.canvas.clientHeight * 0.5;
                 }
@@ -139,7 +139,7 @@ class PlayerActionTemplate {
             if (/*!player.inputManager.inventoryOpened*/true) {
                 let x: number;
                 let y: number;
-                if (player.controler.gamepadInControl) {
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
                     x = player.game.canvas.clientWidth * 0.5;
                     y = player.game.canvas.clientHeight * 0.5;
                 }

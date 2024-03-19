@@ -7,8 +7,6 @@ class PlayerControler {
 
     constructor(public player: Player) {
         player.controler = this;
-        window.addEventListener("keydown", this._keyDown);
-        window.addEventListener("keyup", this._keyUp);
         window.addEventListener("pointerdown", this._pointerDown);
         window.addEventListener("pointermove", this._pointerMove);
         window.addEventListener("pointerup", this._pointerUp);
@@ -28,52 +26,6 @@ class PlayerControler {
         this.aim.style.pointerEvents = "none";
     }
 
-    private _keyDown = (event: KeyboardEvent) => {
-        if (event.code === "KeyW") {
-            this.player.inputZ += 1;
-            this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
-            this.gamepadInControl = false;
-        }
-        else if (event.code === "KeyS") {
-            this.player.inputZ -= 1;
-            this.player.inputZ = Nabu.MinMax(this.player.inputZ, - 1, 0);
-            this.gamepadInControl = false;
-        }
-        else if (event.code === "KeyA") {
-            this.player.inputX -= 1;
-            this.player.inputX = Nabu.MinMax(this.player.inputX, - 1, 0);
-            this.gamepadInControl = false;
-        }
-        else if (event.code === "KeyD") {
-            this.player.inputX += 1;
-            this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
-            this.gamepadInControl = false;
-        }
-    }
-
-    private _keyUp = (event: KeyboardEvent) => {
-        if (event.code === "KeyW") {
-            this.player.inputZ -= 1;
-            this.player.inputZ = Nabu.MinMax(this.player.inputZ, - 1, 0);
-            this.gamepadInControl = false;
-        }
-        else if (event.code === "KeyS") {
-            this.player.inputZ += 1;
-            this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
-            this.gamepadInControl = false;
-        }
-        else if (event.code === "KeyA") {
-            this.player.inputX += 1;
-            this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
-            this.gamepadInControl = false;
-        }
-        else if (event.code === "KeyD") {
-            this.player.inputX -= 1;
-            this.player.inputX = Nabu.MinMax(this.player.inputX, - 1, 0);
-            this.gamepadInControl = false;
-        }
-    }
-
     private _pointerDown = (event: PointerEvent) => {
         this._pointerIsDown = true;
         if (this.player.currentAction) {
@@ -82,7 +34,7 @@ class PlayerControler {
     }
 
     private _pointerMove = (event: PointerEvent) => {
-        if (this._pointerIsDown) {
+        if (this._pointerIsDown || this.player.game.inputManager.isPointerLocked) {
             this.gamepadInControl = false;
             this.player.inputDeltaX += event.movementX;
             this.player.inputDeltaY += event.movementY;
@@ -102,6 +54,25 @@ class PlayerControler {
 
     public lastB0: number;
     public update(dt: number): void {
+        this.player.inputX = 0;
+        this.player.inputZ = 0;
+        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
+            this.player.inputZ += 1;
+            this.gamepadInControl = false;
+        }
+        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
+            this.player.inputZ -= 1;
+            this.gamepadInControl = false;
+        }
+        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
+            this.player.inputX += 1;
+            this.gamepadInControl = false;
+        }
+        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
+            this.player.inputX -= 1;
+            this.gamepadInControl = false;
+        }
+
         let gamepads = navigator.getGamepads();
         let gamepad = gamepads[0];
         if (gamepad) {
@@ -132,7 +103,7 @@ class PlayerControler {
             }
         }
         
-        if (this.gamepadInControl) {
+        if (this.gamepadInControl || this.player.game.inputManager.isPointerLocked) {
             this.aim.style.top = (window.innerHeight * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.left = (window.innerWidth * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.display = "block";

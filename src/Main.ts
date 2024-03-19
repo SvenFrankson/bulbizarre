@@ -25,6 +25,7 @@ class Game {
         return this.scene;
     }
     public screenRatio: number = 1;
+    public inputManager: InputManager;
 
     //public camera: BABYLON.FreeCamera;
     public freeCamera: BABYLON.FreeCamera;
@@ -103,6 +104,8 @@ class Game {
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
 
+        this.inputManager = new InputManager(this.scene, this.canvas, this);
+
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         
         if (this.DEBUG_MODE) {
@@ -175,6 +178,7 @@ class Game {
             this.player.inventory = new Inventory(this.player);
             this.playerActionBar = new PlayerActionView(this.player, this);
             this.playerActionBar.initialize();
+            this.inputManager.initialize(this.player);
 
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);

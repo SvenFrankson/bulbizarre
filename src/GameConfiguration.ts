@@ -44,6 +44,14 @@ class GameConfiguration extends Nabu.Configuration {
                 }
             ),
             new Nabu.ConfigurationElement(
+                "canLockPointer",
+                Nabu.ConfigurationElementType.Boolean,
+                1,
+                {
+                    displayName: "Can Lock Pointer"
+                }
+            ),
+            new Nabu.ConfigurationElement(
                 "godMode",
                 Nabu.ConfigurationElementType.Boolean,
                 0,

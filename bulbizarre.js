@@ -275,6 +275,9 @@ class GameConfiguration extends Nabu.Configuration {
             }, (newValue) => {
                 this.game.terrain.chunckManager.setDistance(newValue * this.game.terrain.chunckLengthIJ);
             }),
+            new Nabu.ConfigurationElement("canLockPointer", Nabu.ConfigurationElementType.Boolean, 1, {
+                displayName: "Can Lock Pointer"
+            }),
             new Nabu.ConfigurationElement("godMode", Nabu.ConfigurationElementType.Boolean, 0, {
                 displayName: "God Mode"
             }, (newValue) => {
@@ -498,6 +501,7 @@ class Game {
         this.uiCamera = new BABYLON.FreeCamera("background-camera", BABYLON.Vector3.Zero());
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
+        this.inputManager = new InputManager(this.scene, this.canvas, this);
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-position")) {
@@ -560,6 +564,7 @@ class Game {
             this.player.inventory = new Inventory(this.player);
             this.playerActionBar = new PlayerActionView(this.player, this);
             this.playerActionBar.initialize();
+            this.inputManager.initialize(this.player);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
@@ -890,7 +895,7 @@ class PlayerActionTemplate {
             if ( /*!player.game.inventoryView.isOpened*/true) {
                 let x;
                 let y;
-                if (player.controler.gamepadInControl) {
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
                     x = player.game.canvas.clientWidth * 0.5;
                     y = player.game.canvas.clientHeight * 0.5;
                 }
@@ -946,7 +951,7 @@ class PlayerActionTemplate {
             if ( /*!player.inputManager.inventoryOpened*/true) {
                 let x;
                 let y;
-                if (player.controler.gamepadInControl) {
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
                     x = player.game.canvas.clientWidth * 0.5;
                     y = player.game.canvas.clientHeight * 0.5;
                 }
@@ -1209,50 +1214,6 @@ class PlayerControler {
         this.player = player;
         this._pointerIsDown = false;
         this.gamepadInControl = false;
-        this._keyDown = (event) => {
-            if (event.code === "KeyW") {
-                this.player.inputZ += 1;
-                this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
-                this.gamepadInControl = false;
-            }
-            else if (event.code === "KeyS") {
-                this.player.inputZ -= 1;
-                this.player.inputZ = Nabu.MinMax(this.player.inputZ, -1, 0);
-                this.gamepadInControl = false;
-            }
-            else if (event.code === "KeyA") {
-                this.player.inputX -= 1;
-                this.player.inputX = Nabu.MinMax(this.player.inputX, -1, 0);
-                this.gamepadInControl = false;
-            }
-            else if (event.code === "KeyD") {
-                this.player.inputX += 1;
-                this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
-                this.gamepadInControl = false;
-            }
-        };
-        this._keyUp = (event) => {
-            if (event.code === "KeyW") {
-                this.player.inputZ -= 1;
-                this.player.inputZ = Nabu.MinMax(this.player.inputZ, -1, 0);
-                this.gamepadInControl = false;
-            }
-            else if (event.code === "KeyS") {
-                this.player.inputZ += 1;
-                this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
-                this.gamepadInControl = false;
-            }
-            else if (event.code === "KeyA") {
-                this.player.inputX += 1;
-                this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
-                this.gamepadInControl = false;
-            }
-            else if (event.code === "KeyD") {
-                this.player.inputX -= 1;
-                this.player.inputX = Nabu.MinMax(this.player.inputX, -1, 0);
-                this.gamepadInControl = false;
-            }
-        };
         this._pointerDown = (event) => {
             this._pointerIsDown = true;
             if (this.player.currentAction) {
@@ -1260,7 +1221,7 @@ class PlayerControler {
             }
         };
         this._pointerMove = (event) => {
-            if (this._pointerIsDown) {
+            if (this._pointerIsDown || this.player.game.inputManager.isPointerLocked) {
                 this.gamepadInControl = false;
                 this.player.inputDeltaX += event.movementX;
                 this.player.inputDeltaY += event.movementY;
@@ -1270,8 +1231,6 @@ class PlayerControler {
             this._pointerIsDown = false;
         };
         player.controler = this;
-        window.addEventListener("keydown", this._keyDown);
-        window.addEventListener("keyup", this._keyUp);
         window.addEventListener("pointerdown", this._pointerDown);
         window.addEventListener("pointermove", this._pointerMove);
         window.addEventListener("pointerup", this._pointerUp);
@@ -1294,6 +1253,24 @@ class PlayerControler {
         return 0;
     }
     update(dt) {
+        this.player.inputX = 0;
+        this.player.inputZ = 0;
+        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
+            this.player.inputZ += 1;
+            this.gamepadInControl = false;
+        }
+        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
+            this.player.inputZ -= 1;
+            this.gamepadInControl = false;
+        }
+        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
+            this.player.inputX += 1;
+            this.gamepadInControl = false;
+        }
+        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
+            this.player.inputX -= 1;
+            this.gamepadInControl = false;
+        }
         let gamepads = navigator.getGamepads();
         let gamepad = gamepads[0];
         if (gamepad) {
@@ -1320,7 +1297,7 @@ class PlayerControler {
                 this.lastB0 = gamepad.buttons[0].value;
             }
         }
-        if (this.gamepadInControl) {
+        if (this.gamepadInControl || this.player.game.inputManager.isPointerLocked) {
             this.aim.style.top = (window.innerHeight * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.left = (window.innerWidth * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.display = "block";
@@ -2435,5 +2412,276 @@ class GameRouter extends Nabu.Router {
         else if (page.startsWith("#home") || true) {
             this.show(this.homePage);
         }
+    }
+}
+var KeyInput;
+(function (KeyInput) {
+    KeyInput[KeyInput["NULL"] = -1] = "NULL";
+    KeyInput[KeyInput["ACTION_SLOT_0"] = 0] = "ACTION_SLOT_0";
+    KeyInput[KeyInput["ACTION_SLOT_1"] = 1] = "ACTION_SLOT_1";
+    KeyInput[KeyInput["ACTION_SLOT_2"] = 2] = "ACTION_SLOT_2";
+    KeyInput[KeyInput["ACTION_SLOT_3"] = 3] = "ACTION_SLOT_3";
+    KeyInput[KeyInput["ACTION_SLOT_4"] = 4] = "ACTION_SLOT_4";
+    KeyInput[KeyInput["ACTION_SLOT_5"] = 5] = "ACTION_SLOT_5";
+    KeyInput[KeyInput["ACTION_SLOT_6"] = 6] = "ACTION_SLOT_6";
+    KeyInput[KeyInput["ACTION_SLOT_7"] = 7] = "ACTION_SLOT_7";
+    KeyInput[KeyInput["ACTION_SLOT_8"] = 8] = "ACTION_SLOT_8";
+    KeyInput[KeyInput["ACTION_SLOT_9"] = 9] = "ACTION_SLOT_9";
+    KeyInput[KeyInput["INVENTORY"] = 10] = "INVENTORY";
+    KeyInput[KeyInput["MOVE_FORWARD"] = 11] = "MOVE_FORWARD";
+    KeyInput[KeyInput["MOVE_LEFT"] = 12] = "MOVE_LEFT";
+    KeyInput[KeyInput["MOVE_BACK"] = 13] = "MOVE_BACK";
+    KeyInput[KeyInput["MOVE_RIGHT"] = 14] = "MOVE_RIGHT";
+    KeyInput[KeyInput["JUMP"] = 15] = "JUMP";
+    KeyInput[KeyInput["MAIN_MENU"] = 16] = "MAIN_MENU";
+    KeyInput[KeyInput["WORKBENCH"] = 17] = "WORKBENCH";
+})(KeyInput || (KeyInput = {}));
+class InputManager {
+    constructor(scene, canvas, game) {
+        this.scene = scene;
+        this.canvas = canvas;
+        this.game = game;
+        this.isPointerLocked = false;
+        this.isPointerDown = false;
+        this.keyInputMap = new Map();
+        this.keyInputDown = new Nabu.UniqueList();
+        this.keyDownListeners = [];
+        this.mappedKeyDownListeners = new Map();
+        this.keyUpListeners = [];
+        this.mappedKeyUpListeners = new Map();
+    }
+    initialize(player) {
+        this.canvas.addEventListener("pointerdown", (ev) => {
+            this.isPointerDown = true;
+            if (this.game.configuration.getValue("canLockPointer") === 1) {
+                this.canvas.requestPointerLock();
+                this.isPointerLocked = true;
+            }
+        });
+        this.canvas.addEventListener("pointerup", () => {
+            this.isPointerDown = false;
+        });
+        document.addEventListener("pointerlockchange", () => {
+            if (!(document.pointerLockElement === this.canvas)) {
+                this.isPointerLocked = false;
+            }
+        });
+        this.keyInputMap.set("Digit0", KeyInput.ACTION_SLOT_0);
+        this.keyInputMap.set("Digit1", KeyInput.ACTION_SLOT_1);
+        this.keyInputMap.set("Digit2", KeyInput.ACTION_SLOT_2);
+        this.keyInputMap.set("Digit3", KeyInput.ACTION_SLOT_3);
+        this.keyInputMap.set("Digit4", KeyInput.ACTION_SLOT_4);
+        this.keyInputMap.set("Digit5", KeyInput.ACTION_SLOT_5);
+        this.keyInputMap.set("Digit6", KeyInput.ACTION_SLOT_6);
+        this.keyInputMap.set("Digit7", KeyInput.ACTION_SLOT_7);
+        this.keyInputMap.set("Digit8", KeyInput.ACTION_SLOT_8);
+        this.keyInputMap.set("Digit9", KeyInput.ACTION_SLOT_9);
+        this.keyInputMap.set("KeyI", KeyInput.INVENTORY);
+        this.keyInputMap.set("KeyW", KeyInput.MOVE_FORWARD);
+        this.keyInputMap.set("KeyA", KeyInput.MOVE_LEFT);
+        this.keyInputMap.set("KeyS", KeyInput.MOVE_BACK);
+        this.keyInputMap.set("KeyD", KeyInput.MOVE_RIGHT);
+        this.keyInputMap.set("Space", KeyInput.JUMP);
+        this.keyInputMap.set("Backquote", KeyInput.MAIN_MENU);
+        this.keyInputMap.set("KeyI", KeyInput.INVENTORY);
+        this.keyInputMap.set("m", KeyInput.MAIN_MENU);
+        this.keyInputMap.set("KeyC", KeyInput.WORKBENCH);
+        window.addEventListener("keydown", (e) => {
+            let keyInput = this.keyInputMap.get(e.code);
+            if (!isFinite(keyInput)) {
+                keyInput = this.keyInputMap.get(e.key);
+            }
+            if (isFinite(keyInput)) {
+                this.doKeyInputDown(keyInput);
+            }
+        });
+        window.addEventListener("keyup", (e) => {
+            let keyInput = this.keyInputMap.get(e.code);
+            if (!isFinite(keyInput)) {
+                keyInput = this.keyInputMap.get(e.key);
+            }
+            if (isFinite(keyInput)) {
+                this.doKeyInputUp(keyInput);
+            }
+        });
+        /*
+        document.getElementById("touch-menu").addEventListener("pointerdown", () => {
+            let keyInput = KeyInput.MAIN_MENU;
+            if (isFinite(keyInput)) {
+                this.doKeyInputDown(keyInput);
+            }
+        })
+        document.getElementById("touch-menu").addEventListener("pointerup", () => {
+            let keyInput = KeyInput.MAIN_MENU;
+            if (isFinite(keyInput)) {
+                this.doKeyInputUp(keyInput);
+            }
+        })
+        document.getElementById("touch-jump").addEventListener("pointerdown", () => {
+            let keyInput = KeyInput.JUMP;
+            if (isFinite(keyInput)) {
+                this.doKeyInputDown(keyInput);
+            }
+        })
+        document.getElementById("touch-jump").addEventListener("pointerup", () => {
+            let keyInput = KeyInput.JUMP;
+            if (isFinite(keyInput)) {
+                this.doKeyInputUp(keyInput);
+            }
+        })
+        */
+        this.addMappedKeyUpListener(KeyInput.INVENTORY, () => {
+            /*
+            this.inventoryOpened = !this.inventoryOpened;
+            if (this.game.configuration.getValue("canLockPointer") === 1) {
+                if (this.inventoryOpened) {
+                    document.exitPointerLock();
+                    this.isPointerLocked = false;
+                }
+                else {
+                    this.canvas.requestPointerLock();
+                    this.isPointerLocked = true;
+                }
+            }
+            */
+        });
+    }
+    doKeyInputDown(keyInput) {
+        this.keyInputDown.push(keyInput);
+        for (let i = 0; i < this.keyDownListeners.length; i++) {
+            this.keyDownListeners[i](keyInput);
+        }
+        let listeners = this.mappedKeyDownListeners.get(keyInput);
+        if (listeners) {
+            for (let i = 0; i < listeners.length; i++) {
+                listeners[i]();
+            }
+        }
+    }
+    doKeyInputUp(keyInput) {
+        this.keyInputDown.remove(keyInput);
+        for (let i = 0; i < this.keyUpListeners.length; i++) {
+            this.keyUpListeners[i](keyInput);
+        }
+        let listeners = this.mappedKeyUpListeners.get(keyInput);
+        if (listeners) {
+            for (let i = 0; i < listeners.length; i++) {
+                listeners[i]();
+            }
+        }
+    }
+    /*
+    public onTouchStart(): void {
+        if (!this._firstTouchStartTriggered) {
+            this.onFirstTouchStart();
+        }
+    }
+
+    private _firstTouchStartTriggered: boolean = false;
+    private onFirstTouchStart(): void {
+        let movePad = new PlayerInputMovePad(this.player);
+        movePad.connectInput(true);
+        
+        let headPad = new PlayerInputHeadPad(this.player);
+        headPad.connectInput(false);
+        this._firstTouchStartTriggered = true;
+
+        document.getElementById("touch-menu").style.display = "block";
+        document.getElementById("touch-jump").style.display = "block";
+
+        this.main.isTouch = true;
+    }
+    */
+    addKeyDownListener(callback) {
+        this.keyDownListeners.push(callback);
+    }
+    addMappedKeyDownListener(k, callback) {
+        let listeners = this.mappedKeyDownListeners.get(k);
+        if (listeners) {
+            listeners.push(callback);
+        }
+        else {
+            listeners = [callback];
+            this.mappedKeyDownListeners.set(k, listeners);
+        }
+    }
+    removeKeyDownListener(callback) {
+        let i = this.keyDownListeners.indexOf(callback);
+        if (i != -1) {
+            this.keyDownListeners.splice(i, 1);
+        }
+    }
+    removeMappedKeyDownListener(k, callback) {
+        let listeners = this.mappedKeyDownListeners.get(k);
+        if (listeners) {
+            let i = listeners.indexOf(callback);
+            if (i != -1) {
+                listeners.splice(i, 1);
+            }
+        }
+    }
+    addKeyUpListener(callback) {
+        this.keyUpListeners.push(callback);
+    }
+    addMappedKeyUpListener(k, callback) {
+        let listeners = this.mappedKeyUpListeners.get(k);
+        if (listeners) {
+            listeners.push(callback);
+        }
+        else {
+            listeners = [callback];
+            this.mappedKeyUpListeners.set(k, listeners);
+        }
+    }
+    removeKeyUpListener(callback) {
+        let i = this.keyUpListeners.indexOf(callback);
+        if (i != -1) {
+            this.keyUpListeners.splice(i, 1);
+        }
+    }
+    removeMappedKeyUpListener(k, callback) {
+        let listeners = this.mappedKeyUpListeners.get(k);
+        if (listeners) {
+            let i = listeners.indexOf(callback);
+            if (i != -1) {
+                listeners.splice(i, 1);
+            }
+        }
+    }
+    isKeyInputDown(keyInput) {
+        return this.keyInputDown.contains(keyInput);
+    }
+    getkeyInputActionSlotDown() {
+        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_0)) {
+            return KeyInput.ACTION_SLOT_0;
+        }
+        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_1)) {
+            return KeyInput.ACTION_SLOT_1;
+        }
+        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_2)) {
+            return KeyInput.ACTION_SLOT_2;
+        }
+        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_3)) {
+            return KeyInput.ACTION_SLOT_3;
+        }
+        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_4)) {
+            return KeyInput.ACTION_SLOT_4;
+        }
+        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_5)) {
+            return KeyInput.ACTION_SLOT_5;
+        }
+        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_6)) {
+            return KeyInput.ACTION_SLOT_6;
+        }
+        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_7)) {
+            return KeyInput.ACTION_SLOT_7;
+        }
+        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_8)) {
+            return KeyInput.ACTION_SLOT_8;
+        }
+        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_9)) {
+            return KeyInput.ACTION_SLOT_9;
+        }
+        return KeyInput.NULL;
     }
 }
