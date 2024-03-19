@@ -565,6 +565,7 @@ class Game {
             this.playerActionBar = new PlayerActionView(this.player, this);
             this.playerActionBar.initialize();
             this.inputManager.initialize(this.player);
+            playerControler.initialize();
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
@@ -604,6 +605,9 @@ class Game {
         let dt = this.scene.deltaTime / 1000;
         if (this.player && this.terrain) {
             this.player.update(dt);
+        }
+        if (this.inputManager) {
+            this.inputManager.update();
         }
         if (this.DEBUG_MODE) {
             let camPos = this.freeCamera.globalPosition;
@@ -908,15 +912,15 @@ class PlayerActionTemplate {
                 });
                 if (hit && hit.pickedPoint) {
                     let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
                     if (chunckIJK) {
                         // Redraw block preview
                         if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: terrain.blockSizeIJ_m, height: terrain.blockSizeK_m, depth: terrain.blockSizeIJ_m, color: new BABYLON.Color4(1, 0, 0, 1) });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: 2 * terrain.blockSizeIJ_m, height: 2 * terrain.blockSizeK_m, depth: 2 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(1, 0, 0, 1) });
                             }
                             else {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: terrain.blockSizeIJ_m, height: terrain.blockSizeK_m, depth: terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: 2 * terrain.blockSizeIJ_m, height: 2 * terrain.blockSizeK_m, depth: 2 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
                             }
                         }
                         let needRedrawMesh = false;
@@ -932,7 +936,7 @@ class PlayerActionTemplate {
                             lastK = chunckIJK.ijk.k;
                             needRedrawMesh = true;
                         }
-                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m);
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j) * terrain.blockSizeIJ_m);
                         previewMesh.parent = chunckIJK.chunck.mesh;
                         return;
                     }
@@ -964,14 +968,13 @@ class PlayerActionTemplate {
                 });
                 if (hit && hit.pickedPoint) {
                     let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
                     if (chunckIJK) {
                         let affectedChuncks = chunckIJK.chunck.setData(blockType, chunckIJK.ijk.i, chunckIJK.ijk.j, chunckIJK.ijk.k);
-                        for (let i = 0; i < affectedChuncks.length; i++) {
-                            let chunck = affectedChuncks[i];
-                            chunck.updateIsEmptyIsFull(chunckIJK.ijk.k);
-                            chunck.redrawMesh(true);
-                        }
+                        player.game.terrainEditor.doAction(chunckIJK.chunck, chunckIJK.ijk, {
+                            brushSize: 2,
+                            brushBlock: blockType,
+                        });
                     }
                 }
             }
@@ -1246,6 +1249,13 @@ class PlayerControler {
         this.aim.style.position = "fixed";
         this.aim.style.pointerEvents = "none";
     }
+    initialize() {
+        this.player.game.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
+            if (this.player.currentAction) {
+                this.player.currentAction.onClick(this.player.currentChuncks);
+            }
+        });
+    }
     testDeadZone(v, threshold = 0.1) {
         if (Math.abs(v) > threshold) {
             return (v - threshold * Math.sign(v)) / (1 - threshold);
@@ -1287,14 +1297,6 @@ class PlayerControler {
                 this.player.inputZ = axis1;
                 this.player.inputRY = axis2;
                 this.player.inputRX = axis3;
-            }
-            if (this.lastB0 != gamepad.buttons[0].value) {
-                if (gamepad.buttons[0].value) {
-                    if (this.player.currentAction) {
-                        this.player.currentAction.onClick(this.player.currentChuncks);
-                    }
-                }
-                this.lastB0 = gamepad.buttons[0].value;
             }
         }
         if (this.gamepadInControl || this.player.game.inputManager.isPointerLocked) {
@@ -2427,14 +2429,15 @@ var KeyInput;
     KeyInput[KeyInput["ACTION_SLOT_7"] = 7] = "ACTION_SLOT_7";
     KeyInput[KeyInput["ACTION_SLOT_8"] = 8] = "ACTION_SLOT_8";
     KeyInput[KeyInput["ACTION_SLOT_9"] = 9] = "ACTION_SLOT_9";
-    KeyInput[KeyInput["INVENTORY"] = 10] = "INVENTORY";
-    KeyInput[KeyInput["MOVE_FORWARD"] = 11] = "MOVE_FORWARD";
-    KeyInput[KeyInput["MOVE_LEFT"] = 12] = "MOVE_LEFT";
-    KeyInput[KeyInput["MOVE_BACK"] = 13] = "MOVE_BACK";
-    KeyInput[KeyInput["MOVE_RIGHT"] = 14] = "MOVE_RIGHT";
-    KeyInput[KeyInput["JUMP"] = 15] = "JUMP";
-    KeyInput[KeyInput["MAIN_MENU"] = 16] = "MAIN_MENU";
-    KeyInput[KeyInput["WORKBENCH"] = 17] = "WORKBENCH";
+    KeyInput[KeyInput["PLAYER_ACTION"] = 10] = "PLAYER_ACTION";
+    KeyInput[KeyInput["INVENTORY"] = 11] = "INVENTORY";
+    KeyInput[KeyInput["MOVE_FORWARD"] = 12] = "MOVE_FORWARD";
+    KeyInput[KeyInput["MOVE_LEFT"] = 13] = "MOVE_LEFT";
+    KeyInput[KeyInput["MOVE_BACK"] = 14] = "MOVE_BACK";
+    KeyInput[KeyInput["MOVE_RIGHT"] = 15] = "MOVE_RIGHT";
+    KeyInput[KeyInput["JUMP"] = 16] = "JUMP";
+    KeyInput[KeyInput["MAIN_MENU"] = 17] = "MAIN_MENU";
+    KeyInput[KeyInput["WORKBENCH"] = 18] = "WORKBENCH";
 })(KeyInput || (KeyInput = {}));
 class InputManager {
     constructor(scene, canvas, game) {
@@ -2443,7 +2446,9 @@ class InputManager {
         this.game = game;
         this.isPointerLocked = false;
         this.isPointerDown = false;
-        this.keyInputMap = new Map();
+        this.padButtonsMap = new Map();
+        this.padButtonsDown = new Nabu.UniqueList();
+        this.keyboardInputMap = new Map();
         this.keyInputDown = new Nabu.UniqueList();
         this.keyDownListeners = [];
         this.mappedKeyDownListeners = new Map();
@@ -2466,39 +2471,40 @@ class InputManager {
                 this.isPointerLocked = false;
             }
         });
-        this.keyInputMap.set("Digit0", KeyInput.ACTION_SLOT_0);
-        this.keyInputMap.set("Digit1", KeyInput.ACTION_SLOT_1);
-        this.keyInputMap.set("Digit2", KeyInput.ACTION_SLOT_2);
-        this.keyInputMap.set("Digit3", KeyInput.ACTION_SLOT_3);
-        this.keyInputMap.set("Digit4", KeyInput.ACTION_SLOT_4);
-        this.keyInputMap.set("Digit5", KeyInput.ACTION_SLOT_5);
-        this.keyInputMap.set("Digit6", KeyInput.ACTION_SLOT_6);
-        this.keyInputMap.set("Digit7", KeyInput.ACTION_SLOT_7);
-        this.keyInputMap.set("Digit8", KeyInput.ACTION_SLOT_8);
-        this.keyInputMap.set("Digit9", KeyInput.ACTION_SLOT_9);
-        this.keyInputMap.set("KeyI", KeyInput.INVENTORY);
-        this.keyInputMap.set("KeyW", KeyInput.MOVE_FORWARD);
-        this.keyInputMap.set("KeyA", KeyInput.MOVE_LEFT);
-        this.keyInputMap.set("KeyS", KeyInput.MOVE_BACK);
-        this.keyInputMap.set("KeyD", KeyInput.MOVE_RIGHT);
-        this.keyInputMap.set("Space", KeyInput.JUMP);
-        this.keyInputMap.set("Backquote", KeyInput.MAIN_MENU);
-        this.keyInputMap.set("KeyI", KeyInput.INVENTORY);
-        this.keyInputMap.set("m", KeyInput.MAIN_MENU);
-        this.keyInputMap.set("KeyC", KeyInput.WORKBENCH);
+        this.padButtonsMap.set(0, KeyInput.PLAYER_ACTION);
+        this.keyboardInputMap.set("Digit0", KeyInput.ACTION_SLOT_0);
+        this.keyboardInputMap.set("Digit1", KeyInput.ACTION_SLOT_1);
+        this.keyboardInputMap.set("Digit2", KeyInput.ACTION_SLOT_2);
+        this.keyboardInputMap.set("Digit3", KeyInput.ACTION_SLOT_3);
+        this.keyboardInputMap.set("Digit4", KeyInput.ACTION_SLOT_4);
+        this.keyboardInputMap.set("Digit5", KeyInput.ACTION_SLOT_5);
+        this.keyboardInputMap.set("Digit6", KeyInput.ACTION_SLOT_6);
+        this.keyboardInputMap.set("Digit7", KeyInput.ACTION_SLOT_7);
+        this.keyboardInputMap.set("Digit8", KeyInput.ACTION_SLOT_8);
+        this.keyboardInputMap.set("Digit9", KeyInput.ACTION_SLOT_9);
+        this.keyboardInputMap.set("KeyI", KeyInput.INVENTORY);
+        this.keyboardInputMap.set("KeyW", KeyInput.MOVE_FORWARD);
+        this.keyboardInputMap.set("KeyA", KeyInput.MOVE_LEFT);
+        this.keyboardInputMap.set("KeyS", KeyInput.MOVE_BACK);
+        this.keyboardInputMap.set("KeyD", KeyInput.MOVE_RIGHT);
+        this.keyboardInputMap.set("Space", KeyInput.JUMP);
+        this.keyboardInputMap.set("Backquote", KeyInput.MAIN_MENU);
+        this.keyboardInputMap.set("KeyI", KeyInput.INVENTORY);
+        this.keyboardInputMap.set("m", KeyInput.MAIN_MENU);
+        this.keyboardInputMap.set("KeyC", KeyInput.WORKBENCH);
         window.addEventListener("keydown", (e) => {
-            let keyInput = this.keyInputMap.get(e.code);
+            let keyInput = this.keyboardInputMap.get(e.code);
             if (!isFinite(keyInput)) {
-                keyInput = this.keyInputMap.get(e.key);
+                keyInput = this.keyboardInputMap.get(e.key);
             }
             if (isFinite(keyInput)) {
                 this.doKeyInputDown(keyInput);
             }
         });
         window.addEventListener("keyup", (e) => {
-            let keyInput = this.keyInputMap.get(e.code);
+            let keyInput = this.keyboardInputMap.get(e.code);
             if (!isFinite(keyInput)) {
-                keyInput = this.keyInputMap.get(e.key);
+                keyInput = this.keyboardInputMap.get(e.key);
             }
             if (isFinite(keyInput)) {
                 this.doKeyInputUp(keyInput);
@@ -2545,6 +2551,34 @@ class InputManager {
             }
             */
         });
+    }
+    update() {
+        let gamepads = navigator.getGamepads();
+        let gamepad = gamepads[0];
+        if (gamepad) {
+            let hasButtonsDown = this.padButtonsDown.length > 0;
+            for (let b = 0; b < gamepad.buttons.length; b++) {
+                let v = gamepad.buttons[b].pressed;
+                if (v) {
+                    if (!this.padButtonsDown.contains(b)) {
+                        this.padButtonsDown.push(b);
+                        let key = this.padButtonsMap.get(b);
+                        if (key) {
+                            this.doKeyInputDown(key);
+                        }
+                    }
+                }
+                else if (hasButtonsDown) {
+                    if (this.padButtonsDown.contains(b)) {
+                        this.padButtonsDown.remove(b);
+                        let key = this.padButtonsMap.get(b);
+                        if (key) {
+                            this.doKeyInputUp(key);
+                        }
+                    }
+                }
+            }
+        }
     }
     doKeyInputDown(keyInput) {
         this.keyInputDown.push(keyInput);

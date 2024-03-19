@@ -91,15 +91,15 @@ class PlayerActionTemplate {
                 )
                 if (hit && hit.pickedPoint) {
                     let n =  hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? - 0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
                     if (chunckIJK) {
                         // Redraw block preview
                         if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: terrain.blockSizeIJ_m, height: terrain.blockSizeK_m, depth: terrain.blockSizeIJ_m, color: new BABYLON.Color4(1, 0, 0, 1) });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: 2 * terrain.blockSizeIJ_m, height: 2 * terrain.blockSizeK_m, depth: 2 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(1, 0, 0, 1) });
                             }
                             else {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: terrain.blockSizeIJ_m, height: terrain.blockSizeK_m, depth: terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: 2 * terrain.blockSizeIJ_m, height: 2 * terrain.blockSizeK_m, depth: 2 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
                             }
                         }
                         
@@ -117,7 +117,7 @@ class PlayerActionTemplate {
                             needRedrawMesh = true;
                         }
                         
-                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m);
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j) * terrain.blockSizeIJ_m);
                         previewMesh.parent = chunckIJK.chunck.mesh;
 
                         return;
@@ -156,15 +156,13 @@ class PlayerActionTemplate {
                 )
                 if (hit && hit.pickedPoint) {
                     let n =  hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? - 0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
                     if (chunckIJK) {
                         let affectedChuncks = chunckIJK.chunck.setData(blockType, chunckIJK.ijk.i, chunckIJK.ijk.j, chunckIJK.ijk.k);
-                        
-                        for (let i = 0; i < affectedChuncks.length; i++) {
-                            let chunck = affectedChuncks[i];
-                            chunck.updateIsEmptyIsFull(chunckIJK.ijk.k);
-                            chunck.redrawMesh(true);
-                        }
+                        player.game.terrainEditor.doAction(chunckIJK.chunck, chunckIJK.ijk, {
+                            brushSize: 2,
+                            brushBlock: blockType,
+                        });
                     }
                 }
             }

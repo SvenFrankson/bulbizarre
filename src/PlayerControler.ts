@@ -26,6 +26,14 @@ class PlayerControler {
         this.aim.style.pointerEvents = "none";
     }
 
+    public initialize(): void {
+        this.player.game.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
+            if (this.player.currentAction) {
+                this.player.currentAction.onClick(this.player.currentChuncks);
+            }
+        })
+    }
+
     private _pointerDown = (event: PointerEvent) => {
         this._pointerIsDown = true;
         if (this.player.currentAction) {
@@ -52,7 +60,6 @@ class PlayerControler {
         return 0;
     }
 
-    public lastB0: number;
     public update(dt: number): void {
         this.player.inputX = 0;
         this.player.inputZ = 0;
@@ -91,15 +98,6 @@ class PlayerControler {
                 this.player.inputZ = axis1;
                 this.player.inputRY = axis2;
                 this.player.inputRX = axis3;
-            }
-
-            if (this.lastB0 != gamepad.buttons[0].value) {
-                if (gamepad.buttons[0].value) {
-                    if (this.player.currentAction) {
-                        this.player.currentAction.onClick(this.player.currentChuncks);
-                    }
-                }
-                this.lastB0 = gamepad.buttons[0].value;
             }
         }
         

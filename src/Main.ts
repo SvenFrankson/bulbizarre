@@ -179,6 +179,7 @@ class Game {
             this.playerActionBar = new PlayerActionView(this.player, this);
             this.playerActionBar.initialize();
             this.inputManager.initialize(this.player);
+            playerControler.initialize();
 
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
@@ -225,6 +226,10 @@ class Game {
         let dt = this.scene.deltaTime / 1000;
         if (this.player && this.terrain) {
             this.player.update(dt);
+        }
+
+        if (this.inputManager) {
+            this.inputManager.update();
         }
 
         if (this.DEBUG_MODE) {

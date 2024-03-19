@@ -10,6 +10,7 @@ enum KeyInput {
     ACTION_SLOT_7,
     ACTION_SLOT_8,
     ACTION_SLOT_9,
+    PLAYER_ACTION,
     INVENTORY,
     MOVE_FORWARD,
     MOVE_LEFT,
@@ -25,7 +26,11 @@ class InputManager {
     public isPointerLocked: boolean = false;
     public isPointerDown: boolean = false;
 
-    public keyInputMap: Map<string, KeyInput> = new Map<string, KeyInput>();
+    public padButtonsMap: Map<number, KeyInput> = new Map<number, KeyInput>();
+    public padButtonsDown: Nabu.UniqueList<number> = new Nabu.UniqueList<number>();
+
+    public keyboardInputMap: Map<string, KeyInput> = new Map<string, KeyInput>();
+    
     public keyInputDown: Nabu.UniqueList<KeyInput> = new Nabu.UniqueList<KeyInput>();
     public keyDownListeners: ((k: KeyInput) => any)[] = [];
     public mappedKeyDownListeners: Map<KeyInput,(() => any)[]> = new Map<KeyInput,(() => any)[]>();
@@ -54,40 +59,42 @@ class InputManager {
             }
         });
 
-        this.keyInputMap.set("Digit0", KeyInput.ACTION_SLOT_0);
-        this.keyInputMap.set("Digit1", KeyInput.ACTION_SLOT_1);
-        this.keyInputMap.set("Digit2", KeyInput.ACTION_SLOT_2);
-        this.keyInputMap.set("Digit3", KeyInput.ACTION_SLOT_3);
-        this.keyInputMap.set("Digit4", KeyInput.ACTION_SLOT_4);
-        this.keyInputMap.set("Digit5", KeyInput.ACTION_SLOT_5);
-        this.keyInputMap.set("Digit6", KeyInput.ACTION_SLOT_6);
-        this.keyInputMap.set("Digit7", KeyInput.ACTION_SLOT_7);
-        this.keyInputMap.set("Digit8", KeyInput.ACTION_SLOT_8);
-        this.keyInputMap.set("Digit9", KeyInput.ACTION_SLOT_9);
-        this.keyInputMap.set("KeyI", KeyInput.INVENTORY);
-        this.keyInputMap.set("KeyW", KeyInput.MOVE_FORWARD);
-        this.keyInputMap.set("KeyA", KeyInput.MOVE_LEFT);
-        this.keyInputMap.set("KeyS", KeyInput.MOVE_BACK);
-        this.keyInputMap.set("KeyD", KeyInput.MOVE_RIGHT);
-        this.keyInputMap.set("Space", KeyInput.JUMP);
-        this.keyInputMap.set("Backquote", KeyInput.MAIN_MENU);
-        this.keyInputMap.set("KeyI", KeyInput.INVENTORY);
-        this.keyInputMap.set("m", KeyInput.MAIN_MENU);
-        this.keyInputMap.set("KeyC", KeyInput.WORKBENCH);
+        this.padButtonsMap.set(0, KeyInput.PLAYER_ACTION);
+
+        this.keyboardInputMap.set("Digit0", KeyInput.ACTION_SLOT_0);
+        this.keyboardInputMap.set("Digit1", KeyInput.ACTION_SLOT_1);
+        this.keyboardInputMap.set("Digit2", KeyInput.ACTION_SLOT_2);
+        this.keyboardInputMap.set("Digit3", KeyInput.ACTION_SLOT_3);
+        this.keyboardInputMap.set("Digit4", KeyInput.ACTION_SLOT_4);
+        this.keyboardInputMap.set("Digit5", KeyInput.ACTION_SLOT_5);
+        this.keyboardInputMap.set("Digit6", KeyInput.ACTION_SLOT_6);
+        this.keyboardInputMap.set("Digit7", KeyInput.ACTION_SLOT_7);
+        this.keyboardInputMap.set("Digit8", KeyInput.ACTION_SLOT_8);
+        this.keyboardInputMap.set("Digit9", KeyInput.ACTION_SLOT_9);
+        this.keyboardInputMap.set("KeyI", KeyInput.INVENTORY);
+        this.keyboardInputMap.set("KeyW", KeyInput.MOVE_FORWARD);
+        this.keyboardInputMap.set("KeyA", KeyInput.MOVE_LEFT);
+        this.keyboardInputMap.set("KeyS", KeyInput.MOVE_BACK);
+        this.keyboardInputMap.set("KeyD", KeyInput.MOVE_RIGHT);
+        this.keyboardInputMap.set("Space", KeyInput.JUMP);
+        this.keyboardInputMap.set("Backquote", KeyInput.MAIN_MENU);
+        this.keyboardInputMap.set("KeyI", KeyInput.INVENTORY);
+        this.keyboardInputMap.set("m", KeyInput.MAIN_MENU);
+        this.keyboardInputMap.set("KeyC", KeyInput.WORKBENCH);
 
         window.addEventListener("keydown", (e) => {
-            let keyInput = this.keyInputMap.get(e.code);
+            let keyInput = this.keyboardInputMap.get(e.code);
             if (!isFinite(keyInput)) {
-                keyInput = this.keyInputMap.get(e.key);
+                keyInput = this.keyboardInputMap.get(e.key);
             }
             if (isFinite(keyInput)) {
                 this.doKeyInputDown(keyInput);
             }
         });
         window.addEventListener("keyup", (e) => {
-            let keyInput = this.keyInputMap.get(e.code);
+            let keyInput = this.keyboardInputMap.get(e.code);
             if (!isFinite(keyInput)) {
-                keyInput = this.keyInputMap.get(e.key);
+                keyInput = this.keyboardInputMap.get(e.key);
             }
             if (isFinite(keyInput)) {
                 this.doKeyInputUp(keyInput);
@@ -134,6 +141,35 @@ class InputManager {
             }
             */
         });
+    }
+
+    public update(): void {
+        let gamepads = navigator.getGamepads();
+        let gamepad = gamepads[0];
+        if (gamepad) {
+            let hasButtonsDown: boolean = this.padButtonsDown.length > 0;
+            for (let b = 0; b < gamepad.buttons.length; b++) {
+                let v = gamepad.buttons[b].pressed;
+                if (v) {
+                    if (!this.padButtonsDown.contains(b)) {
+                        this.padButtonsDown.push(b);
+                        let key: KeyInput = this.padButtonsMap.get(b);
+                        if (key) {
+                            this.doKeyInputDown(key);
+                        }
+                    }
+                }
+                else if (hasButtonsDown) {
+                    if (this.padButtonsDown.contains(b)) {
+                        this.padButtonsDown.remove(b);
+                        let key: KeyInput = this.padButtonsMap.get(b);
+                        if (key) {
+                            this.doKeyInputUp(key);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private doKeyInputDown(keyInput: KeyInput): void {
