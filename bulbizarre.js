@@ -426,6 +426,7 @@ class Game {
             debugTerrainPerf.show();
             this.player = new Player(this);
             this.player.position.copyFrom(this.freeCamera.position);
+            let playerControler = new PlayerControler(this.player);
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -463,7 +464,7 @@ class Game {
             this.player.update(dt);
         }
         if (this.DEBUG_MODE) {
-            let camPos = this.freeCamera.position;
+            let camPos = this.freeCamera.globalPosition;
             let camRot = this.freeCamera.rotation;
             window.localStorage.setItem("camera-position", JSON.stringify({ x: camPos.x, y: camPos.y, z: camPos.z }));
             window.localStorage.setItem("camera-rotation", JSON.stringify({ x: camRot.x, y: camRot.y, z: camRot.z }));
@@ -477,6 +478,7 @@ class Game {
         this.arcCamera.detachControl();
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         this.freeCamera.attachControl();
+        this.freeCamera.parent = undefined;
         this.terrain = new Kulla.Terrain({
             scene: this.scene,
             generatorProps: {
@@ -512,7 +514,10 @@ class Game {
         this.uiCamera.parent = this.freeCamera;
         this.arcCamera.detachControl();
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
-        this.freeCamera.attachControl();
+        this.freeCamera.detachControl();
+        this.freeCamera.parent = this.player.head;
+        this.freeCamera.position.copyFromFloats(0, 0, 0);
+        this.freeCamera.rotation.copyFromFloats(0, 0, 0);
         this.terrain = new Kulla.Terrain({
             scene: this.scene,
             generatorProps: {
@@ -597,44 +602,13 @@ class Player extends BABYLON.Mesh {
         let body = Mummu.CreateBeveledBox("body", { width: 1, height: this.height - 0.2, depth: 1 });
         body.position.y = -this.height * 0.5 - 0.1;
         body.parent = this;
-        window.addEventListener("keydown", (event) => {
-            if (event.code === "KeyW") {
-                this.inputZ += 1;
-                this.inputZ = Nabu.MinMax(this.inputZ, 0, 1);
-            }
-            else if (event.code === "KeyS") {
-                this.inputZ -= 1;
-                this.inputZ = Nabu.MinMax(this.inputZ, -1, 0);
-            }
-            else if (event.code === "KeyA") {
-                this.inputX -= 1;
-                this.inputX = Nabu.MinMax(this.inputX, -1, 0);
-            }
-            else if (event.code === "KeyD") {
-                this.inputX += 1;
-                this.inputX = Nabu.MinMax(this.inputX, 0, 1);
-            }
-        });
-        window.addEventListener("keyup", (event) => {
-            if (event.code === "KeyW") {
-                this.inputZ -= 1;
-                this.inputZ = Nabu.MinMax(this.inputZ, -1, 0);
-            }
-            else if (event.code === "KeyS") {
-                this.inputZ += 1;
-                this.inputZ = Nabu.MinMax(this.inputZ, 0, 1);
-            }
-            else if (event.code === "KeyA") {
-                this.inputX += 1;
-                this.inputX = Nabu.MinMax(this.inputX, 0, 1);
-            }
-            else if (event.code === "KeyD") {
-                this.inputX -= 1;
-                this.inputX = Nabu.MinMax(this.inputX, -1, 0);
-            }
-        });
+        this.head = new BABYLON.Mesh("head");
+        this.head.parent = this;
     }
     update(dt) {
+        if (this.controler) {
+            this.controler.update(dt);
+        }
         let currentChunck = this.game.terrain.getChunckAtPos(this.position, 0);
         if (currentChunck != this.currentChunck) {
             this.currentChunck = currentChunck;
@@ -667,9 +641,17 @@ class Player extends BABYLON.Mesh {
                 this.position.copyFrom(bestPick.pickedPoint).addInPlaceFromFloats(0, this.height, 0);
             }
             else {
-                this.velocity.y -= this.mass * 9.2 * dt * 0.1;
+                this.velocity.y -= this.mass * 9.2 * dt;
             }
             this.position.addInPlace(this.velocity.scale(dt));
+        }
+        else {
+            if (this.position.y < 100) {
+                this.position.y += 0.1;
+            }
+            if (this.position.y < 0) {
+                this.position.y = 100;
+            }
         }
     }
     updateCurrentChuncks() {
@@ -680,6 +662,92 @@ class Player extends BABYLON.Mesh {
                     this.currentChuncks[i + 3 * j] = this.game.terrain.getChunck(0, this.currentChunck.iPos - 1 + i, this.currentChunck.jPos - 1 + j);
                 }
             }
+        }
+    }
+}
+class PlayerControler {
+    constructor(player) {
+        this.player = player;
+        this._pointerIsDown = false;
+        this._keyDown = (event) => {
+            if (event.code === "KeyW") {
+                this.player.inputZ += 1;
+                this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
+            }
+            else if (event.code === "KeyS") {
+                this.player.inputZ -= 1;
+                this.player.inputZ = Nabu.MinMax(this.player.inputZ, -1, 0);
+            }
+            else if (event.code === "KeyA") {
+                this.player.inputX -= 1;
+                this.player.inputX = Nabu.MinMax(this.player.inputX, -1, 0);
+            }
+            else if (event.code === "KeyD") {
+                this.player.inputX += 1;
+                this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
+            }
+            else if (event.code === "KeyE") {
+                let gamepads = navigator.getGamepads();
+                console.log(gamepads);
+                if (gamepads[0]) {
+                }
+                for (let i = 0; i < 10; i++) {
+                }
+            }
+        };
+        this._keyUp = (event) => {
+            if (event.code === "KeyW") {
+                this.player.inputZ -= 1;
+                this.player.inputZ = Nabu.MinMax(this.player.inputZ, -1, 0);
+            }
+            else if (event.code === "KeyS") {
+                this.player.inputZ += 1;
+                this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
+            }
+            else if (event.code === "KeyA") {
+                this.player.inputX += 1;
+                this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
+            }
+            else if (event.code === "KeyD") {
+                this.player.inputX -= 1;
+                this.player.inputX = Nabu.MinMax(this.player.inputX, -1, 0);
+            }
+        };
+        this._pointerDown = (event) => {
+            this._pointerIsDown = true;
+        };
+        this._pointerMove = (event) => {
+            if (this._pointerIsDown) {
+                this.player.rotation.y += event.movementX / 500;
+                this.player.head.rotation.x += event.movementY / 500;
+                this.player.head.rotation.x = Nabu.MinMax(this.player.head.rotation.x, -Math.PI * 0.5, Math.PI * 0.5);
+            }
+        };
+        this._pointerUp = (event) => {
+            this._pointerIsDown = false;
+        };
+        player.controler = this;
+        window.addEventListener("keydown", this._keyDown);
+        window.addEventListener("keyup", this._keyUp);
+        window.addEventListener("pointerdown", this._pointerDown);
+        window.addEventListener("pointermove", this._pointerMove);
+        window.addEventListener("pointerup", this._pointerUp);
+    }
+    testDeadZone(v, threshold = 0.1) {
+        if (Math.abs(v) > threshold) {
+            return (v - threshold * Math.sign(v)) / (1 - threshold);
+        }
+        return 0;
+    }
+    update(dt) {
+        let gamepads = navigator.getGamepads();
+        let gamepad = gamepads[0];
+        if (gamepad) {
+            this.player.inputX = this.testDeadZone(gamepad.axes[0]);
+            this.player.inputZ = -this.testDeadZone(gamepad.axes[1]);
+            this.player.rotation.y += this.testDeadZone(gamepad.axes[2]) / 100;
+            this.player.head.rotation.x += this.testDeadZone(gamepad.axes[3]) / 100;
+            this.player.head.rotation.x = Nabu.MinMax(this.player.head.rotation.x, -Math.PI * 0.5, Math.PI * 0.5);
         }
     }
 }

@@ -168,6 +168,7 @@ class Game {
 
             this.player = new Player(this);
             this.player.position.copyFrom(this.freeCamera.position);
+            let playerControler = new PlayerControler(this.player);
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {
@@ -212,7 +213,7 @@ class Game {
         }
 
         if (this.DEBUG_MODE) {
-            let camPos = this.freeCamera.position;
+            let camPos = this.freeCamera.globalPosition;
             let camRot = this.freeCamera.rotation;
             window.localStorage.setItem("camera-position", JSON.stringify({ x: camPos.x, y: camPos.y, z: camPos.z }));
             window.localStorage.setItem("camera-rotation", JSON.stringify({ x: camRot.x, y: camRot.y, z: camRot.z }));
@@ -228,6 +229,7 @@ class Game {
         this.arcCamera.detachControl();
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         this.freeCamera.attachControl();
+        this.freeCamera.parent = undefined;
             
         this.terrain = new Kulla.Terrain({
             scene: this.scene,
@@ -269,8 +271,11 @@ class Game {
         this.uiCamera.parent = this.freeCamera;
         this.arcCamera.detachControl();
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
-        this.freeCamera.attachControl();
-            
+        this.freeCamera.detachControl();
+        this.freeCamera.parent = this.player.head;
+        this.freeCamera.position.copyFromFloats(0, 0, 0);
+        this.freeCamera.rotation.copyFromFloats(0, 0, 0);
+
         this.terrain = new Kulla.Terrain({
             scene: this.scene,
             generatorProps: {
