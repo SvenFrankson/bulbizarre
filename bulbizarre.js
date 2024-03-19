@@ -753,6 +753,9 @@ class Player extends BABYLON.Mesh {
             this.currentChunck = currentChunck;
             this.updateCurrentChuncks();
         }
+        if (this.currentAction) {
+            this.currentAction.onUpdate(this.currentChuncks);
+        }
         let ray = new BABYLON.Ray(this.position, new BABYLON.Vector3(0, -1, 0));
         let bestPick;
         for (let i = 0; i < this.currentChuncks.length; i++) {
@@ -880,23 +883,23 @@ class PlayerActionTemplate {
         let lastJ;
         let lastK;
         action.onUpdate = () => {
-            /*
-            if (!player.game.inventoryView.isOpened) {
-                let hit = player.inputManager.getPickInfo(player.meshes);
+            let terrain = player.game.terrain;
+            if ( /*!player.game.inventoryView.isOpened*/true) {
+                let hit = player.game.scene.pick(player._scene.pointerX, player._scene.pointerY, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                });
                 if (hit && hit.pickedPoint) {
-                    let n =  hit.getNormal(true).scaleInPlace(blockType === BlockType.None ? - 0.2 : 0.2);
-                    let localIJK = PlanetTools.WorldPositionToLocalIJK(player.planet, hit.pickedPoint.add(n));
-                    if (localIJK) {
+                    let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                    if (chunckIJK) {
                         // Redraw block preview
-                        if (!previewMesh && blockType != BlockType.None) {
-                            previewMesh = new BABYLON.Mesh("preview-mesh");
-                            if (player.planet) {
-                                previewMesh.material = player.planet.chunckMaterial;
-                            }
+                        if (!previewMesh && blockType != Kulla.BlockType.None) {
+                            previewMesh = BABYLON.MeshBuilder.CreateBox("preview", { width: terrain.blockSizeIJ_m, height: terrain.blockSizeK_m, depth: terrain.blockSizeIJ_m });
                         }
+                        /*
                         if (!previewBox) {
                             previewBox = new BABYLON.Mesh("preview-box");
-                            if (blockType === BlockType.None) {
+                            if (blockType === Kulla.BlockType.None) {
                                 previewBox.material = SharedMaterials.RedEmissiveMaterial();
                             }
                             else {
@@ -904,38 +907,33 @@ class PlayerActionTemplate {
                             }
                             previewBox.layerMask = 0x1;
                         }
-                        let globalIJK = PlanetTools.LocalIJKToGlobalIJK(localIJK);
-                        let needRedrawMesh: boolean = false;
-                        if (lastSize != localIJK.planetChunck.size) {
-                            lastSize = localIJK.planetChunck.size;
+                        */
+                        let needRedrawMesh = false;
+                        if (lastI != chunckIJK.ijk.i) {
+                            lastI = chunckIJK.ijk.i;
                             needRedrawMesh = true;
                         }
-                        if (lastI != localIJK.i) {
-                            lastI = localIJK.i;
+                        if (lastJ != chunckIJK.ijk.j) {
+                            lastJ = chunckIJK.ijk.j;
                             needRedrawMesh = true;
                         }
-                        if (lastJ != localIJK.j) {
-                            lastJ = localIJK.j;
-                            needRedrawMesh = true;
-                        }
-                        if (lastK != localIJK.k) {
-                            lastK = localIJK.k;
+                        if (lastK != chunckIJK.ijk.k) {
+                            lastK = chunckIJK.ijk.k;
                             needRedrawMesh = true;
                         }
                         if (needRedrawMesh) {
-                            if (previewMesh) {
-                                PlanetTools.SkewVertexData(previewMeshData, localIJK.planetChunck.size, globalIJK.i, globalIJK.j, globalIJK.k, localIJK.planetChunck.side, blockType).applyToMesh(previewMesh);
-                                previewMesh.parent = localIJK.planetChunck.planetSide;
-                            }
-                            PlanetTools.SkewVertexData(previewBoxData, localIJK.planetChunck.size, globalIJK.i, globalIJK.j, globalIJK.k, localIJK.planetChunck.side).applyToMesh(previewBox);
-                            previewBox.parent = localIJK.planetChunck.planetSide;
+                            //if (previewMesh) {
+                            //    PlanetTools.SkewVertexData(previewMeshData, localIJK.planetChunck.size, globalIJK.i, globalIJK.j, globalIJK.k, localIJK.planetChunck.side, blockType).applyToMesh(previewMesh);
+                            //    previewMesh.parent = chunckIJK.chunck.mesh;
+                            //}
+                            //PlanetTools.SkewVertexData(previewBoxData, localIJK.planetChunck.size, globalIJK.i, globalIJK.j, globalIJK.k, localIJK.planetChunck.side).applyToMesh(previewBox);
+                            previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m);
+                            previewMesh.parent = chunckIJK.chunck.mesh;
                         }
-
                         return;
                     }
                 }
             }
-            
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;
@@ -944,22 +942,25 @@ class PlayerActionTemplate {
                 previewBox.dispose();
                 previewBox = undefined;
             }
-            */
         };
         action.onClick = () => {
-            /*
-            if (!player.inputManager.inventoryOpened) {
-                let hit = player.inputManager.getPickInfo(player.meshes);
+            if ( /*!player.inputManager.inventoryOpened*/true) {
+                let hit = player.game.scene.pick(player._scene.pointerX, player._scene.pointerY, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                });
                 if (hit && hit.pickedPoint) {
-                    let n =  hit.getNormal(true).scaleInPlace(blockType === BlockType.None ? - 0.2 : 0.2);
-                    let localIJK = PlanetTools.WorldPositionToLocalIJK(player.planet, hit.pickedPoint.add(n));
-                    if (localIJK) {
-                        localIJK.planetChunck.SetData(localIJK.i, localIJK.j, localIJK.k, blockType);
-                        localIJK.planetChunck.planetSide.planet.chunckManager.requestDraw(localIJK.planetChunck, localIJK.planetChunck.lod, "PlayerAction.onClick");
+                    let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                    if (chunckIJK) {
+                        let affectedChuncks = chunckIJK.chunck.setData(blockType, chunckIJK.ijk.i, chunckIJK.ijk.j, chunckIJK.ijk.k);
+                        for (let i = 0; i < affectedChuncks.length; i++) {
+                            let chunck = affectedChuncks[i];
+                            chunck.updateIsEmptyIsFull(chunckIJK.ijk.k);
+                            chunck.redrawMesh(true);
+                        }
                     }
                 }
             }
-            */
         };
         action.onUnequip = () => {
             if (previewMesh) {
@@ -998,8 +999,14 @@ class PlayerActionView {
         }
     }
     highlight(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.tiles[slotIndex].style.border = "2px solid rgb(255, 255, 255)";
+        }
     }
     unlit(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.tiles[slotIndex].style.border = "2px solid rgb(127, 127, 127)";
+        }
     }
     onActionEquiped(action, slotIndex) {
         if (this._equipedSlotIndex >= 0 && this._equipedSlotIndex <= 9) {
@@ -1016,14 +1023,8 @@ class PlayerActionView {
         }
     }
     onHintStart(slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.tiles[slotIndex].style.border = "2px solid rgb(255, 255, 255)";
-        }
     }
     onHintEnd(slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.tiles[slotIndex].style.border = "2px solid rgb(127, 127, 127)";
-        }
     }
     onActionLinked(action, slotIndex) {
         if (slotIndex >= 0 && slotIndex <= 9) {
@@ -1077,7 +1078,7 @@ class PlayerActionManager {
     get inventory() {
         return this.player.inventory;
     }
-    get hud() {
+    get playerActionView() {
         return this.game.playerActionBar;
     }
     initialize() {
@@ -1108,7 +1109,7 @@ class PlayerActionManager {
     linkAction(action, slotIndex) {
         if (slotIndex >= 0 && slotIndex <= 9) {
             this.linkedActions[slotIndex] = action;
-            this.hud.onActionLinked(action, slotIndex);
+            this.playerActionView.onActionLinked(action, slotIndex);
             /*
             if (Config.saveConfiguration.useLocalStorage) {
                 window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
@@ -1119,7 +1120,7 @@ class PlayerActionManager {
     unlinkAction(slotIndex) {
         if (slotIndex >= 0 && slotIndex <= 9) {
             this.linkedActions[slotIndex] = undefined;
-            this.hud.onActionUnlinked(slotIndex);
+            this.playerActionView.onActionUnlinked(slotIndex);
             /*
             if (Config.saveConfiguration.useLocalStorage) {
                 window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
@@ -1129,15 +1130,12 @@ class PlayerActionManager {
     }
     equipAction(slotIndex) {
         if (slotIndex >= 0 && slotIndex < 10) {
-            for (let i = 0; i < 10; i++) {
-                //(document.querySelector("#player-action-" + i + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background.svg";
-            }
             // Unequip current action
             if (this.player.currentAction) {
                 if (this.player.currentAction.onUnequip) {
                     this.player.currentAction.onUnequip();
                 }
-                this.hud.onActionUnequiped(this.player.currentAction, slotIndex);
+                this.playerActionView.onActionUnequiped(this.player.currentAction, slotIndex);
             }
             if (this.linkedActions[slotIndex]) {
                 // If request action was already equiped, remove it.
@@ -1152,7 +1150,7 @@ class PlayerActionManager {
                         if (this.player.currentAction.onEquip) {
                             this.player.currentAction.onEquip();
                         }
-                        this.hud.onActionEquiped(this.player.currentAction, slotIndex);
+                        this.playerActionView.onActionEquiped(this.player.currentAction, slotIndex);
                     }
                 }
             }
@@ -1165,13 +1163,13 @@ class PlayerActionManager {
         this.inventory.hintedSlotIndex.push(slotIndex);
         setTimeout(() => {
             if (this.inventory.hintedSlotIndex.contains(slotIndex)) {
-                this.hud.onHintStart(slotIndex);
+                this.playerActionView.onHintStart(slotIndex);
             }
         }, 200);
     }
     stopHint(slotIndex) {
         this.inventory.hintedSlotIndex.remove(slotIndex) >= 0;
-        this.hud.onHintEnd(slotIndex);
+        this.playerActionView.onHintEnd(slotIndex);
     }
     serialize() {
         let linkedActionsNames = [];
@@ -1248,6 +1246,9 @@ class PlayerControler {
         };
         this._pointerDown = (event) => {
             this._pointerIsDown = true;
+            if (this.player.currentAction) {
+                this.player.currentAction.onClick(this.player.currentChuncks);
+            }
         };
         this._pointerMove = (event) => {
             if (this._pointerIsDown) {

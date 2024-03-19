@@ -45,6 +45,10 @@ class Player extends BABYLON.Mesh {
             this.updateCurrentChuncks();
         }
 
+        if (this.currentAction) {
+            this.currentAction.onUpdate(this.currentChuncks);
+        }
+
         let ray = new BABYLON.Ray(this.position, new BABYLON.Vector3(0, - 1, 0));
         let bestPick: BABYLON.PickingInfo;
         for (let i = 0; i < this.currentChuncks.length; i++) {

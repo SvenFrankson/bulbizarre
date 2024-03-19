@@ -31,7 +31,7 @@ class PlayerActionManager {
     public get inventory(): Inventory {
         return this.player.inventory;
     }
-    public get hud(): PlayerActionView {
+    public get playerActionView(): PlayerActionView {
         return this.game.playerActionBar;
     }
 
@@ -78,7 +78,7 @@ class PlayerActionManager {
     public linkAction(action: PlayerAction, slotIndex: number): void {
         if (slotIndex >= 0 && slotIndex <= 9) {
             this.linkedActions[slotIndex] = action;
-            this.hud.onActionLinked(action, slotIndex);
+            this.playerActionView.onActionLinked(action, slotIndex);
             /*
             if (Config.saveConfiguration.useLocalStorage) {
                 window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
@@ -90,7 +90,7 @@ class PlayerActionManager {
     public unlinkAction(slotIndex: number): void {
         if (slotIndex >= 0 && slotIndex <= 9) {
             this.linkedActions[slotIndex] = undefined;
-            this.hud.onActionUnlinked(slotIndex);
+            this.playerActionView.onActionUnlinked(slotIndex);
             /*
             if (Config.saveConfiguration.useLocalStorage) {
                 window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
@@ -101,15 +101,12 @@ class PlayerActionManager {
 
     public equipAction(slotIndex: number): void {
         if (slotIndex >= 0 && slotIndex < 10) {
-            for (let i = 0; i < 10; i++) {
-                //(document.querySelector("#player-action-" + i + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background.svg";
-            }
             // Unequip current action
             if (this.player.currentAction) {
                 if (this.player.currentAction.onUnequip) {
                     this.player.currentAction.onUnequip();
                 }
-                this.hud.onActionUnequiped(this.player.currentAction, slotIndex);
+                this.playerActionView.onActionUnequiped(this.player.currentAction, slotIndex);
             }
             if (this.linkedActions[slotIndex]) {
                 // If request action was already equiped, remove it.
@@ -124,7 +121,7 @@ class PlayerActionManager {
                         if (this.player.currentAction.onEquip) {
                             this.player.currentAction.onEquip();
                         }
-                        this.hud.onActionEquiped(this.player.currentAction, slotIndex);
+                        this.playerActionView.onActionEquiped(this.player.currentAction, slotIndex);
                     }
                 }
             }
@@ -138,14 +135,14 @@ class PlayerActionManager {
         this.inventory.hintedSlotIndex.push(slotIndex);
         setTimeout(() => {
             if (this.inventory.hintedSlotIndex.contains(slotIndex)) {
-                this.hud.onHintStart(slotIndex);
+                this.playerActionView.onHintStart(slotIndex);
             }
         }, 200);
     }
 
     public stopHint(slotIndex: number): void {
         this.inventory.hintedSlotIndex.remove(slotIndex) >= 0;
-        this.hud.onHintEnd(slotIndex);
+        this.playerActionView.onHintEnd(slotIndex);
     }
 
     public serialize(): IPlayerActionManagerData {

@@ -22,11 +22,15 @@ class PlayerActionView {
     }
 
     public highlight(slotIndex: number): void {
-        
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.tiles[slotIndex].style.border = "2px solid rgb(255, 255, 255)";
+        }
     }
 
     public unlit(slotIndex: number): void {
-        
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.tiles[slotIndex].style.border = "2px solid rgb(127, 127, 127)";
+        }
     }
 
     private _equipedSlotIndex: number = - 1;
@@ -47,15 +51,11 @@ class PlayerActionView {
     }
 
     public onHintStart(slotIndex: number): void {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.tiles[slotIndex].style.border = "2px solid rgb(255, 255, 255)";
-        }
+        
     }
 
     public onHintEnd(slotIndex: number): void {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.tiles[slotIndex].style.border = "2px solid rgb(127, 127, 127)";
-        }
+
     }
 
     public onActionLinked(action: PlayerAction, slotIndex: number): void {

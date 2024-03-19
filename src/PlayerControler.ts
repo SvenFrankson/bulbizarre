@@ -60,6 +60,9 @@ class PlayerControler {
 
     private _pointerDown = (event: PointerEvent) => {
         this._pointerIsDown = true;
+        if (this.player.currentAction) {
+            this.player.currentAction.onClick(this.player.currentChuncks);
+        }
     }
 
     private _pointerMove = (event: PointerEvent) => {
