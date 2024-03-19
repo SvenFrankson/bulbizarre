@@ -596,8 +596,13 @@ class Player extends BABYLON.Mesh {
         this.velocity = BABYLON.Vector3.Zero();
         this.frozen = true;
         this.speed = 3;
+        this.rSpeed = Math.PI;
         this.inputZ = 0;
         this.inputX = 0;
+        this.inputRY = 0;
+        this.inputRX = 0;
+        this.inputDeltaX = 0;
+        this.inputDeltaY = 0;
         this.currentChuncks = [];
         let body = Mummu.CreateBeveledBox("body", { width: 1, height: this.height - 0.2, depth: 1 });
         body.position.y = -this.height * 0.5 - 0.1;
@@ -635,6 +640,17 @@ class Player extends BABYLON.Mesh {
         }
         this.velocity.addInPlace(this.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
         this.velocity.addInPlace(this.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
+        this.rotation.y += this.rSpeed * this.inputRY * dt;
+        this.head.rotation.x += this.rSpeed * this.inputRX * dt;
+        this.head.rotation.x = Nabu.MinMax(this.head.rotation.x, -Math.PI * 0.5, Math.PI * 0.5);
+        if (this.inputDeltaX != 0) {
+            this.rotation.y += this.inputDeltaX / 500;
+            this.inputDeltaX = 0;
+        }
+        if (this.inputDeltaY != 0) {
+            this.head.rotation.x += this.inputDeltaY / 500;
+            this.inputDeltaY = 0;
+        }
         if (bestPick && bestPick.hit) {
             if (bestPick.distance <= this.height) {
                 this.velocity.y = 0;
@@ -669,48 +685,49 @@ class PlayerControler {
     constructor(player) {
         this.player = player;
         this._pointerIsDown = false;
+        this.gamepadCanControl = false;
         this._keyDown = (event) => {
             if (event.code === "KeyW") {
                 this.player.inputZ += 1;
                 this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
+                this.gamepadCanControl = false;
             }
             else if (event.code === "KeyS") {
                 this.player.inputZ -= 1;
                 this.player.inputZ = Nabu.MinMax(this.player.inputZ, -1, 0);
+                this.gamepadCanControl = false;
             }
             else if (event.code === "KeyA") {
                 this.player.inputX -= 1;
                 this.player.inputX = Nabu.MinMax(this.player.inputX, -1, 0);
+                this.gamepadCanControl = false;
             }
             else if (event.code === "KeyD") {
                 this.player.inputX += 1;
                 this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
-            }
-            else if (event.code === "KeyE") {
-                let gamepads = navigator.getGamepads();
-                console.log(gamepads);
-                if (gamepads[0]) {
-                }
-                for (let i = 0; i < 10; i++) {
-                }
+                this.gamepadCanControl = false;
             }
         };
         this._keyUp = (event) => {
             if (event.code === "KeyW") {
                 this.player.inputZ -= 1;
                 this.player.inputZ = Nabu.MinMax(this.player.inputZ, -1, 0);
+                this.gamepadCanControl = false;
             }
             else if (event.code === "KeyS") {
                 this.player.inputZ += 1;
                 this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
+                this.gamepadCanControl = false;
             }
             else if (event.code === "KeyA") {
                 this.player.inputX += 1;
                 this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
+                this.gamepadCanControl = false;
             }
             else if (event.code === "KeyD") {
                 this.player.inputX -= 1;
                 this.player.inputX = Nabu.MinMax(this.player.inputX, -1, 0);
+                this.gamepadCanControl = false;
             }
         };
         this._pointerDown = (event) => {
@@ -718,9 +735,8 @@ class PlayerControler {
         };
         this._pointerMove = (event) => {
             if (this._pointerIsDown) {
-                this.player.rotation.y += event.movementX / 500;
-                this.player.head.rotation.x += event.movementY / 500;
-                this.player.head.rotation.x = Nabu.MinMax(this.player.head.rotation.x, -Math.PI * 0.5, Math.PI * 0.5);
+                this.player.inputDeltaX += event.movementX;
+                this.player.inputDeltaY += event.movementY;
             }
         };
         this._pointerUp = (event) => {
@@ -743,11 +759,20 @@ class PlayerControler {
         let gamepads = navigator.getGamepads();
         let gamepad = gamepads[0];
         if (gamepad) {
-            this.player.inputX = this.testDeadZone(gamepad.axes[0]);
-            this.player.inputZ = -this.testDeadZone(gamepad.axes[1]);
-            this.player.rotation.y += this.testDeadZone(gamepad.axes[2]) / 100;
-            this.player.head.rotation.x += this.testDeadZone(gamepad.axes[3]) / 100;
-            this.player.head.rotation.x = Nabu.MinMax(this.player.head.rotation.x, -Math.PI * 0.5, Math.PI * 0.5);
+            let axis0 = this.testDeadZone(gamepad.axes[0]);
+            let axis1 = -this.testDeadZone(gamepad.axes[1]);
+            let axis2 = this.testDeadZone(gamepad.axes[2]);
+            let axis3 = this.testDeadZone(gamepad.axes[3]);
+            this.gamepadCanControl = this.gamepadCanControl || (axis0 != 0);
+            this.gamepadCanControl = this.gamepadCanControl || (axis1 != 0);
+            this.gamepadCanControl = this.gamepadCanControl || (axis2 != 0);
+            this.gamepadCanControl = this.gamepadCanControl || (axis3 != 0);
+            if (this.gamepadCanControl) {
+                this.player.inputX = axis0;
+                this.player.inputZ = axis1;
+                this.player.inputRY = axis2;
+                this.player.inputRX = axis3;
+            }
         }
     }
 }

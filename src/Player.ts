@@ -7,9 +7,14 @@ class Player extends BABYLON.Mesh {
     public velocity: BABYLON.Vector3 = BABYLON.Vector3.Zero();
     public frozen: boolean = true;
     public speed: number = 3;
+    public rSpeed: number = Math.PI;
 
     public inputZ: number = 0;
     public inputX: number = 0;
+    public inputRY: number = 0;
+    public inputRX: number = 0;
+    public inputDeltaX: number = 0;
+    public inputDeltaY: number = 0;
 
     public currentChunck: Kulla.Chunck;
     public currentChuncks: Kulla.Chunck[] = [];
@@ -59,6 +64,19 @@ class Player extends BABYLON.Mesh {
         }
         this.velocity.addInPlace(this.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
         this.velocity.addInPlace(this.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
+
+        this.rotation.y += this.rSpeed * this.inputRY * dt;
+        this.head.rotation.x += this.rSpeed * this.inputRX * dt;
+        this.head.rotation.x = Nabu.MinMax(this.head.rotation.x, - Math.PI * 0.5, Math.PI * 0.5);
+
+        if (this.inputDeltaX != 0) {
+            this.rotation.y += this.inputDeltaX / 500;
+            this.inputDeltaX = 0;
+        }
+        if (this.inputDeltaY != 0) {
+            this.head.rotation.x += this.inputDeltaY / 500;
+            this.inputDeltaY = 0;
+        }
         
         if (bestPick && bestPick.hit) {
             if (bestPick.distance <= this.height) {

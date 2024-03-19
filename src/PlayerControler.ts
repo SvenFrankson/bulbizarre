@@ -1,6 +1,7 @@
 class PlayerControler {
 
     private _pointerIsDown: boolean = false;
+    public gamepadCanControl: boolean = false;
 
     constructor(public player: Player) {
         player.controler = this;
@@ -15,28 +16,22 @@ class PlayerControler {
         if (event.code === "KeyW") {
             this.player.inputZ += 1;
             this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
+            this.gamepadCanControl = false;
         }
         else if (event.code === "KeyS") {
             this.player.inputZ -= 1;
             this.player.inputZ = Nabu.MinMax(this.player.inputZ, - 1, 0);
+            this.gamepadCanControl = false;
         }
         else if (event.code === "KeyA") {
             this.player.inputX -= 1;
             this.player.inputX = Nabu.MinMax(this.player.inputX, - 1, 0);
+            this.gamepadCanControl = false;
         }
         else if (event.code === "KeyD") {
             this.player.inputX += 1;
             this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
-        }
-        else if (event.code === "KeyE") {    
-            let gamepads = navigator.getGamepads();
-            console.log(gamepads);
-            if (gamepads[0]) {
-                
-            }
-            for (let i = 0; i < 10; i++) {
-            
-            }
+            this.gamepadCanControl = false;
         }
     }
 
@@ -44,18 +39,22 @@ class PlayerControler {
         if (event.code === "KeyW") {
             this.player.inputZ -= 1;
             this.player.inputZ = Nabu.MinMax(this.player.inputZ, - 1, 0);
+            this.gamepadCanControl = false;
         }
         else if (event.code === "KeyS") {
             this.player.inputZ += 1;
             this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
+            this.gamepadCanControl = false;
         }
         else if (event.code === "KeyA") {
             this.player.inputX += 1;
             this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
+            this.gamepadCanControl = false;
         }
         else if (event.code === "KeyD") {
             this.player.inputX -= 1;
             this.player.inputX = Nabu.MinMax(this.player.inputX, - 1, 0);
+            this.gamepadCanControl = false;
         }
     }
 
@@ -65,9 +64,8 @@ class PlayerControler {
 
     private _pointerMove = (event: PointerEvent) => {
         if (this._pointerIsDown) {
-            this.player.rotation.y += event.movementX / 500;
-            this.player.head.rotation.x += event.movementY / 500;
-            this.player.head.rotation.x = Nabu.MinMax(this.player.head.rotation.x, - Math.PI * 0.5, Math.PI * 0.5);
+            this.player.inputDeltaX += event.movementX;
+            this.player.inputDeltaY += event.movementY;
         }
     }
 
@@ -86,11 +84,22 @@ class PlayerControler {
         let gamepads = navigator.getGamepads();
         let gamepad = gamepads[0];
         if (gamepad) {
-            this.player.inputX = this.testDeadZone(gamepad.axes[0]);
-            this.player.inputZ = - this.testDeadZone(gamepad.axes[1]);
-            this.player.rotation.y += this.testDeadZone(gamepad.axes[2]) / 100;
-            this.player.head.rotation.x += this.testDeadZone(gamepad.axes[3]) / 100;
-            this.player.head.rotation.x = Nabu.MinMax(this.player.head.rotation.x, - Math.PI * 0.5, Math.PI * 0.5);
+            let axis0 = this.testDeadZone(gamepad.axes[0]);
+            let axis1 = - this.testDeadZone(gamepad.axes[1]);
+            let axis2 = this.testDeadZone(gamepad.axes[2]);
+            let axis3 = this.testDeadZone(gamepad.axes[3]);
+
+            this.gamepadCanControl = this.gamepadCanControl || (axis0 != 0);
+            this.gamepadCanControl = this.gamepadCanControl || (axis1 != 0);
+            this.gamepadCanControl = this.gamepadCanControl || (axis2 != 0);
+            this.gamepadCanControl = this.gamepadCanControl || (axis3 != 0);
+
+            if (this.gamepadCanControl) {
+                this.player.inputX = axis0;
+                this.player.inputZ = axis1;
+                this.player.inputRY = axis2;
+                this.player.inputRX = axis3;
+            }
         }
     }
 }
