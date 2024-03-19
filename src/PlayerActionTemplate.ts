@@ -72,9 +72,19 @@ class PlayerActionTemplate {
         action.onUpdate = () => {
             let terrain = player.game.terrain;
             if (/*!player.game.inventoryView.isOpened*/true) {
+                let x: number;
+                let y: number;
+                if (player.controler.gamepadInControl) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
                 let hit = player.game.scene.pick(
-                    player._scene.pointerX,
-                    player._scene.pointerY,
+                    x,
+                    y,
                     (mesh) => {
                         return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
                     }
@@ -140,9 +150,19 @@ class PlayerActionTemplate {
 
         action.onClick = () => {
             if (/*!player.inputManager.inventoryOpened*/true) {
+                let x: number;
+                let y: number;
+                if (player.controler.gamepadInControl) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
                 let hit = player.game.scene.pick(
-                    player._scene.pointerX,
-                    player._scene.pointerY,
+                    x,
+                    y,
                     (mesh) => {
                         return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
                     }

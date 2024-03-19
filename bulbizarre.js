@@ -739,6 +739,7 @@ class Player extends BABYLON.Mesh {
         this.inputDeltaY = 0;
         this.currentChuncks = [];
         let body = Mummu.CreateBeveledBox("body", { width: 1, height: this.height - 0.2, depth: 1 });
+        body.isVisible = false;
         body.position.y = -this.height * 0.5 - 0.1;
         body.parent = this;
         this.head = new BABYLON.Mesh("head");
@@ -790,8 +791,7 @@ class Player extends BABYLON.Mesh {
         }
         if (bestPick && bestPick.hit) {
             if (bestPick.distance <= this.height) {
-                this.velocity.y = 0;
-                this.position.copyFrom(bestPick.pickedPoint).addInPlaceFromFloats(0, this.height, 0);
+                this.velocity.y = (this.height - bestPick.distance);
             }
             else {
                 this.velocity.y -= this.mass * 9.2 * dt;
@@ -885,7 +885,17 @@ class PlayerActionTemplate {
         action.onUpdate = () => {
             let terrain = player.game.terrain;
             if ( /*!player.game.inventoryView.isOpened*/true) {
-                let hit = player.game.scene.pick(player._scene.pointerX, player._scene.pointerY, (mesh) => {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
                     return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
                 });
                 if (hit && hit.pickedPoint) {
@@ -945,7 +955,17 @@ class PlayerActionTemplate {
         };
         action.onClick = () => {
             if ( /*!player.inputManager.inventoryOpened*/true) {
-                let hit = player.game.scene.pick(player._scene.pointerX, player._scene.pointerY, (mesh) => {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
                     return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
                 });
                 if (hit && hit.pickedPoint) {
@@ -1199,49 +1219,49 @@ class PlayerControler {
     constructor(player) {
         this.player = player;
         this._pointerIsDown = false;
-        this.gamepadCanControl = false;
+        this.gamepadInControl = false;
         this._keyDown = (event) => {
             if (event.code === "KeyW") {
                 this.player.inputZ += 1;
                 this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
-                this.gamepadCanControl = false;
+                this.gamepadInControl = false;
             }
             else if (event.code === "KeyS") {
                 this.player.inputZ -= 1;
                 this.player.inputZ = Nabu.MinMax(this.player.inputZ, -1, 0);
-                this.gamepadCanControl = false;
+                this.gamepadInControl = false;
             }
             else if (event.code === "KeyA") {
                 this.player.inputX -= 1;
                 this.player.inputX = Nabu.MinMax(this.player.inputX, -1, 0);
-                this.gamepadCanControl = false;
+                this.gamepadInControl = false;
             }
             else if (event.code === "KeyD") {
                 this.player.inputX += 1;
                 this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
-                this.gamepadCanControl = false;
+                this.gamepadInControl = false;
             }
         };
         this._keyUp = (event) => {
             if (event.code === "KeyW") {
                 this.player.inputZ -= 1;
                 this.player.inputZ = Nabu.MinMax(this.player.inputZ, -1, 0);
-                this.gamepadCanControl = false;
+                this.gamepadInControl = false;
             }
             else if (event.code === "KeyS") {
                 this.player.inputZ += 1;
                 this.player.inputZ = Nabu.MinMax(this.player.inputZ, 0, 1);
-                this.gamepadCanControl = false;
+                this.gamepadInControl = false;
             }
             else if (event.code === "KeyA") {
                 this.player.inputX += 1;
                 this.player.inputX = Nabu.MinMax(this.player.inputX, 0, 1);
-                this.gamepadCanControl = false;
+                this.gamepadInControl = false;
             }
             else if (event.code === "KeyD") {
                 this.player.inputX -= 1;
                 this.player.inputX = Nabu.MinMax(this.player.inputX, -1, 0);
-                this.gamepadCanControl = false;
+                this.gamepadInControl = false;
             }
         };
         this._pointerDown = (event) => {
@@ -1252,6 +1272,7 @@ class PlayerControler {
         };
         this._pointerMove = (event) => {
             if (this._pointerIsDown) {
+                this.gamepadInControl = false;
                 this.player.inputDeltaX += event.movementX;
                 this.player.inputDeltaY += event.movementY;
             }
@@ -1265,6 +1286,17 @@ class PlayerControler {
         window.addEventListener("pointerdown", this._pointerDown);
         window.addEventListener("pointermove", this._pointerMove);
         window.addEventListener("pointerup", this._pointerUp);
+        this.aim = document.createElement("canvas");
+        this.aim.width = 21;
+        this.aim.height = 21;
+        document.body.appendChild(this.aim);
+        let context = this.aim.getContext("2d");
+        context.fillStyle = "#00ff00";
+        context.fillRect(0, 10, 21, 1);
+        context.fillRect(10, 0, 1, 21);
+        this.aim.style.zIndex = "10";
+        this.aim.style.position = "fixed";
+        this.aim.style.pointerEvents = "none";
     }
     testDeadZone(v, threshold = 0.1) {
         if (Math.abs(v) > threshold) {
@@ -1280,16 +1312,34 @@ class PlayerControler {
             let axis1 = -this.testDeadZone(gamepad.axes[1]);
             let axis2 = this.testDeadZone(gamepad.axes[2]);
             let axis3 = this.testDeadZone(gamepad.axes[3]);
-            this.gamepadCanControl = this.gamepadCanControl || (axis0 != 0);
-            this.gamepadCanControl = this.gamepadCanControl || (axis1 != 0);
-            this.gamepadCanControl = this.gamepadCanControl || (axis2 != 0);
-            this.gamepadCanControl = this.gamepadCanControl || (axis3 != 0);
-            if (this.gamepadCanControl) {
+            this.gamepadInControl = this.gamepadInControl || (axis0 != 0);
+            this.gamepadInControl = this.gamepadInControl || (axis1 != 0);
+            this.gamepadInControl = this.gamepadInControl || (axis2 != 0);
+            this.gamepadInControl = this.gamepadInControl || (axis3 != 0);
+            if (this.gamepadInControl) {
                 this.player.inputX = axis0;
                 this.player.inputZ = axis1;
                 this.player.inputRY = axis2;
                 this.player.inputRX = axis3;
             }
+            if (this.lastB0 != gamepad.buttons[0].value) {
+                if (gamepad.buttons[0].value) {
+                    if (this.player.currentAction) {
+                        this.player.currentAction.onClick(this.player.currentChuncks);
+                    }
+                }
+                this.lastB0 = gamepad.buttons[0].value;
+            }
+        }
+        if (this.gamepadInControl) {
+            this.aim.style.top = (window.innerHeight * 0.5 - 10).toFixed(0) + "px";
+            this.aim.style.left = (window.innerWidth * 0.5 - 10).toFixed(0) + "px";
+            this.aim.style.display = "block";
+            document.body.style.cursor = "none";
+        }
+        else {
+            this.aim.style.display = "none";
+            document.body.style.cursor = "auto";
         }
     }
 }

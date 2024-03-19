@@ -27,6 +27,7 @@ class Player extends BABYLON.Mesh {
     constructor(public game: Game) {
         super("player");
         let body = Mummu.CreateBeveledBox("body", { width: 1, height: this.height - 0.2, depth: 1 });
+        body.isVisible = false;
         body.position.y = - this.height * 0.5 - 0.1;
         body.parent = this;
 
@@ -87,8 +88,7 @@ class Player extends BABYLON.Mesh {
         
         if (bestPick && bestPick.hit) {
             if (bestPick.distance <= this.height) {
-                this.velocity.y = 0;
-                this.position.copyFrom(bestPick.pickedPoint).addInPlaceFromFloats(0, this.height, 0);
+                this.velocity.y = (this.height - bestPick.distance);
             }
             else {
                 this.velocity.y -= this.mass * 9.2 * dt;
