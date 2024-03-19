@@ -40,6 +40,7 @@ class Game {
     public terrainEditor: Kulla.TerrainEditor;
     public propEditor: PropEditor;
     public player: Player;
+    public playerActionBar: PlayerActionView;
 
     public router: GameRouter;
 
@@ -169,6 +170,13 @@ class Game {
             this.player = new Player(this);
             this.player.position.copyFrom(this.freeCamera.position);
             let playerControler = new PlayerControler(this.player);
+            this.player.playerActionManager = new PlayerActionManager(this.player, this);
+            this.player.playerActionManager.initialize();
+            this.player.inventory = new Inventory(this.player);
+            this.playerActionBar = new PlayerActionView(this.player, this);
+            this.playerActionBar.initialize();
+
+            this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 1);
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {

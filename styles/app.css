@@ -222,3 +222,16 @@ nabu-checkbox {
     background-repeat: no-repeat;
     background-position: center;
 }
+
+#action-bar {
+    position: fixed;
+    top: 10;
+    left: 10;
+}
+
+#action-bar .action-tile {
+    width: 5vh;
+    height: 5vh;
+    margin: 1vh;
+    border: 2px solid rgb(127, 127, 127);
+}

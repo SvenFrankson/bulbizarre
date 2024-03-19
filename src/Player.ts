@@ -1,6 +1,9 @@
 class Player extends BABYLON.Mesh {
 
     public controler: PlayerControler;
+    public inventory: Inventory;
+    public playerActionManager: PlayerActionManager;
+    public currentAction: PlayerAction;
 
     public mass: number = 2;
     public height: number = 2;

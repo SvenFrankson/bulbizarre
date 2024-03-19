@@ -3,6 +3,7 @@ class GameRouter extends Nabu.Router {
     public homePage: Nabu.PanelPage;
     public optionPage: Nabu.OptionPage;
     public propEditor: Nabu.DefaultPage;
+    public actionBar: Nabu.DefaultPage;
 
     constructor(public game: Game) {
         super();
@@ -12,6 +13,7 @@ class GameRouter extends Nabu.Router {
         this.homePage = document.getElementById("home-page") as Nabu.PanelPage;
         this.optionPage = document.getElementById("option-page") as Nabu.OptionPage;
         this.propEditor = document.getElementById("prop-editor-ui") as Nabu.DefaultPage;
+        this.actionBar = document.getElementById("action-bar") as Nabu.DefaultPage;
     }
 
     protected onUpdate(): void {
@@ -25,7 +27,7 @@ class GameRouter extends Nabu.Router {
             this.game.generateTerrainLarge();
         }
         else if (page.startsWith("#brick")) {
-            this.hideAll();
+            this.show(this.actionBar);
             this.game.generateTerrainBrick();
         }
         else if (page.startsWith("#prop-creator")) {

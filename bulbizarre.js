@@ -304,6 +304,134 @@ class GameConfiguration extends Nabu.Configuration {
         }
     }
 }
+var InventorySection;
+(function (InventorySection) {
+    InventorySection[InventorySection["Action"] = 0] = "Action";
+    InventorySection[InventorySection["Cube"] = 1] = "Cube";
+    InventorySection[InventorySection["Block"] = 2] = "Block";
+    InventorySection[InventorySection["Brick"] = 3] = "Brick";
+    InventorySection[InventorySection["TmpObject"] = 4] = "TmpObject";
+    InventorySection[InventorySection["DriderBait"] = 5] = "DriderBait";
+})(InventorySection || (InventorySection = {}));
+class InventoryItem {
+    constructor() {
+        this.count = 1;
+        this.size = 1;
+        this.timeUse = 0;
+    }
+    static async Block(player, blockType) {
+        return new Promise(async (resolve) => {
+            let it = new InventoryItem();
+            it.section = InventorySection.Block;
+            it.name = Kulla.BlockTypeNames[blockType];
+            it.size = 27;
+            it.playerAction = await PlayerActionTemplate.CreateBlockAction(player, blockType);
+            it.playerAction.item = it;
+            it.iconUrl = "datas/images/block-icon-" + Kulla.BlockTypeNames[blockType] + "-miniature.png";
+            resolve(it);
+        });
+    }
+    static async TmpObject(player, tmpObjectName) {
+        return new Promise(async (resolve) => {
+            let it = new InventoryItem();
+            it.section = InventorySection.TmpObject;
+            it.name = tmpObjectName;
+            it.size = 1;
+            it.playerAction = await PlayerActionTemplate.AddTmpObjectAction(player, tmpObjectName);
+            it.playerAction.item = it;
+            it.iconUrl = "/datas/images/qmark.png";
+            resolve(it);
+        });
+    }
+}
+var BrickSortingOrder;
+(function (BrickSortingOrder) {
+    BrickSortingOrder[BrickSortingOrder["Recent"] = 0] = "Recent";
+    BrickSortingOrder[BrickSortingOrder["TypeAsc"] = 1] = "TypeAsc";
+    BrickSortingOrder[BrickSortingOrder["TypeDesc"] = 2] = "TypeDesc";
+    BrickSortingOrder[BrickSortingOrder["SizeAsc"] = 3] = "SizeAsc";
+    BrickSortingOrder[BrickSortingOrder["SizeDesc"] = 4] = "SizeDesc";
+    BrickSortingOrder[BrickSortingOrder["ColorAsc"] = 5] = "ColorAsc";
+    BrickSortingOrder[BrickSortingOrder["ColorDesc"] = 6] = "ColorDesc";
+})(BrickSortingOrder || (BrickSortingOrder = {}));
+class Inventory {
+    constructor(player) {
+        this.player = player;
+        this.items = [];
+        this._brickSorting = BrickSortingOrder.TypeAsc;
+        this.hintedSlotIndex = new Nabu.UniqueList();
+        player.inventory = this;
+    }
+    async initialize() {
+        let savedInventoryString = window.localStorage.getItem("player-inventory");
+        if (savedInventoryString) {
+            let savedInventory = JSON.parse(savedInventoryString);
+            await this.deserializeInPlace(savedInventory);
+        }
+        else {
+            this.addItem(await InventoryItem.Block(this.player, Kulla.BlockType.None));
+        }
+        this.update();
+    }
+    addItem(item) {
+        let same = this.items.find(it => { return it.name === item.name; });
+        if (same) {
+            same.count++;
+        }
+        else {
+            this.items.push(item);
+        }
+        let data = this.serialize();
+        window.localStorage.setItem("player-inventory", JSON.stringify(data));
+    }
+    getCurrentSectionItems() {
+        let sectionItems = [];
+        for (let i = 0; i < this.items.length; i++) {
+            if (this.items[i].section === this.currentSection) {
+                sectionItems.push(this.items[i]);
+            }
+        }
+        return sectionItems;
+    }
+    getItemByName(name) {
+        return this.items.find(it => { return it.name === name; });
+    }
+    getItemByPlayerActionName(playerActionName) {
+        return this.items.find(it => { return it.playerAction.name === playerActionName; });
+    }
+    update() {
+    }
+    serialize() {
+        let data = {
+            items: []
+        };
+        for (let i = 0; i < this.items.length; i++) {
+            let item = this.items[i];
+            data.items.push({
+                r: item.name,
+                c: item.count
+            });
+        }
+        return data;
+    }
+    async deserializeInPlace(input) {
+        this.items = [];
+        for (let i = 0; i < input.items.length; i++) {
+            let data = input.items[i];
+            let blockType = Kulla.BlockTypeNames.indexOf(data.r);
+            if (blockType != -1) {
+                let item = await InventoryItem.Block(this.player, blockType);
+                item.count = data.c;
+                this.items.push(item);
+            }
+            else {
+                let item = await InventoryItem.TmpObject(this.player, data.r);
+                item.count = data.c;
+                this.items.push(item);
+            }
+        }
+    }
+}
 /// <reference path="../lib/babylon.d.ts"/>
 /// <reference path="../lib/nabu/nabu.d.ts"/>
 /// <reference path="../lib/mummu/mummu.d.ts"/>
@@ -427,6 +555,12 @@ class Game {
             this.player = new Player(this);
             this.player.position.copyFrom(this.freeCamera.position);
             let playerControler = new PlayerControler(this.player);
+            this.player.playerActionManager = new PlayerActionManager(this.player, this);
+            this.player.playerActionManager.initialize();
+            this.player.inventory = new Inventory(this.player);
+            this.playerActionBar = new PlayerActionView(this.player, this);
+            this.playerActionBar.initialize();
+            this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 1);
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -676,6 +810,388 @@ class Player extends BABYLON.Mesh {
             for (let i = 0; i <= 2; i++) {
                 for (let j = 0; j <= 2; j++) {
                     this.currentChuncks[i + 3 * j] = this.game.terrain.getChunck(0, this.currentChunck.iPos - 1 + i, this.currentChunck.jPos - 1 + j);
+                }
+            }
+        }
+    }
+}
+var ACTIVE_DEBUG_PLAYER_ACTION = true;
+var ADD_BRICK_ANIMATION_DURATION = 1000;
+class PlayerActionTemplate {
+    static async AddTmpObjectAction(player, tmpObjectName) {
+        return undefined;
+        /*
+        let action = new PlayerAction(tmpObjectName, player);
+        action.iconUrl = "/datas/images/qmark.png";
+
+        let previewTmpObject: TmpObject;
+
+        action.onUpdate = () => {
+            if (!player.inputManager.inventoryOpened) {
+                let hit = player.inputManager.getPickInfo(player.meshes);
+                if (hit && hit.pickedPoint) {
+                    if (!previewTmpObject) {
+                        previewTmpObject = new TmpObject(tmpObjectName, player.main);
+                        previewTmpObject.planet = player.planet;
+                        previewTmpObject.instantiate();
+                    }
+                    previewTmpObject.setPosition(hit.pickedPoint);
+                    previewTmpObject.setTarget(player.position);
+                    return;
+                }
+            }
+            if (previewTmpObject) {
+                previewTmpObject.dispose();
+                previewTmpObject = undefined;
+            }
+        }
+
+        action.onClick = () => {
+            if (!player.inputManager.inventoryOpened) {
+                let hit = player.inputManager.getPickInfo(player.meshes);
+                if (hit && hit.pickedPoint) {
+                    let tmpObject = new TmpObject(tmpObjectName, player.main);
+                    tmpObject.planet = player.planet;
+                    tmpObject.instantiate();
+                    tmpObject.setPosition(hit.pickedPoint);
+                    tmpObject.setTarget(player.position);
+                }
+            }
+        }
+
+        action.onUnequip = () => {
+            if (previewTmpObject) {
+                previewTmpObject.dispose();
+                previewTmpObject = undefined;
+            }
+        }
+
+        return action;
+        */
+    }
+    static async CreateBlockAction(player, blockType) {
+        let action = new PlayerAction(Kulla.BlockTypeNames[blockType], player);
+        action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
+        let previewMesh;
+        let previewBox;
+        action.iconUrl = "/datas/images/block-icon-" + Kulla.BlockTypeNames[blockType] + "-miniature.png";
+        let lastSize;
+        let lastI;
+        let lastJ;
+        let lastK;
+        action.onUpdate = () => {
+            /*
+            if (!player.game.inventoryView.isOpened) {
+                let hit = player.inputManager.getPickInfo(player.meshes);
+                if (hit && hit.pickedPoint) {
+                    let n =  hit.getNormal(true).scaleInPlace(blockType === BlockType.None ? - 0.2 : 0.2);
+                    let localIJK = PlanetTools.WorldPositionToLocalIJK(player.planet, hit.pickedPoint.add(n));
+                    if (localIJK) {
+                        // Redraw block preview
+                        if (!previewMesh && blockType != BlockType.None) {
+                            previewMesh = new BABYLON.Mesh("preview-mesh");
+                            if (player.planet) {
+                                previewMesh.material = player.planet.chunckMaterial;
+                            }
+                        }
+                        if (!previewBox) {
+                            previewBox = new BABYLON.Mesh("preview-box");
+                            if (blockType === BlockType.None) {
+                                previewBox.material = SharedMaterials.RedEmissiveMaterial();
+                            }
+                            else {
+                                previewBox.material = SharedMaterials.WhiteEmissiveMaterial();
+                            }
+                            previewBox.layerMask = 0x1;
+                        }
+                        let globalIJK = PlanetTools.LocalIJKToGlobalIJK(localIJK);
+                        let needRedrawMesh: boolean = false;
+                        if (lastSize != localIJK.planetChunck.size) {
+                            lastSize = localIJK.planetChunck.size;
+                            needRedrawMesh = true;
+                        }
+                        if (lastI != localIJK.i) {
+                            lastI = localIJK.i;
+                            needRedrawMesh = true;
+                        }
+                        if (lastJ != localIJK.j) {
+                            lastJ = localIJK.j;
+                            needRedrawMesh = true;
+                        }
+                        if (lastK != localIJK.k) {
+                            lastK = localIJK.k;
+                            needRedrawMesh = true;
+                        }
+                        if (needRedrawMesh) {
+                            if (previewMesh) {
+                                PlanetTools.SkewVertexData(previewMeshData, localIJK.planetChunck.size, globalIJK.i, globalIJK.j, globalIJK.k, localIJK.planetChunck.side, blockType).applyToMesh(previewMesh);
+                                previewMesh.parent = localIJK.planetChunck.planetSide;
+                            }
+                            PlanetTools.SkewVertexData(previewBoxData, localIJK.planetChunck.size, globalIJK.i, globalIJK.j, globalIJK.k, localIJK.planetChunck.side).applyToMesh(previewBox);
+                            previewBox.parent = localIJK.planetChunck.planetSide;
+                        }
+
+                        return;
+                    }
+                }
+            }
+            
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+            */
+        };
+        action.onClick = () => {
+            /*
+            if (!player.inputManager.inventoryOpened) {
+                let hit = player.inputManager.getPickInfo(player.meshes);
+                if (hit && hit.pickedPoint) {
+                    let n =  hit.getNormal(true).scaleInPlace(blockType === BlockType.None ? - 0.2 : 0.2);
+                    let localIJK = PlanetTools.WorldPositionToLocalIJK(player.planet, hit.pickedPoint.add(n));
+                    if (localIJK) {
+                        localIJK.planetChunck.SetData(localIJK.i, localIJK.j, localIJK.k, blockType);
+                        localIJK.planetChunck.planetSide.planet.chunckManager.requestDraw(localIJK.planetChunck, localIJK.planetChunck.lod, "PlayerAction.onClick");
+                    }
+                }
+            }
+            */
+        };
+        action.onUnequip = () => {
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+            lastSize = undefined;
+            lastI = undefined;
+            lastJ = undefined;
+            lastK = undefined;
+        };
+        return action;
+    }
+}
+class PlayerActionView {
+    constructor(player, game) {
+        this.player = player;
+        this.game = game;
+        this.isOpened = false;
+        this._equipedSlotIndex = -1;
+    }
+    get scene() {
+        return this.game.scene;
+    }
+    get inventory() {
+        return this.player.inventory;
+    }
+    initialize() {
+        this.tiles = [];
+        for (let slotIndex = 0; slotIndex <= 9; slotIndex++) {
+            this.tiles[slotIndex] = document.querySelector("#action-" + slotIndex.toFixed(0));
+        }
+    }
+    highlight(slotIndex) {
+    }
+    unlit(slotIndex) {
+    }
+    onActionEquiped(action, slotIndex) {
+        if (this._equipedSlotIndex >= 0 && this._equipedSlotIndex <= 9) {
+            this.unlit(this._equipedSlotIndex);
+        }
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.highlight(slotIndex);
+            this._equipedSlotIndex = slotIndex;
+        }
+    }
+    onActionUnequiped(action, slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.unlit(slotIndex);
+        }
+    }
+    onHintStart(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.tiles[slotIndex].style.border = "2px solid rgb(255, 255, 255)";
+        }
+    }
+    onHintEnd(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.tiles[slotIndex].style.border = "2px solid rgb(127, 127, 127)";
+        }
+    }
+    onActionLinked(action, slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.tiles[slotIndex].style.backgroundColor = action.backgroundColor;
+            /*
+            this.hudLateralTileImageMeshes[slotIndex].isVisible = true;
+            this.hudLateralTileImageMaterials[slotIndex].diffuseTexture = new BABYLON.Texture(action.iconUrl);
+            this.hudLateralTileImageMaterials[slotIndex].diffuseTexture.hasAlpha = true;
+            this.itemCountTexts[slotIndex].prop.text = action.item.count.toFixed(0);
+            this.itemNameTexts[slotIndex].prop.text = action.item.name;
+            this.slika.needRedraw = true;
+            */
+        }
+    }
+    onActionUnlinked(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.tiles[slotIndex].style.backgroundColor = undefined;
+            /*
+            this.hudLateralTileImageMeshes[slotIndex].isVisible = false;
+            this.hudLateralTileImageMaterials[slotIndex].diffuseTexture = undefined;
+            this.itemCountTexts[slotIndex].prop.text = "";
+            this.itemNameTexts[slotIndex].prop.text = "";
+            this.slika.needRedraw = true;
+            */
+        }
+    }
+    onPointerUp() {
+        if (this.inventory.draggedItem) {
+            //this.player.playerActionManager.linkAction(this.inventory.draggedItem.playerAction, index);
+            this.inventory.draggedItem = undefined;
+        }
+    }
+}
+class PlayerAction {
+    constructor(name, player) {
+        this.name = name;
+        this.player = player;
+        this.backgroundColor = "#ffffff";
+        this.r = 0;
+    }
+}
+class PlayerActionManager {
+    constructor(player, game) {
+        this.player = player;
+        this.game = game;
+        this.linkedActions = [];
+        this.update = () => {
+        };
+        player.playerActionManager = this;
+    }
+    get inventory() {
+        return this.player.inventory;
+    }
+    get hud() {
+        return this.game.playerActionBar;
+    }
+    initialize() {
+        let savedPlayerActionString = window.localStorage.getItem("player-action-manager");
+        if (savedPlayerActionString) {
+            let savedPlayerAction = JSON.parse(savedPlayerActionString);
+            this.deserializeInPlace(savedPlayerAction);
+        }
+        this.game.scene.onBeforeRenderObservable.add(this.update);
+        window.addEventListener("keydown", (ev) => {
+            if (ev.code.startsWith("Digit")) {
+                let slotIndex = parseInt(ev.code.replace("Digit", ""));
+                if (slotIndex >= 0 && slotIndex < 10) {
+                    this.startHint(slotIndex);
+                }
+            }
+        });
+        window.addEventListener("keydown", (ev) => {
+            if (ev.code.startsWith("Digit")) {
+                let slotIndex = parseInt(ev.code.replace("Digit", ""));
+                if (slotIndex >= 0 && slotIndex < 10) {
+                    this.stopHint(slotIndex);
+                    this.equipAction(slotIndex);
+                }
+            }
+        });
+    }
+    linkAction(action, slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.linkedActions[slotIndex] = action;
+            this.hud.onActionLinked(action, slotIndex);
+            /*
+            if (Config.saveConfiguration.useLocalStorage) {
+                window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
+            }
+            */
+        }
+    }
+    unlinkAction(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.linkedActions[slotIndex] = undefined;
+            this.hud.onActionUnlinked(slotIndex);
+            /*
+            if (Config.saveConfiguration.useLocalStorage) {
+                window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
+            }
+            */
+        }
+    }
+    equipAction(slotIndex) {
+        if (slotIndex >= 0 && slotIndex < 10) {
+            for (let i = 0; i < 10; i++) {
+                //(document.querySelector("#player-action-" + i + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background.svg";
+            }
+            // Unequip current action
+            if (this.player.currentAction) {
+                if (this.player.currentAction.onUnequip) {
+                    this.player.currentAction.onUnequip();
+                }
+                this.hud.onActionUnequiped(this.player.currentAction, slotIndex);
+            }
+            if (this.linkedActions[slotIndex]) {
+                // If request action was already equiped, remove it.
+                if (this.player.currentAction === this.linkedActions[slotIndex]) {
+                    this.player.currentAction = undefined;
+                }
+                // Otherwise, equip new action.
+                else {
+                    this.player.currentAction = this.linkedActions[slotIndex];
+                    if (this.player.currentAction) {
+                        //(document.querySelector("#player-action-" + slotIndex + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background-highlit.svg";
+                        if (this.player.currentAction.onEquip) {
+                            this.player.currentAction.onEquip();
+                        }
+                        this.hud.onActionEquiped(this.player.currentAction, slotIndex);
+                    }
+                }
+            }
+            else {
+                this.player.currentAction = undefined;
+            }
+        }
+    }
+    startHint(slotIndex) {
+        this.inventory.hintedSlotIndex.push(slotIndex);
+        setTimeout(() => {
+            if (this.inventory.hintedSlotIndex.contains(slotIndex)) {
+                this.hud.onHintStart(slotIndex);
+            }
+        }, 200);
+    }
+    stopHint(slotIndex) {
+        this.inventory.hintedSlotIndex.remove(slotIndex) >= 0;
+        this.hud.onHintEnd(slotIndex);
+    }
+    serialize() {
+        let linkedActionsNames = [];
+        for (let i = 0; i < this.linkedActions.length; i++) {
+            if (this.linkedActions[i]) {
+                linkedActionsNames[i] = this.linkedActions[i].item.name;
+            }
+        }
+        return {
+            linkedItemNames: linkedActionsNames
+        };
+    }
+    deserializeInPlace(data) {
+        if (data && data.linkedItemNames) {
+            for (let i = 0; i < data.linkedItemNames.length; i++) {
+                let linkedItemName = data.linkedItemNames[i];
+                let item = this.player.inventory.getItemByName(linkedItemName);
+                if (item) {
+                    this.linkAction(item.playerAction, i);
+                    item.timeUse = (new Date()).getTime();
                 }
             }
         }
@@ -1854,6 +2370,7 @@ class GameRouter extends Nabu.Router {
         this.homePage = document.getElementById("home-page");
         this.optionPage = document.getElementById("option-page");
         this.propEditor = document.getElementById("prop-editor-ui");
+        this.actionBar = document.getElementById("action-bar");
     }
     onUpdate() {
     }
@@ -1864,7 +2381,7 @@ class GameRouter extends Nabu.Router {
             this.game.generateTerrainLarge();
         }
         else if (page.startsWith("#brick")) {
-            this.hideAll();
+            this.show(this.actionBar);
             this.game.generateTerrainBrick();
         }
         else if (page.startsWith("#prop-creator")) {
