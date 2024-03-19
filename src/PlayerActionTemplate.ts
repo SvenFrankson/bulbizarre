@@ -94,21 +94,14 @@ class PlayerActionTemplate {
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                     if (chunckIJK) {
                         // Redraw block preview
-                        if (!previewMesh && blockType != Kulla.BlockType.None) {
-                            previewMesh = BABYLON.MeshBuilder.CreateBox("preview", { width: terrain.blockSizeIJ_m, height: terrain.blockSizeK_m, depth: terrain.blockSizeIJ_m });
-                        }
-                        /*
-                        if (!previewBox) {
-                            previewBox = new BABYLON.Mesh("preview-box");
+                        if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
-                                previewBox.material = SharedMaterials.RedEmissiveMaterial();
+                                previewMesh = Mummu.CreateLineBox("preview", { width: terrain.blockSizeIJ_m, height: terrain.blockSizeK_m, depth: terrain.blockSizeIJ_m, color: new BABYLON.Color4(1, 0, 0, 1) });
                             }
                             else {
-                                previewBox.material = SharedMaterials.WhiteEmissiveMaterial();
+                                previewMesh = Mummu.CreateLineBox("preview", { width: terrain.blockSizeIJ_m, height: terrain.blockSizeK_m, depth: terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
                             }
-                            previewBox.layerMask = 0x1;
                         }
-                        */
                         
                         let needRedrawMesh: boolean = false;
                         if (lastI != chunckIJK.ijk.i) {
@@ -123,15 +116,9 @@ class PlayerActionTemplate {
                             lastK = chunckIJK.ijk.k;
                             needRedrawMesh = true;
                         }
-                        if (needRedrawMesh) {
-                            //if (previewMesh) {
-                            //    PlanetTools.SkewVertexData(previewMeshData, localIJK.planetChunck.size, globalIJK.i, globalIJK.j, globalIJK.k, localIJK.planetChunck.side, blockType).applyToMesh(previewMesh);
-                            //    previewMesh.parent = chunckIJK.chunck.mesh;
-                            //}
-                            //PlanetTools.SkewVertexData(previewBoxData, localIJK.planetChunck.size, globalIJK.i, globalIJK.j, globalIJK.k, localIJK.planetChunck.side).applyToMesh(previewBox);
-                            previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m);
-                            previewMesh.parent = chunckIJK.chunck.mesh;
-                        }
+                        
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m);
+                        previewMesh.parent = chunckIJK.chunck.mesh;
 
                         return;
                     }
