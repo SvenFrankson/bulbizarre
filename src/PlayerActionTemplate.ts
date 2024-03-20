@@ -71,7 +71,7 @@ class PlayerActionTemplate {
 
         action.onUpdate = () => {
             let terrain = player.game.terrain;
-            if (/*!player.game.inventoryView.isOpened*/true) {
+            if (player.game.router.inPlayMode) {
                 let x: number;
                 let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {

@@ -285,9 +285,6 @@ class Game {
     }
 
     public generateTerrainBrick(): void {
-        if (this.terrain) {
-            this.terrain.dispose();
-        }
 
         this.uiCamera.parent = this.freeCamera;
         this.arcCamera.detachControl();
@@ -297,31 +294,36 @@ class Game {
         this.freeCamera.position.copyFromFloats(0, 0, 0);
         this.freeCamera.rotation.copyFromFloats(0, 0, 0);
 
-        this.terrain = new Kulla.Terrain({
-            scene: this.scene,
-            generatorProps: {
-                type: Kulla.GeneratorType.Flat,
-                altitude: 64,
-                blockType: Kulla.BlockType.Dirt
-            },
-            maxDisplayedLevel: 0,
-            blockSizeIJ_m: 0.78,
-            blockSizeK_m: 0.96,
-            chunckLengthIJ: 24,
-            chunckLengthK: 256,
-            chunckCountIJ: 512,
-            useAnalytics: true
-        });
+        if (!(this.terrain && this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat)) {
+            if (this.terrain) {
+                this.terrain.dispose();
+            }
+            this.terrain = new Kulla.Terrain({
+                scene: this.scene,
+                generatorProps: {
+                    type: Kulla.GeneratorType.Flat,
+                    altitude: 64,
+                    blockType: Kulla.BlockType.Dirt
+                },
+                maxDisplayedLevel: 0,
+                blockSizeIJ_m: 0.78,
+                blockSizeK_m: 0.96,
+                chunckLengthIJ: 24,
+                chunckLengthK: 256,
+                chunckCountIJ: 512,
+                useAnalytics: true
+            });
+            this.terrain.initialize();
+            this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+        }
 
         let mat = new TerrainMaterial("terrain", this.scene);
         this.terrain.materials = [mat];
         mat.freeze();
 
-        this.terrain.initialize();
         this.configuration.getElement("renderDist").forceInit();
         this.configuration.getElement("showRenderDistDebug").forceInit();
 
-        this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
     }
 
     public generateTerrainSmall(): void {

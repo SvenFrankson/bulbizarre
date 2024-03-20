@@ -5,6 +5,8 @@ class GameRouter extends Nabu.Router {
     public propEditor: Nabu.DefaultPage;
     public actionBar: Nabu.DefaultPage;
 
+    public inPlayMode: boolean = false;
+
     constructor(public game: Game) {
         super();
     }
@@ -21,12 +23,16 @@ class GameRouter extends Nabu.Router {
     }
 
     protected async onHRefChange(page: string): Promise<void> {
+        this.inPlayMode = false;
+        this.game.inputManager.deactivateAllKeyInputs = true;
         this.game.propEditor.dispose();
         if (page.startsWith("#game")) {
             this.hideAll();
             this.game.generateTerrainLarge();
         }
         else if (page.startsWith("#brick")) {
+            this.inPlayMode = true;
+            this.game.inputManager.deactivateAllKeyInputs = false;
             this.show(this.actionBar);
             this.game.generateTerrainBrick();
         }

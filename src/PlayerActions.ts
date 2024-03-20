@@ -50,25 +50,6 @@ class PlayerActionManager {
         }
         
         this.game.scene.onBeforeRenderObservable.add(this.update);
-        
-        window.addEventListener("keydown", (ev: KeyboardEvent) => {
-            if (ev.code.startsWith("Digit")) {
-                let slotIndex = parseInt(ev.code.replace("Digit", ""));
-                if (slotIndex >= 0 && slotIndex < 10) {
-                    this.startHint(slotIndex);
-                }
-            }
-        });
-        
-        window.addEventListener("keydown", (ev: KeyboardEvent) => {
-            if (ev.code.startsWith("Digit")) {
-                let slotIndex = parseInt(ev.code.replace("Digit", ""));
-                if (slotIndex >= 0 && slotIndex < 10) {
-                    this.stopHint(slotIndex);
-                    this.equipAction(slotIndex);
-                }
-            }
-        });
     }
 
     public update = () => {

@@ -693,9 +693,6 @@ class Game {
         this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
     }
     generateTerrainBrick() {
-        if (this.terrain) {
-            this.terrain.dispose();
-        }
         this.uiCamera.parent = this.freeCamera;
         this.arcCamera.detachControl();
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
@@ -703,28 +700,33 @@ class Game {
         this.freeCamera.parent = this.player.head;
         this.freeCamera.position.copyFromFloats(0, 0, 0);
         this.freeCamera.rotation.copyFromFloats(0, 0, 0);
-        this.terrain = new Kulla.Terrain({
-            scene: this.scene,
-            generatorProps: {
-                type: Kulla.GeneratorType.Flat,
-                altitude: 64,
-                blockType: Kulla.BlockType.Dirt
-            },
-            maxDisplayedLevel: 0,
-            blockSizeIJ_m: 0.78,
-            blockSizeK_m: 0.96,
-            chunckLengthIJ: 24,
-            chunckLengthK: 256,
-            chunckCountIJ: 512,
-            useAnalytics: true
-        });
+        if (!(this.terrain && this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat)) {
+            if (this.terrain) {
+                this.terrain.dispose();
+            }
+            this.terrain = new Kulla.Terrain({
+                scene: this.scene,
+                generatorProps: {
+                    type: Kulla.GeneratorType.Flat,
+                    altitude: 64,
+                    blockType: Kulla.BlockType.Dirt
+                },
+                maxDisplayedLevel: 0,
+                blockSizeIJ_m: 0.78,
+                blockSizeK_m: 0.96,
+                chunckLengthIJ: 24,
+                chunckLengthK: 256,
+                chunckCountIJ: 512,
+                useAnalytics: true
+            });
+            this.terrain.initialize();
+            this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+        }
         let mat = new TerrainMaterial("terrain", this.scene);
         this.terrain.materials = [mat];
         mat.freeze();
-        this.terrain.initialize();
         this.configuration.getElement("renderDist").forceInit();
         this.configuration.getElement("showRenderDistDebug").forceInit();
-        this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
     }
     generateTerrainSmall() {
         if (this.terrain) {
@@ -935,7 +937,7 @@ class PlayerActionTemplate {
         let lastK;
         action.onUpdate = () => {
             let terrain = player.game.terrain;
-            if ( /*!player.game.inventoryView.isOpened*/true) {
+            if (player.game.router.inPlayMode) {
                 let x;
                 let y;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -1144,23 +1146,6 @@ class PlayerActionManager {
             this.deserializeInPlace(savedPlayerAction);
         }
         this.game.scene.onBeforeRenderObservable.add(this.update);
-        window.addEventListener("keydown", (ev) => {
-            if (ev.code.startsWith("Digit")) {
-                let slotIndex = parseInt(ev.code.replace("Digit", ""));
-                if (slotIndex >= 0 && slotIndex < 10) {
-                    this.startHint(slotIndex);
-                }
-            }
-        });
-        window.addEventListener("keydown", (ev) => {
-            if (ev.code.startsWith("Digit")) {
-                let slotIndex = parseInt(ev.code.replace("Digit", ""));
-                if (slotIndex >= 0 && slotIndex < 10) {
-                    this.stopHint(slotIndex);
-                    this.equipAction(slotIndex);
-                }
-            }
-        });
     }
     linkAction(action, slotIndex) {
         if (slotIndex >= 0 && slotIndex <= 9) {
@@ -1257,12 +1242,18 @@ class PlayerControler {
         this._pointerIsDown = false;
         this.gamepadInControl = false;
         this._pointerDown = (event) => {
+            if (!this.player.game.router.inPlayMode) {
+                return;
+            }
             this._pointerIsDown = true;
             if (this.player.currentAction) {
                 this.player.currentAction.onClick(this.player.currentChuncks);
             }
         };
         this._pointerMove = (event) => {
+            if (!this.player.game.router.inPlayMode) {
+                return;
+            }
             if (this._pointerIsDown || this.player.game.inputManager.isPointerLocked) {
                 this.gamepadInControl = false;
                 this.player.inputDeltaX += event.movementX;
@@ -1270,6 +1261,9 @@ class PlayerControler {
             }
         };
         this._pointerUp = (event) => {
+            if (!this.player.game.router.inPlayMode) {
+                return;
+            }
             this._pointerIsDown = false;
         };
         player.controler = this;
@@ -1294,6 +1288,13 @@ class PlayerControler {
                 this.player.currentAction.onClick(this.player.currentChuncks);
             }
         });
+        for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
+            this.player.game.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
+                if (this.player.playerActionManager) {
+                    this.player.playerActionManager.equipAction(slotIndex);
+                }
+            });
+        }
     }
     testDeadZone(v, threshold = 0.1) {
         if (Math.abs(v) > threshold) {
@@ -1304,39 +1305,44 @@ class PlayerControler {
     update(dt) {
         this.player.inputX = 0;
         this.player.inputZ = 0;
-        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
-            this.player.inputZ += 1;
-            this.gamepadInControl = false;
-        }
-        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
-            this.player.inputZ -= 1;
-            this.gamepadInControl = false;
-        }
-        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
-            this.player.inputX += 1;
-            this.gamepadInControl = false;
-        }
-        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
-            this.player.inputX -= 1;
-            this.gamepadInControl = false;
-        }
-        let gamepads = navigator.getGamepads();
-        let gamepad = gamepads[0];
-        if (gamepad) {
-            let axis0 = this.testDeadZone(gamepad.axes[0]);
-            let axis1 = -this.testDeadZone(gamepad.axes[1]);
-            let axis2 = this.testDeadZone(gamepad.axes[2]);
-            let axis3 = this.testDeadZone(gamepad.axes[3]);
-            this.gamepadInControl = this.gamepadInControl || (axis0 != 0);
-            this.gamepadInControl = this.gamepadInControl || (axis1 != 0);
-            this.gamepadInControl = this.gamepadInControl || (axis2 != 0);
-            this.gamepadInControl = this.gamepadInControl || (axis3 != 0);
-            if (this.gamepadInControl) {
-                this.player.inputX = axis0;
-                this.player.inputZ = axis1;
-                this.player.inputRY = axis2;
-                this.player.inputRX = axis3;
+        if (this.player.game.router.inPlayMode) {
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
+                this.player.inputZ += 1;
+                this.gamepadInControl = false;
             }
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
+                this.player.inputZ -= 1;
+                this.gamepadInControl = false;
+            }
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
+                this.player.inputX += 1;
+                this.gamepadInControl = false;
+            }
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
+                this.player.inputX -= 1;
+                this.gamepadInControl = false;
+            }
+            let gamepads = navigator.getGamepads();
+            let gamepad = gamepads[0];
+            if (gamepad) {
+                let axis0 = this.testDeadZone(gamepad.axes[0]);
+                let axis1 = -this.testDeadZone(gamepad.axes[1]);
+                let axis2 = this.testDeadZone(gamepad.axes[2]);
+                let axis3 = this.testDeadZone(gamepad.axes[3]);
+                this.gamepadInControl = this.gamepadInControl || (axis0 != 0);
+                this.gamepadInControl = this.gamepadInControl || (axis1 != 0);
+                this.gamepadInControl = this.gamepadInControl || (axis2 != 0);
+                this.gamepadInControl = this.gamepadInControl || (axis3 != 0);
+                if (this.gamepadInControl) {
+                    this.player.inputX = axis0;
+                    this.player.inputZ = axis1;
+                    this.player.inputRY = axis2;
+                    this.player.inputRX = axis3;
+                }
+            }
+        }
+        else {
+            this.gamepadInControl = false;
         }
         if (this.gamepadInControl || this.player.game.inputManager.isPointerLocked) {
             this.aim.style.top = (window.innerHeight * 0.5 - 10).toFixed(0) + "px";
@@ -2423,6 +2429,7 @@ class GameRouter extends Nabu.Router {
     constructor(game) {
         super();
         this.game = game;
+        this.inPlayMode = false;
     }
     onFindAllPages() {
         this.homePage = document.getElementById("home-page");
@@ -2433,12 +2440,16 @@ class GameRouter extends Nabu.Router {
     onUpdate() {
     }
     async onHRefChange(page) {
+        this.inPlayMode = false;
+        this.game.inputManager.deactivateAllKeyInputs = true;
         this.game.propEditor.dispose();
         if (page.startsWith("#game")) {
             this.hideAll();
             this.game.generateTerrainLarge();
         }
         else if (page.startsWith("#brick")) {
+            this.inPlayMode = true;
+            this.game.inputManager.deactivateAllKeyInputs = false;
             this.show(this.actionBar);
             this.game.generateTerrainBrick();
         }

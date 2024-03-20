@@ -32,9 +32,20 @@ class PlayerControler {
                 this.player.currentAction.onClick(this.player.currentChuncks);
             }
         })
+        
+        for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
+            this.player.game.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
+                if (this.player.playerActionManager) {
+                    this.player.playerActionManager.equipAction(slotIndex);
+                }
+            })
+        }
     }
 
     private _pointerDown = (event: PointerEvent) => {
+        if (!this.player.game.router.inPlayMode) {
+            return;
+        }
         this._pointerIsDown = true;
         if (this.player.currentAction) {
             this.player.currentAction.onClick(this.player.currentChuncks);
@@ -42,6 +53,9 @@ class PlayerControler {
     }
 
     private _pointerMove = (event: PointerEvent) => {
+        if (!this.player.game.router.inPlayMode) {
+            return;
+        }
         if (this._pointerIsDown || this.player.game.inputManager.isPointerLocked) {
             this.gamepadInControl = false;
             this.player.inputDeltaX += event.movementX;
@@ -50,6 +64,9 @@ class PlayerControler {
     }
 
     private _pointerUp = (event: PointerEvent) => {
+        if (!this.player.game.router.inPlayMode) {
+            return;
+        }
         this._pointerIsDown = false;
     }
 
@@ -63,42 +80,48 @@ class PlayerControler {
     public update(dt: number): void {
         this.player.inputX = 0;
         this.player.inputZ = 0;
-        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
-            this.player.inputZ += 1;
-            this.gamepadInControl = false;
-        }
-        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
-            this.player.inputZ -= 1;
-            this.gamepadInControl = false;
-        }
-        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
-            this.player.inputX += 1;
-            this.gamepadInControl = false;
-        }
-        if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
-            this.player.inputX -= 1;
-            this.gamepadInControl = false;
-        }
 
-        let gamepads = navigator.getGamepads();
-        let gamepad = gamepads[0];
-        if (gamepad) {
-            let axis0 = this.testDeadZone(gamepad.axes[0]);
-            let axis1 = - this.testDeadZone(gamepad.axes[1]);
-            let axis2 = this.testDeadZone(gamepad.axes[2]);
-            let axis3 = this.testDeadZone(gamepad.axes[3]);
-
-            this.gamepadInControl = this.gamepadInControl || (axis0 != 0);
-            this.gamepadInControl = this.gamepadInControl || (axis1 != 0);
-            this.gamepadInControl = this.gamepadInControl || (axis2 != 0);
-            this.gamepadInControl = this.gamepadInControl || (axis3 != 0);
-
-            if (this.gamepadInControl) {
-                this.player.inputX = axis0;
-                this.player.inputZ = axis1;
-                this.player.inputRY = axis2;
-                this.player.inputRX = axis3;
+        if (this.player.game.router.inPlayMode) {
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
+                this.player.inputZ += 1;
+                this.gamepadInControl = false;
             }
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
+                this.player.inputZ -= 1;
+                this.gamepadInControl = false;
+            }
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
+                this.player.inputX += 1;
+                this.gamepadInControl = false;
+            }
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
+                this.player.inputX -= 1;
+                this.gamepadInControl = false;
+            }
+    
+            let gamepads = navigator.getGamepads();
+            let gamepad = gamepads[0];
+            if (gamepad) {
+                let axis0 = this.testDeadZone(gamepad.axes[0]);
+                let axis1 = - this.testDeadZone(gamepad.axes[1]);
+                let axis2 = this.testDeadZone(gamepad.axes[2]);
+                let axis3 = this.testDeadZone(gamepad.axes[3]);
+    
+                this.gamepadInControl = this.gamepadInControl || (axis0 != 0);
+                this.gamepadInControl = this.gamepadInControl || (axis1 != 0);
+                this.gamepadInControl = this.gamepadInControl || (axis2 != 0);
+                this.gamepadInControl = this.gamepadInControl || (axis3 != 0);
+    
+                if (this.gamepadInControl) {
+                    this.player.inputX = axis0;
+                    this.player.inputZ = axis1;
+                    this.player.inputRY = axis2;
+                    this.player.inputRX = axis3;
+                }
+            }
+        }
+        else {
+            this.gamepadInControl = false;
         }
         
         if (this.gamepadInControl || this.player.game.inputManager.isPointerLocked) {
