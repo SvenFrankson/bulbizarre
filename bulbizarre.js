@@ -320,7 +320,22 @@ class GameConfiguration extends Nabu.Configuration {
                 else {
                     this.game.terrain.chunckManager.setShowDebugRenderDist(false);
                 }
-            })
+            }),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION", KeyInput.PLAYER_ACTION, "GamepadBtn0"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_LEFT", KeyInput.MOVE_LEFT, "KeyA"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_BACK", KeyInput.MOVE_BACK, "KeyS"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_RIGHT", KeyInput.MOVE_RIGHT, "KeyD"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_0", KeyInput.ACTION_SLOT_0, "Digit0"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_1", KeyInput.ACTION_SLOT_1, "Digit1"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_2", KeyInput.ACTION_SLOT_2, "Digit2"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_3", KeyInput.ACTION_SLOT_3, "Digit3"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_4", KeyInput.ACTION_SLOT_4, "Digit4"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_5", KeyInput.ACTION_SLOT_5, "Digit5"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_6", KeyInput.ACTION_SLOT_6, "Digit6"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_7", KeyInput.ACTION_SLOT_7, "Digit7"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_8", KeyInput.ACTION_SLOT_8, "Digit8"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_9", KeyInput.ACTION_SLOT_9, "Digit9")
         ];
     }
     getValue(property) {
@@ -485,6 +500,7 @@ class Game {
     async createScene() {
         this.scene = new BABYLON.Scene(this.engine);
         this.configuration = new GameConfiguration("my-test-configuration", this);
+        this.inputManager = new Nabu.InputManager(this.canvas, this.configuration);
         this.configuration.initialize();
         this.configuration.saveToLocalStorage();
         this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
@@ -524,28 +540,6 @@ class Game {
         this.uiCamera = new BABYLON.FreeCamera("background-camera", BABYLON.Vector3.Zero());
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
-        this.inputManager = new Nabu.InputManager(this.canvas, this.configuration);
-        this.inputManager.mapInput("GamepadBtn0", KeyInput.PLAYER_ACTION);
-        this.inputManager.mapInput("Digit0", KeyInput.ACTION_SLOT_0);
-        this.inputManager.mapInput("Digit1", KeyInput.ACTION_SLOT_1);
-        this.inputManager.mapInput("Digit2", KeyInput.ACTION_SLOT_2);
-        this.inputManager.mapInput("Digit3", KeyInput.ACTION_SLOT_3);
-        this.inputManager.mapInput("Digit4", KeyInput.ACTION_SLOT_4);
-        this.inputManager.mapInput("Digit5", KeyInput.ACTION_SLOT_5);
-        this.inputManager.mapInput("Digit6", KeyInput.ACTION_SLOT_6);
-        this.inputManager.mapInput("Digit7", KeyInput.ACTION_SLOT_7);
-        this.inputManager.mapInput("Digit8", KeyInput.ACTION_SLOT_8);
-        this.inputManager.mapInput("Digit9", KeyInput.ACTION_SLOT_9);
-        this.inputManager.mapInput("KeyI", KeyInput.INVENTORY);
-        this.inputManager.mapInput("KeyW", KeyInput.MOVE_FORWARD);
-        this.inputManager.mapInput("KeyA", KeyInput.MOVE_LEFT);
-        this.inputManager.mapInput("KeyS", KeyInput.MOVE_BACK);
-        this.inputManager.mapInput("KeyD", KeyInput.MOVE_RIGHT);
-        this.inputManager.mapInput("Space", KeyInput.JUMP);
-        this.inputManager.mapInput("Backquote", KeyInput.MAIN_MENU);
-        this.inputManager.mapInput("KeyI", KeyInput.INVENTORY);
-        this.inputManager.mapInput("m", KeyInput.MAIN_MENU);
-        this.inputManager.mapInput("KeyC", KeyInput.WORKBENCH);
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-position")) {
@@ -609,6 +603,7 @@ class Game {
             this.playerActionBar = new PlayerActionView(this.player, this);
             this.playerActionBar.initialize();
             this.inputManager.initialize();
+            this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
