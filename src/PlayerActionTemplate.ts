@@ -136,7 +136,7 @@ class PlayerActionTemplate {
         }
 
         action.onClick = () => {
-            if (/*!player.inputManager.inventoryOpened*/true) {
+            if (player.game.router.inPlayMode) {
                 let x: number;
                 let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -158,10 +158,10 @@ class PlayerActionTemplate {
                     let n =  hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? - 0.2 : 0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
                     if (chunckIJK) {
-                        let affectedChuncks = chunckIJK.chunck.setData(blockType, chunckIJK.ijk.i, chunckIJK.ijk.j, chunckIJK.ijk.k);
                         player.game.terrainEditor.doAction(chunckIJK.chunck, chunckIJK.ijk, {
                             brushSize: 2,
                             brushBlock: blockType,
+                            saveToLocalStorage: true
                         });
                     }
                 }
