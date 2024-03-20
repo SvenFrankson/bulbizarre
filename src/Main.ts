@@ -25,7 +25,7 @@ class Game {
         return this.scene;
     }
     public screenRatio: number = 1;
-    public inputManager: InputManager;
+    public inputManager: Nabu.InputManager;
 
     //public camera: BABYLON.FreeCamera;
     public freeCamera: BABYLON.FreeCamera;
@@ -104,7 +104,29 @@ class Game {
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
 
-        this.inputManager = new InputManager(this.scene, this.canvas, this);
+        this.inputManager = new Nabu.InputManager(this.canvas, this.configuration);
+
+        this.inputManager.mapInput("GamepadBtn0", KeyInput.PLAYER_ACTION);
+        this.inputManager.mapInput("Digit0", KeyInput.ACTION_SLOT_0);
+        this.inputManager.mapInput("Digit1", KeyInput.ACTION_SLOT_1);
+        this.inputManager.mapInput("Digit2", KeyInput.ACTION_SLOT_2);
+        this.inputManager.mapInput("Digit3", KeyInput.ACTION_SLOT_3);
+        this.inputManager.mapInput("Digit4", KeyInput.ACTION_SLOT_4);
+        this.inputManager.mapInput("Digit5", KeyInput.ACTION_SLOT_5);
+        this.inputManager.mapInput("Digit6", KeyInput.ACTION_SLOT_6);
+        this.inputManager.mapInput("Digit7", KeyInput.ACTION_SLOT_7);
+        this.inputManager.mapInput("Digit8", KeyInput.ACTION_SLOT_8);
+        this.inputManager.mapInput("Digit9", KeyInput.ACTION_SLOT_9);
+        this.inputManager.mapInput("KeyI", KeyInput.INVENTORY);
+        this.inputManager.mapInput("KeyW", KeyInput.MOVE_FORWARD);
+        this.inputManager.mapInput("KeyA", KeyInput.MOVE_LEFT);
+        this.inputManager.mapInput("KeyS", KeyInput.MOVE_BACK);
+        this.inputManager.mapInput("KeyD", KeyInput.MOVE_RIGHT);
+        this.inputManager.mapInput("Space", KeyInput.JUMP);
+        this.inputManager.mapInput("Backquote", KeyInput.MAIN_MENU);
+        this.inputManager.mapInput("KeyI", KeyInput.INVENTORY);
+        this.inputManager.mapInput("m", KeyInput.MAIN_MENU);
+        this.inputManager.mapInput("KeyC", KeyInput.WORKBENCH);
 
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         
@@ -178,7 +200,7 @@ class Game {
             this.player.inventory = new Inventory(this.player);
             this.playerActionBar = new PlayerActionView(this.player, this);
             this.playerActionBar.initialize();
-            this.inputManager.initialize(this.player);
+            this.inputManager.initialize();
             playerControler.initialize();
 
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);

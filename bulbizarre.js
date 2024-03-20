@@ -242,6 +242,29 @@ class DebugTerrainPerf {
         this.scene.onBeforeRenderObservable.removeCallback(this._update);
     }
 }
+var KeyInput;
+(function (KeyInput) {
+    KeyInput[KeyInput["NULL"] = -1] = "NULL";
+    KeyInput[KeyInput["ACTION_SLOT_0"] = 0] = "ACTION_SLOT_0";
+    KeyInput[KeyInput["ACTION_SLOT_1"] = 1] = "ACTION_SLOT_1";
+    KeyInput[KeyInput["ACTION_SLOT_2"] = 2] = "ACTION_SLOT_2";
+    KeyInput[KeyInput["ACTION_SLOT_3"] = 3] = "ACTION_SLOT_3";
+    KeyInput[KeyInput["ACTION_SLOT_4"] = 4] = "ACTION_SLOT_4";
+    KeyInput[KeyInput["ACTION_SLOT_5"] = 5] = "ACTION_SLOT_5";
+    KeyInput[KeyInput["ACTION_SLOT_6"] = 6] = "ACTION_SLOT_6";
+    KeyInput[KeyInput["ACTION_SLOT_7"] = 7] = "ACTION_SLOT_7";
+    KeyInput[KeyInput["ACTION_SLOT_8"] = 8] = "ACTION_SLOT_8";
+    KeyInput[KeyInput["ACTION_SLOT_9"] = 9] = "ACTION_SLOT_9";
+    KeyInput[KeyInput["PLAYER_ACTION"] = 10] = "PLAYER_ACTION";
+    KeyInput[KeyInput["INVENTORY"] = 11] = "INVENTORY";
+    KeyInput[KeyInput["MOVE_FORWARD"] = 12] = "MOVE_FORWARD";
+    KeyInput[KeyInput["MOVE_LEFT"] = 13] = "MOVE_LEFT";
+    KeyInput[KeyInput["MOVE_BACK"] = 14] = "MOVE_BACK";
+    KeyInput[KeyInput["MOVE_RIGHT"] = 15] = "MOVE_RIGHT";
+    KeyInput[KeyInput["JUMP"] = 16] = "JUMP";
+    KeyInput[KeyInput["MAIN_MENU"] = 17] = "MAIN_MENU";
+    KeyInput[KeyInput["WORKBENCH"] = 18] = "WORKBENCH";
+})(KeyInput || (KeyInput = {}));
 class GameConfiguration extends Nabu.Configuration {
     constructor(configName, game) {
         super(configName);
@@ -501,7 +524,28 @@ class Game {
         this.uiCamera = new BABYLON.FreeCamera("background-camera", BABYLON.Vector3.Zero());
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
-        this.inputManager = new InputManager(this.scene, this.canvas, this);
+        this.inputManager = new Nabu.InputManager(this.canvas, this.configuration);
+        this.inputManager.mapInput("GamepadBtn0", KeyInput.PLAYER_ACTION);
+        this.inputManager.mapInput("Digit0", KeyInput.ACTION_SLOT_0);
+        this.inputManager.mapInput("Digit1", KeyInput.ACTION_SLOT_1);
+        this.inputManager.mapInput("Digit2", KeyInput.ACTION_SLOT_2);
+        this.inputManager.mapInput("Digit3", KeyInput.ACTION_SLOT_3);
+        this.inputManager.mapInput("Digit4", KeyInput.ACTION_SLOT_4);
+        this.inputManager.mapInput("Digit5", KeyInput.ACTION_SLOT_5);
+        this.inputManager.mapInput("Digit6", KeyInput.ACTION_SLOT_6);
+        this.inputManager.mapInput("Digit7", KeyInput.ACTION_SLOT_7);
+        this.inputManager.mapInput("Digit8", KeyInput.ACTION_SLOT_8);
+        this.inputManager.mapInput("Digit9", KeyInput.ACTION_SLOT_9);
+        this.inputManager.mapInput("KeyI", KeyInput.INVENTORY);
+        this.inputManager.mapInput("KeyW", KeyInput.MOVE_FORWARD);
+        this.inputManager.mapInput("KeyA", KeyInput.MOVE_LEFT);
+        this.inputManager.mapInput("KeyS", KeyInput.MOVE_BACK);
+        this.inputManager.mapInput("KeyD", KeyInput.MOVE_RIGHT);
+        this.inputManager.mapInput("Space", KeyInput.JUMP);
+        this.inputManager.mapInput("Backquote", KeyInput.MAIN_MENU);
+        this.inputManager.mapInput("KeyI", KeyInput.INVENTORY);
+        this.inputManager.mapInput("m", KeyInput.MAIN_MENU);
+        this.inputManager.mapInput("KeyC", KeyInput.WORKBENCH);
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-position")) {
@@ -564,7 +608,7 @@ class Game {
             this.player.inventory = new Inventory(this.player);
             this.playerActionBar = new PlayerActionView(this.player, this);
             this.playerActionBar.initialize();
-            this.inputManager.initialize(this.player);
+            this.inputManager.initialize();
             playerControler.initialize();
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
@@ -2414,326 +2458,5 @@ class GameRouter extends Nabu.Router {
         else if (page.startsWith("#home") || true) {
             this.show(this.homePage);
         }
-    }
-}
-var KeyInput;
-(function (KeyInput) {
-    KeyInput[KeyInput["NULL"] = -1] = "NULL";
-    KeyInput[KeyInput["ACTION_SLOT_0"] = 0] = "ACTION_SLOT_0";
-    KeyInput[KeyInput["ACTION_SLOT_1"] = 1] = "ACTION_SLOT_1";
-    KeyInput[KeyInput["ACTION_SLOT_2"] = 2] = "ACTION_SLOT_2";
-    KeyInput[KeyInput["ACTION_SLOT_3"] = 3] = "ACTION_SLOT_3";
-    KeyInput[KeyInput["ACTION_SLOT_4"] = 4] = "ACTION_SLOT_4";
-    KeyInput[KeyInput["ACTION_SLOT_5"] = 5] = "ACTION_SLOT_5";
-    KeyInput[KeyInput["ACTION_SLOT_6"] = 6] = "ACTION_SLOT_6";
-    KeyInput[KeyInput["ACTION_SLOT_7"] = 7] = "ACTION_SLOT_7";
-    KeyInput[KeyInput["ACTION_SLOT_8"] = 8] = "ACTION_SLOT_8";
-    KeyInput[KeyInput["ACTION_SLOT_9"] = 9] = "ACTION_SLOT_9";
-    KeyInput[KeyInput["PLAYER_ACTION"] = 10] = "PLAYER_ACTION";
-    KeyInput[KeyInput["INVENTORY"] = 11] = "INVENTORY";
-    KeyInput[KeyInput["MOVE_FORWARD"] = 12] = "MOVE_FORWARD";
-    KeyInput[KeyInput["MOVE_LEFT"] = 13] = "MOVE_LEFT";
-    KeyInput[KeyInput["MOVE_BACK"] = 14] = "MOVE_BACK";
-    KeyInput[KeyInput["MOVE_RIGHT"] = 15] = "MOVE_RIGHT";
-    KeyInput[KeyInput["JUMP"] = 16] = "JUMP";
-    KeyInput[KeyInput["MAIN_MENU"] = 17] = "MAIN_MENU";
-    KeyInput[KeyInput["WORKBENCH"] = 18] = "WORKBENCH";
-})(KeyInput || (KeyInput = {}));
-class InputManager {
-    constructor(scene, canvas, game) {
-        this.scene = scene;
-        this.canvas = canvas;
-        this.game = game;
-        this.isPointerLocked = false;
-        this.isPointerDown = false;
-        this.padButtonsMap = new Map();
-        this.padButtonsDown = new Nabu.UniqueList();
-        this.keyboardInputMap = new Map();
-        this.keyInputDown = new Nabu.UniqueList();
-        this.keyDownListeners = [];
-        this.mappedKeyDownListeners = new Map();
-        this.keyUpListeners = [];
-        this.mappedKeyUpListeners = new Map();
-    }
-    initialize(player) {
-        this.canvas.addEventListener("pointerdown", (ev) => {
-            this.isPointerDown = true;
-            if (this.game.configuration.getValue("canLockPointer") === 1) {
-                this.canvas.requestPointerLock();
-                this.isPointerLocked = true;
-            }
-        });
-        this.canvas.addEventListener("pointerup", () => {
-            this.isPointerDown = false;
-        });
-        document.addEventListener("pointerlockchange", () => {
-            if (!(document.pointerLockElement === this.canvas)) {
-                this.isPointerLocked = false;
-            }
-        });
-        this.mapInput("GamepadBtn0", KeyInput.PLAYER_ACTION);
-        this.mapInput("Digit0", KeyInput.ACTION_SLOT_0);
-        this.mapInput("Digit1", KeyInput.ACTION_SLOT_1);
-        this.mapInput("Digit2", KeyInput.ACTION_SLOT_2);
-        this.mapInput("Digit3", KeyInput.ACTION_SLOT_3);
-        this.mapInput("Digit4", KeyInput.ACTION_SLOT_4);
-        this.mapInput("Digit5", KeyInput.ACTION_SLOT_5);
-        this.mapInput("Digit6", KeyInput.ACTION_SLOT_6);
-        this.mapInput("Digit7", KeyInput.ACTION_SLOT_7);
-        this.mapInput("Digit8", KeyInput.ACTION_SLOT_8);
-        this.mapInput("Digit9", KeyInput.ACTION_SLOT_9);
-        this.mapInput("KeyI", KeyInput.INVENTORY);
-        this.mapInput("KeyW", KeyInput.MOVE_FORWARD);
-        this.mapInput("KeyA", KeyInput.MOVE_LEFT);
-        this.mapInput("KeyS", KeyInput.MOVE_BACK);
-        this.mapInput("KeyD", KeyInput.MOVE_RIGHT);
-        this.mapInput("Space", KeyInput.JUMP);
-        this.mapInput("Backquote", KeyInput.MAIN_MENU);
-        this.mapInput("KeyI", KeyInput.INVENTORY);
-        this.mapInput("m", KeyInput.MAIN_MENU);
-        this.mapInput("KeyC", KeyInput.WORKBENCH);
-        window.addEventListener("keydown", (e) => {
-            let keyInput = this.keyboardInputMap.get(e.code);
-            if (!isFinite(keyInput)) {
-                keyInput = this.keyboardInputMap.get(e.key);
-            }
-            if (isFinite(keyInput)) {
-                this.doKeyInputDown(keyInput);
-            }
-        });
-        window.addEventListener("keyup", (e) => {
-            let keyInput = this.keyboardInputMap.get(e.code);
-            if (!isFinite(keyInput)) {
-                keyInput = this.keyboardInputMap.get(e.key);
-            }
-            if (isFinite(keyInput)) {
-                this.doKeyInputUp(keyInput);
-            }
-        });
-        /*
-        document.getElementById("touch-menu").addEventListener("pointerdown", () => {
-            let keyInput = KeyInput.MAIN_MENU;
-            if (isFinite(keyInput)) {
-                this.doKeyInputDown(keyInput);
-            }
-        })
-        document.getElementById("touch-menu").addEventListener("pointerup", () => {
-            let keyInput = KeyInput.MAIN_MENU;
-            if (isFinite(keyInput)) {
-                this.doKeyInputUp(keyInput);
-            }
-        })
-        document.getElementById("touch-jump").addEventListener("pointerdown", () => {
-            let keyInput = KeyInput.JUMP;
-            if (isFinite(keyInput)) {
-                this.doKeyInputDown(keyInput);
-            }
-        })
-        document.getElementById("touch-jump").addEventListener("pointerup", () => {
-            let keyInput = KeyInput.JUMP;
-            if (isFinite(keyInput)) {
-                this.doKeyInputUp(keyInput);
-            }
-        })
-        */
-        this.addMappedKeyUpListener(KeyInput.INVENTORY, () => {
-            /*
-            this.inventoryOpened = !this.inventoryOpened;
-            if (this.game.configuration.getValue("canLockPointer") === 1) {
-                if (this.inventoryOpened) {
-                    document.exitPointerLock();
-                    this.isPointerLocked = false;
-                }
-                else {
-                    this.canvas.requestPointerLock();
-                    this.isPointerLocked = true;
-                }
-            }
-            */
-        });
-    }
-    update() {
-        let gamepads = navigator.getGamepads();
-        let gamepad = gamepads[0];
-        if (gamepad) {
-            let hasButtonsDown = this.padButtonsDown.length > 0;
-            for (let b = 0; b < gamepad.buttons.length; b++) {
-                let v = gamepad.buttons[b].pressed;
-                if (v) {
-                    if (!this.padButtonsDown.contains(b)) {
-                        this.padButtonsDown.push(b);
-                        let key = this.padButtonsMap.get(b);
-                        if (key) {
-                            this.doKeyInputDown(key);
-                        }
-                    }
-                }
-                else if (hasButtonsDown) {
-                    if (this.padButtonsDown.contains(b)) {
-                        this.padButtonsDown.remove(b);
-                        let key = this.padButtonsMap.get(b);
-                        if (key) {
-                            this.doKeyInputUp(key);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    doKeyInputDown(keyInput) {
-        this.keyInputDown.push(keyInput);
-        for (let i = 0; i < this.keyDownListeners.length; i++) {
-            this.keyDownListeners[i](keyInput);
-        }
-        let listeners = this.mappedKeyDownListeners.get(keyInput);
-        if (listeners) {
-            for (let i = 0; i < listeners.length; i++) {
-                listeners[i]();
-            }
-        }
-    }
-    doKeyInputUp(keyInput) {
-        this.keyInputDown.remove(keyInput);
-        for (let i = 0; i < this.keyUpListeners.length; i++) {
-            this.keyUpListeners[i](keyInput);
-        }
-        let listeners = this.mappedKeyUpListeners.get(keyInput);
-        if (listeners) {
-            for (let i = 0; i < listeners.length; i++) {
-                listeners[i]();
-            }
-        }
-    }
-    mapInput(input, key) {
-        if (input.startsWith("GamepadBtn")) {
-            let btnIndex = parseInt(input.replace("GamepadBtn", ""));
-            this.padButtonsMap.set(btnIndex, key);
-        }
-        else {
-            this.keyboardInputMap.set(input, key);
-        }
-    }
-    unMapInput(input) {
-        if (input.startsWith("GamepadBtn")) {
-            let btnIndex = parseInt(input.replace("GamepadBtn", ""));
-            this.padButtonsMap.delete(btnIndex);
-        }
-        else {
-            this.keyboardInputMap.delete(input);
-        }
-    }
-    /*
-    public onTouchStart(): void {
-        if (!this._firstTouchStartTriggered) {
-            this.onFirstTouchStart();
-        }
-    }
-
-    private _firstTouchStartTriggered: boolean = false;
-    private onFirstTouchStart(): void {
-        let movePad = new PlayerInputMovePad(this.player);
-        movePad.connectInput(true);
-        
-        let headPad = new PlayerInputHeadPad(this.player);
-        headPad.connectInput(false);
-        this._firstTouchStartTriggered = true;
-
-        document.getElementById("touch-menu").style.display = "block";
-        document.getElementById("touch-jump").style.display = "block";
-
-        this.main.isTouch = true;
-    }
-    */
-    addKeyDownListener(callback) {
-        this.keyDownListeners.push(callback);
-    }
-    addMappedKeyDownListener(k, callback) {
-        let listeners = this.mappedKeyDownListeners.get(k);
-        if (listeners) {
-            listeners.push(callback);
-        }
-        else {
-            listeners = [callback];
-            this.mappedKeyDownListeners.set(k, listeners);
-        }
-    }
-    removeKeyDownListener(callback) {
-        let i = this.keyDownListeners.indexOf(callback);
-        if (i != -1) {
-            this.keyDownListeners.splice(i, 1);
-        }
-    }
-    removeMappedKeyDownListener(k, callback) {
-        let listeners = this.mappedKeyDownListeners.get(k);
-        if (listeners) {
-            let i = listeners.indexOf(callback);
-            if (i != -1) {
-                listeners.splice(i, 1);
-            }
-        }
-    }
-    addKeyUpListener(callback) {
-        this.keyUpListeners.push(callback);
-    }
-    addMappedKeyUpListener(k, callback) {
-        let listeners = this.mappedKeyUpListeners.get(k);
-        if (listeners) {
-            listeners.push(callback);
-        }
-        else {
-            listeners = [callback];
-            this.mappedKeyUpListeners.set(k, listeners);
-        }
-    }
-    removeKeyUpListener(callback) {
-        let i = this.keyUpListeners.indexOf(callback);
-        if (i != -1) {
-            this.keyUpListeners.splice(i, 1);
-        }
-    }
-    removeMappedKeyUpListener(k, callback) {
-        let listeners = this.mappedKeyUpListeners.get(k);
-        if (listeners) {
-            let i = listeners.indexOf(callback);
-            if (i != -1) {
-                listeners.splice(i, 1);
-            }
-        }
-    }
-    isKeyInputDown(keyInput) {
-        return this.keyInputDown.contains(keyInput);
-    }
-    getkeyInputActionSlotDown() {
-        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_0)) {
-            return KeyInput.ACTION_SLOT_0;
-        }
-        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_1)) {
-            return KeyInput.ACTION_SLOT_1;
-        }
-        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_2)) {
-            return KeyInput.ACTION_SLOT_2;
-        }
-        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_3)) {
-            return KeyInput.ACTION_SLOT_3;
-        }
-        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_4)) {
-            return KeyInput.ACTION_SLOT_4;
-        }
-        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_5)) {
-            return KeyInput.ACTION_SLOT_5;
-        }
-        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_6)) {
-            return KeyInput.ACTION_SLOT_6;
-        }
-        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_7)) {
-            return KeyInput.ACTION_SLOT_7;
-        }
-        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_8)) {
-            return KeyInput.ACTION_SLOT_8;
-        }
-        if (this.keyInputDown.contains(KeyInput.ACTION_SLOT_9)) {
-            return KeyInput.ACTION_SLOT_9;
-        }
-        return KeyInput.NULL;
     }
 }

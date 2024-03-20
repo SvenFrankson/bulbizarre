@@ -1,3 +1,26 @@
+enum KeyInput {
+    NULL = -1,
+    ACTION_SLOT_0 = 0,
+    ACTION_SLOT_1,
+    ACTION_SLOT_2,
+    ACTION_SLOT_3,
+    ACTION_SLOT_4,
+    ACTION_SLOT_5,
+    ACTION_SLOT_6,
+    ACTION_SLOT_7,
+    ACTION_SLOT_8,
+    ACTION_SLOT_9,
+    PLAYER_ACTION,
+    INVENTORY,
+    MOVE_FORWARD,
+    MOVE_LEFT,
+    MOVE_BACK,
+    MOVE_RIGHT,
+    JUMP,
+    MAIN_MENU,
+    WORKBENCH,
+}
+
 class GameConfiguration extends Nabu.Configuration {
 
     constructor(configName: string, public game: Game) {
