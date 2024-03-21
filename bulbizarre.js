@@ -554,6 +554,7 @@ class Game {
             }
         }
         this.router = new GameRouter(this);
+        this.playerActionBar = new PlayerActionView();
         this.propEditor = new PropEditor(this);
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.router.initialize();
@@ -600,8 +601,6 @@ class Game {
             this.player.playerActionManager = new PlayerActionManager(this.player, this);
             this.player.playerActionManager.initialize();
             this.player.inventory = new Inventory(this.player);
-            this.playerActionBar = new PlayerActionView(this.player, this);
-            this.playerActionBar.initialize();
             this.inputManager.initialize();
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
@@ -774,588 +773,6 @@ window.addEventListener("DOMContentLoaded", () => {
         main.animate();
     });
 });
-class Player extends BABYLON.Mesh {
-    constructor(game) {
-        super("player");
-        this.game = game;
-        this.mass = 2;
-        this.height = 2;
-        this.velocity = BABYLON.Vector3.Zero();
-        this.frozen = true;
-        this.speed = 3;
-        this.rSpeed = Math.PI;
-        this.inputZ = 0;
-        this.inputX = 0;
-        this.inputRY = 0;
-        this.inputRX = 0;
-        this.inputDeltaX = 0;
-        this.inputDeltaY = 0;
-        this.currentChuncks = [];
-        let body = Mummu.CreateBeveledBox("body", { width: 1, height: this.height - 0.2, depth: 1 });
-        body.isVisible = false;
-        body.position.y = -this.height * 0.5 - 0.1;
-        body.parent = this;
-        this.head = new BABYLON.Mesh("head");
-        this.head.parent = this;
-    }
-    update(dt) {
-        if (this.controler) {
-            this.controler.update(dt);
-        }
-        let currentChunck = this.game.terrain.getChunckAtPos(this.position, 0);
-        if (currentChunck != this.currentChunck) {
-            this.currentChunck = currentChunck;
-            this.updateCurrentChuncks();
-        }
-        if (this.currentAction) {
-            this.currentAction.onUpdate(this.currentChuncks);
-        }
-        let ray = new BABYLON.Ray(this.position, new BABYLON.Vector3(0, -1, 0));
-        let bestPick;
-        for (let i = 0; i < this.currentChuncks.length; i++) {
-            let chunck = this.currentChuncks[i];
-            if (chunck && chunck.mesh) {
-                let pick = ray.intersectsMesh(chunck.mesh);
-                if (pick.hit) {
-                    bestPick = pick;
-                    break;
-                }
-            }
-        }
-        this.velocity.x = 0;
-        this.velocity.z = 0;
-        let inputL = Math.sqrt(this.inputX * this.inputX + this.inputZ * this.inputZ);
-        if (inputL > this.speed) {
-            this.inputX /= inputL * this.speed;
-            this.inputZ /= inputL * this.speed;
-        }
-        this.velocity.addInPlace(this.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
-        this.velocity.addInPlace(this.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
-        this.rotation.y += this.rSpeed * this.inputRY * dt;
-        this.head.rotation.x += this.rSpeed * this.inputRX * dt;
-        this.head.rotation.x = Nabu.MinMax(this.head.rotation.x, -Math.PI * 0.5, Math.PI * 0.5);
-        if (this.inputDeltaX != 0) {
-            this.rotation.y += this.inputDeltaX / 500;
-            this.inputDeltaX = 0;
-        }
-        if (this.inputDeltaY != 0) {
-            this.head.rotation.x += this.inputDeltaY / 500;
-            this.inputDeltaY = 0;
-        }
-        if (bestPick && bestPick.hit) {
-            if (bestPick.distance <= this.height) {
-                this.velocity.y = (this.height - bestPick.distance);
-            }
-            else {
-                this.velocity.y -= this.mass * 9.2 * dt;
-            }
-            this.position.addInPlace(this.velocity.scale(dt));
-        }
-        else {
-            if (this.position.y < 100) {
-                this.position.y += 0.1;
-            }
-            if (this.position.y < 0) {
-                this.position.y = 100;
-            }
-        }
-    }
-    updateCurrentChuncks() {
-        this.currentChuncks = [];
-        if (this.currentChunck) {
-            for (let i = 0; i <= 2; i++) {
-                for (let j = 0; j <= 2; j++) {
-                    this.currentChuncks[i + 3 * j] = this.game.terrain.getChunck(0, this.currentChunck.iPos - 1 + i, this.currentChunck.jPos - 1 + j);
-                }
-            }
-        }
-    }
-}
-var ACTIVE_DEBUG_PLAYER_ACTION = true;
-var ADD_BRICK_ANIMATION_DURATION = 1000;
-class PlayerActionTemplate {
-    static async AddTmpObjectAction(player, tmpObjectName) {
-        return undefined;
-        /*
-        let action = new PlayerAction(tmpObjectName, player);
-        action.iconUrl = "/datas/images/qmark.png";
-
-        let previewTmpObject: TmpObject;
-
-        action.onUpdate = () => {
-            if (!player.inputManager.inventoryOpened) {
-                let hit = player.inputManager.getPickInfo(player.meshes);
-                if (hit && hit.pickedPoint) {
-                    if (!previewTmpObject) {
-                        previewTmpObject = new TmpObject(tmpObjectName, player.main);
-                        previewTmpObject.planet = player.planet;
-                        previewTmpObject.instantiate();
-                    }
-                    previewTmpObject.setPosition(hit.pickedPoint);
-                    previewTmpObject.setTarget(player.position);
-                    return;
-                }
-            }
-            if (previewTmpObject) {
-                previewTmpObject.dispose();
-                previewTmpObject = undefined;
-            }
-        }
-
-        action.onClick = () => {
-            if (!player.inputManager.inventoryOpened) {
-                let hit = player.inputManager.getPickInfo(player.meshes);
-                if (hit && hit.pickedPoint) {
-                    let tmpObject = new TmpObject(tmpObjectName, player.main);
-                    tmpObject.planet = player.planet;
-                    tmpObject.instantiate();
-                    tmpObject.setPosition(hit.pickedPoint);
-                    tmpObject.setTarget(player.position);
-                }
-            }
-        }
-
-        action.onUnequip = () => {
-            if (previewTmpObject) {
-                previewTmpObject.dispose();
-                previewTmpObject = undefined;
-            }
-        }
-
-        return action;
-        */
-    }
-    static async CreateBlockAction(player, blockType) {
-        let action = new PlayerAction(Kulla.BlockTypeNames[blockType], player);
-        action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
-        let previewMesh;
-        let previewBox;
-        action.iconUrl = "/datas/images/block-icon-" + Kulla.BlockTypeNames[blockType] + "-miniature.png";
-        let lastSize;
-        let lastI;
-        let lastJ;
-        let lastK;
-        action.onUpdate = () => {
-            let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
-                let x;
-                let y;
-                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
-                    x = player.game.canvas.clientWidth * 0.5;
-                    y = player.game.canvas.clientHeight * 0.5;
-                }
-                else {
-                    x = player._scene.pointerX;
-                    y = player._scene.pointerY;
-                }
-                let hit = player.game.scene.pick(x, y, (mesh) => {
-                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
-                });
-                if (hit && hit.pickedPoint) {
-                    let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
-                    if (chunckIJK) {
-                        // Redraw block preview
-                        if (!previewMesh) {
-                            if (blockType === Kulla.BlockType.None) {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: 2 * terrain.blockSizeIJ_m, height: 2 * terrain.blockSizeK_m, depth: 2 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(1, 0, 0, 1) });
-                            }
-                            else {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: 2 * terrain.blockSizeIJ_m, height: 2 * terrain.blockSizeK_m, depth: 2 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
-                            }
-                        }
-                        let needRedrawMesh = false;
-                        if (lastI != chunckIJK.ijk.i) {
-                            lastI = chunckIJK.ijk.i;
-                            needRedrawMesh = true;
-                        }
-                        if (lastJ != chunckIJK.ijk.j) {
-                            lastJ = chunckIJK.ijk.j;
-                            needRedrawMesh = true;
-                        }
-                        if (lastK != chunckIJK.ijk.k) {
-                            lastK = chunckIJK.ijk.k;
-                            needRedrawMesh = true;
-                        }
-                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j) * terrain.blockSizeIJ_m);
-                        previewMesh.parent = chunckIJK.chunck.mesh;
-                        return;
-                    }
-                }
-            }
-            if (previewMesh) {
-                previewMesh.dispose();
-                previewMesh = undefined;
-            }
-            if (previewBox) {
-                previewBox.dispose();
-                previewBox = undefined;
-            }
-        };
-        action.onClick = () => {
-            if (player.game.router.inPlayMode) {
-                let x;
-                let y;
-                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
-                    x = player.game.canvas.clientWidth * 0.5;
-                    y = player.game.canvas.clientHeight * 0.5;
-                }
-                else {
-                    x = player._scene.pointerX;
-                    y = player._scene.pointerY;
-                }
-                let hit = player.game.scene.pick(x, y, (mesh) => {
-                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
-                });
-                if (hit && hit.pickedPoint) {
-                    let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
-                    if (chunckIJK) {
-                        player.game.terrainEditor.doAction(chunckIJK.chunck, chunckIJK.ijk, {
-                            brushSize: 2,
-                            brushBlock: blockType,
-                            saveToLocalStorage: true
-                        });
-                    }
-                }
-            }
-        };
-        action.onUnequip = () => {
-            if (previewMesh) {
-                previewMesh.dispose();
-                previewMesh = undefined;
-            }
-            if (previewBox) {
-                previewBox.dispose();
-                previewBox = undefined;
-            }
-            lastSize = undefined;
-            lastI = undefined;
-            lastJ = undefined;
-            lastK = undefined;
-        };
-        return action;
-    }
-}
-class PlayerActionView {
-    constructor(player, game) {
-        this.player = player;
-        this.game = game;
-        this.isOpened = false;
-        this._equipedSlotIndex = -1;
-    }
-    get scene() {
-        return this.game.scene;
-    }
-    get inventory() {
-        return this.player.inventory;
-    }
-    initialize() {
-        this.tiles = [];
-        for (let slotIndex = 0; slotIndex <= 9; slotIndex++) {
-            this.tiles[slotIndex] = document.querySelector("#action-" + slotIndex.toFixed(0));
-        }
-    }
-    highlight(slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.tiles[slotIndex].style.border = "2px solid rgb(255, 255, 255)";
-        }
-    }
-    unlit(slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.tiles[slotIndex].style.border = "2px solid rgb(127, 127, 127)";
-        }
-    }
-    onActionEquiped(action, slotIndex) {
-        if (this._equipedSlotIndex >= 0 && this._equipedSlotIndex <= 9) {
-            this.unlit(this._equipedSlotIndex);
-        }
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.highlight(slotIndex);
-            this._equipedSlotIndex = slotIndex;
-        }
-    }
-    onActionUnequiped(action, slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.unlit(slotIndex);
-        }
-    }
-    onHintStart(slotIndex) {
-    }
-    onHintEnd(slotIndex) {
-    }
-    onActionLinked(action, slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.tiles[slotIndex].style.backgroundColor = action.backgroundColor;
-            /*
-            this.hudLateralTileImageMeshes[slotIndex].isVisible = true;
-            this.hudLateralTileImageMaterials[slotIndex].diffuseTexture = new BABYLON.Texture(action.iconUrl);
-            this.hudLateralTileImageMaterials[slotIndex].diffuseTexture.hasAlpha = true;
-            this.itemCountTexts[slotIndex].prop.text = action.item.count.toFixed(0);
-            this.itemNameTexts[slotIndex].prop.text = action.item.name;
-            this.slika.needRedraw = true;
-            */
-        }
-    }
-    onActionUnlinked(slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.tiles[slotIndex].style.backgroundColor = undefined;
-            /*
-            this.hudLateralTileImageMeshes[slotIndex].isVisible = false;
-            this.hudLateralTileImageMaterials[slotIndex].diffuseTexture = undefined;
-            this.itemCountTexts[slotIndex].prop.text = "";
-            this.itemNameTexts[slotIndex].prop.text = "";
-            this.slika.needRedraw = true;
-            */
-        }
-    }
-    onPointerUp() {
-        if (this.inventory.draggedItem) {
-            //this.player.playerActionManager.linkAction(this.inventory.draggedItem.playerAction, index);
-            this.inventory.draggedItem = undefined;
-        }
-    }
-}
-class PlayerAction {
-    constructor(name, player) {
-        this.name = name;
-        this.player = player;
-        this.backgroundColor = "#ffffff";
-        this.r = 0;
-    }
-}
-class PlayerActionManager {
-    constructor(player, game) {
-        this.player = player;
-        this.game = game;
-        this.linkedActions = [];
-        this.update = () => {
-        };
-        player.playerActionManager = this;
-    }
-    get inventory() {
-        return this.player.inventory;
-    }
-    get playerActionView() {
-        return this.game.playerActionBar;
-    }
-    initialize() {
-        let savedPlayerActionString = window.localStorage.getItem("player-action-manager");
-        if (savedPlayerActionString) {
-            let savedPlayerAction = JSON.parse(savedPlayerActionString);
-            this.deserializeInPlace(savedPlayerAction);
-        }
-        this.game.scene.onBeforeRenderObservable.add(this.update);
-    }
-    linkAction(action, slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.linkedActions[slotIndex] = action;
-            this.playerActionView.onActionLinked(action, slotIndex);
-            /*
-            if (Config.saveConfiguration.useLocalStorage) {
-                window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
-            }
-            */
-        }
-    }
-    unlinkAction(slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.linkedActions[slotIndex] = undefined;
-            this.playerActionView.onActionUnlinked(slotIndex);
-            /*
-            if (Config.saveConfiguration.useLocalStorage) {
-                window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
-            }
-            */
-        }
-    }
-    equipAction(slotIndex) {
-        if (slotIndex >= 0 && slotIndex < 10) {
-            // Unequip current action
-            if (this.player.currentAction) {
-                if (this.player.currentAction.onUnequip) {
-                    this.player.currentAction.onUnequip();
-                }
-                this.playerActionView.onActionUnequiped(this.player.currentAction, slotIndex);
-            }
-            if (this.linkedActions[slotIndex]) {
-                // If request action was already equiped, remove it.
-                if (this.player.currentAction === this.linkedActions[slotIndex]) {
-                    this.player.currentAction = undefined;
-                }
-                // Otherwise, equip new action.
-                else {
-                    this.player.currentAction = this.linkedActions[slotIndex];
-                    if (this.player.currentAction) {
-                        //(document.querySelector("#player-action-" + slotIndex + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background-highlit.svg";
-                        if (this.player.currentAction.onEquip) {
-                            this.player.currentAction.onEquip();
-                        }
-                        this.playerActionView.onActionEquiped(this.player.currentAction, slotIndex);
-                    }
-                }
-            }
-            else {
-                this.player.currentAction = undefined;
-            }
-        }
-    }
-    startHint(slotIndex) {
-        this.inventory.hintedSlotIndex.push(slotIndex);
-        setTimeout(() => {
-            if (this.inventory.hintedSlotIndex.contains(slotIndex)) {
-                this.playerActionView.onHintStart(slotIndex);
-            }
-        }, 200);
-    }
-    stopHint(slotIndex) {
-        this.inventory.hintedSlotIndex.remove(slotIndex) >= 0;
-        this.playerActionView.onHintEnd(slotIndex);
-    }
-    serialize() {
-        let linkedActionsNames = [];
-        for (let i = 0; i < this.linkedActions.length; i++) {
-            if (this.linkedActions[i]) {
-                linkedActionsNames[i] = this.linkedActions[i].item.name;
-            }
-        }
-        return {
-            linkedItemNames: linkedActionsNames
-        };
-    }
-    deserializeInPlace(data) {
-        if (data && data.linkedItemNames) {
-            for (let i = 0; i < data.linkedItemNames.length; i++) {
-                let linkedItemName = data.linkedItemNames[i];
-                let item = this.player.inventory.getItemByName(linkedItemName);
-                if (item) {
-                    this.linkAction(item.playerAction, i);
-                    item.timeUse = (new Date()).getTime();
-                }
-            }
-        }
-    }
-}
-class PlayerControler {
-    constructor(player) {
-        this.player = player;
-        this._pointerIsDown = false;
-        this.gamepadInControl = false;
-        this._pointerDown = (event) => {
-            if (!this.player.game.router.inPlayMode) {
-                return;
-            }
-            this._pointerIsDown = true;
-            if (this.player.currentAction) {
-                this.player.currentAction.onClick(this.player.currentChuncks);
-            }
-        };
-        this._pointerMove = (event) => {
-            if (!this.player.game.router.inPlayMode) {
-                return;
-            }
-            if (this._pointerIsDown || this.player.game.inputManager.isPointerLocked) {
-                this.gamepadInControl = false;
-                this.player.inputDeltaX += event.movementX;
-                this.player.inputDeltaY += event.movementY;
-            }
-        };
-        this._pointerUp = (event) => {
-            if (!this.player.game.router.inPlayMode) {
-                return;
-            }
-            this._pointerIsDown = false;
-        };
-        player.controler = this;
-        window.addEventListener("pointerdown", this._pointerDown);
-        window.addEventListener("pointermove", this._pointerMove);
-        window.addEventListener("pointerup", this._pointerUp);
-        this.aim = document.createElement("canvas");
-        this.aim.width = 21;
-        this.aim.height = 21;
-        document.body.appendChild(this.aim);
-        let context = this.aim.getContext("2d");
-        context.fillStyle = "#00ff00";
-        context.fillRect(0, 10, 21, 1);
-        context.fillRect(10, 0, 1, 21);
-        this.aim.style.zIndex = "10";
-        this.aim.style.position = "fixed";
-        this.aim.style.pointerEvents = "none";
-    }
-    initialize() {
-        this.player.game.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
-            if (this.player.currentAction) {
-                this.player.currentAction.onClick(this.player.currentChuncks);
-            }
-        });
-        for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
-            this.player.game.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
-                if (this.player.playerActionManager) {
-                    this.player.playerActionManager.equipAction(slotIndex);
-                }
-            });
-        }
-    }
-    testDeadZone(v, threshold = 0.1) {
-        if (Math.abs(v) > threshold) {
-            return (v - threshold * Math.sign(v)) / (1 - threshold);
-        }
-        return 0;
-    }
-    update(dt) {
-        this.player.inputX = 0;
-        this.player.inputZ = 0;
-        if (this.player.game.router.inPlayMode) {
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
-                this.player.inputZ += 1;
-                this.gamepadInControl = false;
-            }
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
-                this.player.inputZ -= 1;
-                this.gamepadInControl = false;
-            }
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
-                this.player.inputX += 1;
-                this.gamepadInControl = false;
-            }
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
-                this.player.inputX -= 1;
-                this.gamepadInControl = false;
-            }
-            let gamepads = navigator.getGamepads();
-            let gamepad = gamepads[0];
-            if (gamepad) {
-                let axis0 = this.testDeadZone(gamepad.axes[0]);
-                let axis1 = -this.testDeadZone(gamepad.axes[1]);
-                let axis2 = this.testDeadZone(gamepad.axes[2]);
-                let axis3 = this.testDeadZone(gamepad.axes[3]);
-                this.gamepadInControl = this.gamepadInControl || (axis0 != 0);
-                this.gamepadInControl = this.gamepadInControl || (axis1 != 0);
-                this.gamepadInControl = this.gamepadInControl || (axis2 != 0);
-                this.gamepadInControl = this.gamepadInControl || (axis3 != 0);
-                if (this.gamepadInControl) {
-                    this.player.inputX = axis0;
-                    this.player.inputZ = axis1;
-                    this.player.inputRY = axis2;
-                    this.player.inputRX = axis3;
-                }
-            }
-        }
-        else {
-            this.gamepadInControl = false;
-        }
-        if (this.gamepadInControl || this.player.game.inputManager.isPointerLocked) {
-            this.aim.style.top = (window.innerHeight * 0.5 - 10).toFixed(0) + "px";
-            this.aim.style.left = (window.innerWidth * 0.5 - 10).toFixed(0) + "px";
-            this.aim.style.display = "block";
-            document.body.style.cursor = "none";
-        }
-        else {
-            this.aim.style.display = "none";
-            document.body.style.cursor = "auto";
-        }
-    }
-}
 class PropShapeMesh extends BABYLON.Mesh {
     constructor(propEditor, shape, color) {
         super("prop-shape-mesh");
@@ -2423,6 +1840,569 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
     }
     updateSpecularPower() {
         this.setFloat("specularPower", this._specularPower);
+    }
+}
+class Player extends BABYLON.Mesh {
+    constructor(game) {
+        super("player");
+        this.game = game;
+        this.mass = 2;
+        this.height = 2;
+        this.velocity = BABYLON.Vector3.Zero();
+        this.frozen = true;
+        this.speed = 3;
+        this.rSpeed = Math.PI;
+        this.inputZ = 0;
+        this.inputX = 0;
+        this.inputRY = 0;
+        this.inputRX = 0;
+        this.inputDeltaX = 0;
+        this.inputDeltaY = 0;
+        this.currentChuncks = [];
+        let body = Mummu.CreateBeveledBox("body", { width: 1, height: this.height - 0.2, depth: 1 });
+        body.isVisible = false;
+        body.position.y = -this.height * 0.5 - 0.1;
+        body.parent = this;
+        this.head = new BABYLON.Mesh("head");
+        this.head.parent = this;
+    }
+    update(dt) {
+        if (this.controler) {
+            this.controler.update(dt);
+        }
+        let currentChunck = this.game.terrain.getChunckAtPos(this.position, 0);
+        if (currentChunck != this.currentChunck) {
+            this.currentChunck = currentChunck;
+            this.updateCurrentChuncks();
+        }
+        if (this.currentAction) {
+            this.currentAction.onUpdate(this.currentChuncks);
+        }
+        let ray = new BABYLON.Ray(this.position, new BABYLON.Vector3(0, -1, 0));
+        let bestPick;
+        for (let i = 0; i < this.currentChuncks.length; i++) {
+            let chunck = this.currentChuncks[i];
+            if (chunck && chunck.mesh) {
+                let pick = ray.intersectsMesh(chunck.mesh);
+                if (pick.hit) {
+                    bestPick = pick;
+                    break;
+                }
+            }
+        }
+        this.velocity.x = 0;
+        this.velocity.z = 0;
+        let inputL = Math.sqrt(this.inputX * this.inputX + this.inputZ * this.inputZ);
+        if (inputL > this.speed) {
+            this.inputX /= inputL * this.speed;
+            this.inputZ /= inputL * this.speed;
+        }
+        this.velocity.addInPlace(this.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
+        this.velocity.addInPlace(this.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
+        this.rotation.y += this.rSpeed * this.inputRY * dt;
+        this.head.rotation.x += this.rSpeed * this.inputRX * dt;
+        this.head.rotation.x = Nabu.MinMax(this.head.rotation.x, -Math.PI * 0.5, Math.PI * 0.5);
+        if (this.inputDeltaX != 0) {
+            this.rotation.y += this.inputDeltaX / 500;
+            this.inputDeltaX = 0;
+        }
+        if (this.inputDeltaY != 0) {
+            this.head.rotation.x += this.inputDeltaY / 500;
+            this.inputDeltaY = 0;
+        }
+        if (bestPick && bestPick.hit) {
+            if (bestPick.distance <= this.height) {
+                this.velocity.y = (this.height - bestPick.distance);
+            }
+            else {
+                this.velocity.y -= this.mass * 9.2 * dt;
+            }
+            this.position.addInPlace(this.velocity.scale(dt));
+        }
+        else {
+            if (this.position.y < 100) {
+                this.position.y += 0.1;
+            }
+            if (this.position.y < 0) {
+                this.position.y = 100;
+            }
+        }
+    }
+    updateCurrentChuncks() {
+        this.currentChuncks = [];
+        if (this.currentChunck) {
+            for (let i = 0; i <= 2; i++) {
+                for (let j = 0; j <= 2; j++) {
+                    this.currentChuncks[i + 3 * j] = this.game.terrain.getChunck(0, this.currentChunck.iPos - 1 + i, this.currentChunck.jPos - 1 + j);
+                }
+            }
+        }
+    }
+}
+class PlayerActionManager {
+    constructor(player, game) {
+        this.player = player;
+        this.game = game;
+        this.linkedActions = [];
+        this.update = () => {
+        };
+        player.playerActionManager = this;
+    }
+    get inventory() {
+        return this.player.inventory;
+    }
+    get playerActionView() {
+        return this.game.playerActionBar;
+    }
+    initialize() {
+        let savedPlayerActionString = window.localStorage.getItem("player-action-manager");
+        if (savedPlayerActionString) {
+            let savedPlayerAction = JSON.parse(savedPlayerActionString);
+            this.deserializeInPlace(savedPlayerAction);
+        }
+        this.game.scene.onBeforeRenderObservable.add(this.update);
+    }
+    linkAction(action, slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.linkedActions[slotIndex] = action;
+            this.playerActionView.onActionLinked(action, slotIndex);
+            /*
+            if (Config.saveConfiguration.useLocalStorage) {
+                window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
+            }
+            */
+        }
+    }
+    unlinkAction(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.linkedActions[slotIndex] = undefined;
+            this.playerActionView.onActionUnlinked(slotIndex);
+            /*
+            if (Config.saveConfiguration.useLocalStorage) {
+                window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
+            }
+            */
+        }
+    }
+    equipAction(slotIndex) {
+        if (slotIndex >= 0 && slotIndex < 10) {
+            // Unequip current action
+            if (this.player.currentAction) {
+                if (this.player.currentAction.onUnequip) {
+                    this.player.currentAction.onUnequip();
+                }
+                this.playerActionView.onActionUnequiped(slotIndex);
+            }
+            if (this.linkedActions[slotIndex]) {
+                // If request action was already equiped, remove it.
+                if (this.player.currentAction === this.linkedActions[slotIndex]) {
+                    this.player.currentAction = undefined;
+                }
+                // Otherwise, equip new action.
+                else {
+                    this.player.currentAction = this.linkedActions[slotIndex];
+                    if (this.player.currentAction) {
+                        //(document.querySelector("#player-action-" + slotIndex + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background-highlit.svg";
+                        if (this.player.currentAction.onEquip) {
+                            this.player.currentAction.onEquip();
+                        }
+                        this.playerActionView.onActionEquiped(slotIndex);
+                    }
+                }
+            }
+            else {
+                this.player.currentAction = undefined;
+            }
+        }
+    }
+    startHint(slotIndex) {
+        this.inventory.hintedSlotIndex.push(slotIndex);
+        setTimeout(() => {
+            if (this.inventory.hintedSlotIndex.contains(slotIndex)) {
+                this.playerActionView.onHintStart(slotIndex);
+            }
+        }, 200);
+    }
+    stopHint(slotIndex) {
+        this.inventory.hintedSlotIndex.remove(slotIndex) >= 0;
+        this.playerActionView.onHintEnd(slotIndex);
+    }
+    serialize() {
+        let linkedActionsNames = [];
+        for (let i = 0; i < this.linkedActions.length; i++) {
+            if (this.linkedActions[i]) {
+                linkedActionsNames[i] = this.linkedActions[i].item.name;
+            }
+        }
+        return {
+            linkedItemNames: linkedActionsNames
+        };
+    }
+    deserializeInPlace(data) {
+        if (data && data.linkedItemNames) {
+            for (let i = 0; i < data.linkedItemNames.length; i++) {
+                let linkedItemName = data.linkedItemNames[i];
+                let item = this.player.inventory.getItemByName(linkedItemName);
+                if (item) {
+                    this.linkAction(item.playerAction, i);
+                    item.timeUse = (new Date()).getTime();
+                }
+            }
+        }
+    }
+}
+var ACTIVE_DEBUG_PLAYER_ACTION = true;
+var ADD_BRICK_ANIMATION_DURATION = 1000;
+class PlayerActionTemplate {
+    static async AddTmpObjectAction(player, tmpObjectName) {
+        return undefined;
+        /*
+        let action = new PlayerAction(tmpObjectName, player);
+        action.iconUrl = "/datas/images/qmark.png";
+
+        let previewTmpObject: TmpObject;
+
+        action.onUpdate = () => {
+            if (!player.inputManager.inventoryOpened) {
+                let hit = player.inputManager.getPickInfo(player.meshes);
+                if (hit && hit.pickedPoint) {
+                    if (!previewTmpObject) {
+                        previewTmpObject = new TmpObject(tmpObjectName, player.main);
+                        previewTmpObject.planet = player.planet;
+                        previewTmpObject.instantiate();
+                    }
+                    previewTmpObject.setPosition(hit.pickedPoint);
+                    previewTmpObject.setTarget(player.position);
+                    return;
+                }
+            }
+            if (previewTmpObject) {
+                previewTmpObject.dispose();
+                previewTmpObject = undefined;
+            }
+        }
+
+        action.onClick = () => {
+            if (!player.inputManager.inventoryOpened) {
+                let hit = player.inputManager.getPickInfo(player.meshes);
+                if (hit && hit.pickedPoint) {
+                    let tmpObject = new TmpObject(tmpObjectName, player.main);
+                    tmpObject.planet = player.planet;
+                    tmpObject.instantiate();
+                    tmpObject.setPosition(hit.pickedPoint);
+                    tmpObject.setTarget(player.position);
+                }
+            }
+        }
+
+        action.onUnequip = () => {
+            if (previewTmpObject) {
+                previewTmpObject.dispose();
+                previewTmpObject = undefined;
+            }
+        }
+
+        return action;
+        */
+    }
+    static async CreateBlockAction(player, blockType) {
+        let action = new PlayerAction(Kulla.BlockTypeNames[blockType], player);
+        action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
+        let previewMesh;
+        let previewBox;
+        action.iconUrl = "/datas/images/block-icon-" + Kulla.BlockTypeNames[blockType] + "-miniature.png";
+        let lastSize;
+        let lastI;
+        let lastJ;
+        let lastK;
+        action.onUpdate = () => {
+            let terrain = player.game.terrain;
+            if (player.game.router.inPlayMode) {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                });
+                if (hit && hit.pickedPoint) {
+                    let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
+                    if (chunckIJK) {
+                        // Redraw block preview
+                        if (!previewMesh) {
+                            if (blockType === Kulla.BlockType.None) {
+                                previewMesh = Mummu.CreateLineBox("preview", { width: 2 * terrain.blockSizeIJ_m, height: 2 * terrain.blockSizeK_m, depth: 2 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(1, 0, 0, 1) });
+                            }
+                            else {
+                                previewMesh = Mummu.CreateLineBox("preview", { width: 2 * terrain.blockSizeIJ_m, height: 2 * terrain.blockSizeK_m, depth: 2 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
+                            }
+                        }
+                        let needRedrawMesh = false;
+                        if (lastI != chunckIJK.ijk.i) {
+                            lastI = chunckIJK.ijk.i;
+                            needRedrawMesh = true;
+                        }
+                        if (lastJ != chunckIJK.ijk.j) {
+                            lastJ = chunckIJK.ijk.j;
+                            needRedrawMesh = true;
+                        }
+                        if (lastK != chunckIJK.ijk.k) {
+                            lastK = chunckIJK.ijk.k;
+                            needRedrawMesh = true;
+                        }
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j) * terrain.blockSizeIJ_m);
+                        previewMesh.parent = chunckIJK.chunck.mesh;
+                        return;
+                    }
+                }
+            }
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+        };
+        action.onClick = () => {
+            if (player.game.router.inPlayMode) {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                });
+                if (hit && hit.pickedPoint) {
+                    let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
+                    if (chunckIJK) {
+                        player.game.terrainEditor.doAction(chunckIJK.chunck, chunckIJK.ijk, {
+                            brushSize: 2,
+                            brushBlock: blockType,
+                            saveToLocalStorage: true
+                        });
+                    }
+                }
+            }
+        };
+        action.onUnequip = () => {
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+            lastSize = undefined;
+            lastI = undefined;
+            lastJ = undefined;
+            lastK = undefined;
+        };
+        return action;
+    }
+}
+class PlayerActionView {
+    constructor() {
+        this._tiles = [];
+    }
+    getTile(slotIndex) {
+        if (!this._tiles[slotIndex]) {
+            this._tiles[slotIndex] = document.querySelector("#action-" + slotIndex.toFixed(0));
+        }
+        return this._tiles[slotIndex];
+    }
+    highlight(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            let tile = this.getTile(slotIndex);
+            if (tile) {
+                tile.style.border = "2px solid rgb(255, 255, 255)";
+            }
+        }
+    }
+    unlit(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            let tile = this.getTile(slotIndex);
+            if (tile) {
+                tile.style.border = "2px solid rgb(127, 127, 127)";
+            }
+        }
+    }
+    onActionEquiped(slotIndex) {
+        for (let i = 0; i <= 9; i++) {
+            this.unlit(i);
+        }
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.highlight(slotIndex);
+        }
+    }
+    onActionUnequiped(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            this.unlit(slotIndex);
+        }
+    }
+    onHintStart(slotIndex) {
+    }
+    onHintEnd(slotIndex) {
+    }
+    onActionLinked(action, slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            let tile = this.getTile(slotIndex);
+            if (tile) {
+                tile.style.backgroundColor = action.backgroundColor;
+            }
+        }
+    }
+    onActionUnlinked(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            let tile = this.getTile(slotIndex);
+            if (tile) {
+                tile.style.backgroundColor = undefined;
+            }
+        }
+    }
+}
+class PlayerAction {
+    constructor(name, player) {
+        this.name = name;
+        this.player = player;
+        this.backgroundColor = "#ffffff";
+        this.r = 0;
+    }
+}
+class PlayerControler {
+    constructor(player) {
+        this.player = player;
+        this._pointerIsDown = false;
+        this.gamepadInControl = false;
+        this._pointerDown = (event) => {
+            if (!this.player.game.router.inPlayMode) {
+                return;
+            }
+            this._pointerIsDown = true;
+            if (this.player.currentAction) {
+                this.player.currentAction.onClick(this.player.currentChuncks);
+            }
+        };
+        this._pointerMove = (event) => {
+            if (!this.player.game.router.inPlayMode) {
+                return;
+            }
+            if (this._pointerIsDown || this.player.game.inputManager.isPointerLocked) {
+                this.gamepadInControl = false;
+                this.player.inputDeltaX += event.movementX;
+                this.player.inputDeltaY += event.movementY;
+            }
+        };
+        this._pointerUp = (event) => {
+            if (!this.player.game.router.inPlayMode) {
+                return;
+            }
+            this._pointerIsDown = false;
+        };
+        player.controler = this;
+        window.addEventListener("pointerdown", this._pointerDown);
+        window.addEventListener("pointermove", this._pointerMove);
+        window.addEventListener("pointerup", this._pointerUp);
+        this.aim = document.createElement("canvas");
+        this.aim.width = 21;
+        this.aim.height = 21;
+        document.body.appendChild(this.aim);
+        let context = this.aim.getContext("2d");
+        context.fillStyle = "#00ff00";
+        context.fillRect(0, 10, 21, 1);
+        context.fillRect(10, 0, 1, 21);
+        this.aim.style.zIndex = "10";
+        this.aim.style.position = "fixed";
+        this.aim.style.pointerEvents = "none";
+    }
+    initialize() {
+        this.player.game.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
+            if (this.player.currentAction) {
+                this.player.currentAction.onClick(this.player.currentChuncks);
+            }
+        });
+        for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
+            this.player.game.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
+                if (this.player.playerActionManager) {
+                    this.player.playerActionManager.equipAction(slotIndex);
+                }
+            });
+        }
+    }
+    testDeadZone(v, threshold = 0.1) {
+        if (Math.abs(v) > threshold) {
+            return (v - threshold * Math.sign(v)) / (1 - threshold);
+        }
+        return 0;
+    }
+    update(dt) {
+        this.player.inputX = 0;
+        this.player.inputZ = 0;
+        if (this.player.game.router.inPlayMode) {
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
+                this.player.inputZ += 1;
+                this.gamepadInControl = false;
+            }
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
+                this.player.inputZ -= 1;
+                this.gamepadInControl = false;
+            }
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
+                this.player.inputX += 1;
+                this.gamepadInControl = false;
+            }
+            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
+                this.player.inputX -= 1;
+                this.gamepadInControl = false;
+            }
+            let gamepads = navigator.getGamepads();
+            let gamepad = gamepads[0];
+            if (gamepad) {
+                let axis0 = this.testDeadZone(gamepad.axes[0]);
+                let axis1 = -this.testDeadZone(gamepad.axes[1]);
+                let axis2 = this.testDeadZone(gamepad.axes[2]);
+                let axis3 = this.testDeadZone(gamepad.axes[3]);
+                this.gamepadInControl = this.gamepadInControl || (axis0 != 0);
+                this.gamepadInControl = this.gamepadInControl || (axis1 != 0);
+                this.gamepadInControl = this.gamepadInControl || (axis2 != 0);
+                this.gamepadInControl = this.gamepadInControl || (axis3 != 0);
+                if (this.gamepadInControl) {
+                    this.player.inputX = axis0;
+                    this.player.inputZ = axis1;
+                    this.player.inputRY = axis2;
+                    this.player.inputRX = axis3;
+                }
+            }
+        }
+        else {
+            this.gamepadInControl = false;
+        }
+        if (this.gamepadInControl || this.player.game.inputManager.isPointerLocked) {
+            this.aim.style.top = (window.innerHeight * 0.5 - 10).toFixed(0) + "px";
+            this.aim.style.left = (window.innerWidth * 0.5 - 10).toFixed(0) + "px";
+            this.aim.style.display = "block";
+            document.body.style.cursor = "none";
+        }
+        else {
+            this.aim.style.display = "none";
+            document.body.style.cursor = "auto";
+        }
     }
 }
 class GameRouter extends Nabu.Router {

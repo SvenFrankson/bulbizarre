@@ -122,6 +122,7 @@ class Game {
         }
 
         this.router = new GameRouter(this);
+        this.playerActionBar = new PlayerActionView();
 
         this.propEditor = new PropEditor(this);
 
@@ -176,8 +177,6 @@ class Game {
             this.player.playerActionManager = new PlayerActionManager(this.player, this);
             this.player.playerActionManager.initialize();
             this.player.inventory = new Inventory(this.player);
-            this.playerActionBar = new PlayerActionView(this.player, this);
-            this.playerActionBar.initialize();
             this.inputManager.initialize();
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();

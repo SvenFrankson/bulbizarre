@@ -1,29 +1,3 @@
-interface IPlayerActionManagerData {
-    linkedItemNames: string[];
-}
-
-class PlayerAction {
-    public iconUrl: string;
-    public backgroundColor: string = "#ffffff";
-    public r: number = 0;
-    public item: InventoryItem;
-
-    public onUpdate: (chuncks?: Kulla.Chunck[]) => void;
-    public onClick: (chuncks?: Kulla.Chunck[]) => void;
-    public onWheel: (e: WheelEvent) => void;
-    public onKeyDown: (e: KeyboardEvent) => void;
-    public onKeyUp: (e: KeyboardEvent) => void;
-    public onEquip: () => void;
-    public onUnequip: () => void;
-
-    constructor(    
-        public name: string,
-        public player: Player
-    ) {
-
-    }
-}
-
 class PlayerActionManager {
 
     public linkedActions: PlayerAction[] = [];
@@ -87,7 +61,7 @@ class PlayerActionManager {
                 if (this.player.currentAction.onUnequip) {
                     this.player.currentAction.onUnequip();
                 }
-                this.playerActionView.onActionUnequiped(this.player.currentAction, slotIndex);
+                this.playerActionView.onActionUnequiped(slotIndex);
             }
             if (this.linkedActions[slotIndex]) {
                 // If request action was already equiped, remove it.
@@ -102,7 +76,7 @@ class PlayerActionManager {
                         if (this.player.currentAction.onEquip) {
                             this.player.currentAction.onEquip();
                         }
-                        this.playerActionView.onActionEquiped(this.player.currentAction, slotIndex);
+                        this.playerActionView.onActionEquiped(slotIndex);
                     }
                 }
             }
