@@ -13,8 +13,12 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
     public inventory: PlayerInventory;
     private _title: HTMLHeadingElement;
     private _containerFrame: HTMLDivElement;
-    private _container: HTMLDivElement;
-    private _backButton: HTMLButtonElement;
+    private _containers: HTMLDivElement[];
+    private _categoryAllBtn: HTMLDivElement;
+    private _categoryBlocksBtn: HTMLDivElement;
+    private _categoryBricksBtn: HTMLDivElement;
+    private _categoryIngredientsBtn: HTMLDivElement;
+    private _categoryBtns: HTMLDivElement[];
 
     private _onLoad: () => void;
     public get onLoad(): () => void {
@@ -27,6 +31,43 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
         }
     }
 
+    private _currentCategory: InventoryCategory = InventoryCategory.Block;
+    public setCurrentCategory(cat: InventoryCategory): void {
+        this._currentCategory = cat;
+        for (let i = 0; i < this._categoryBtns.length; i++) {
+            this._makeCategoryBtnInactive(this._categoryBtns[i]);
+            this._containers[i].style.display = "none";
+        }
+        this._makeCategoryBtnActive(this._categoryBtns[this._currentCategory]);
+        this._containers[this._currentCategory].style.display = "block";
+    }
+
+    private _makeCategoryBtnStyle(btn: HTMLDivElement): void {
+        btn.style.fontSize = "min(2svh, 2vw)";
+        btn.style.display = "inline-block";
+        btn.style.marginLeft = "1%";
+        btn.style.marginRight = "1%";
+        btn.style.width = "20%";
+        btn.style.textAlign = "center";
+        btn.style.borderLeft = "2px solid white";
+        btn.style.borderTop = "2px solid white";
+        btn.style.borderRight = "2px solid white";
+    }
+
+    private _makeCategoryBtnActive(btn: HTMLDivElement): void {
+        btn.style.borderLeft = "2px solid white";
+        btn.style.borderTop = "2px solid white";
+        btn.style.borderRight = "2px solid white";
+        btn.style.color = "white";
+    }
+
+    private _makeCategoryBtnInactive(btn: HTMLDivElement): void {
+        btn.style.borderLeft = "2px solid #7F7F7F";
+        btn.style.borderTop = "2px solid #7F7F7F";
+        btn.style.borderRight = "2px solid #7F7F7F";
+        btn.style.color = "#7F7F7F";
+    }
+
     public connectedCallback(): void {
         this.style.display = "none";
         this.style.opacity = "0";
@@ -35,22 +76,56 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
         this._title.innerHTML = "INVENTORY";
         this.appendChild(this._title);
 
+        let categoriesContainer: HTMLDivElement;
+        categoriesContainer = document.createElement("div");
+        this.appendChild(categoriesContainer);
+
+        this._categoryBlocksBtn = document.createElement("div");
+        this._categoryBlocksBtn.innerHTML = "BLOCKS";
+        categoriesContainer.appendChild(this._categoryBlocksBtn);
+        this._makeCategoryBtnStyle(this._categoryBlocksBtn);
+        this._categoryBlocksBtn.onclick = () => {
+            this.setCurrentCategory(InventoryCategory.Block);
+        }
+        
+        this._categoryBricksBtn = document.createElement("div");
+        this._categoryBricksBtn.innerHTML = "BRICKS";
+        categoriesContainer.appendChild(this._categoryBricksBtn);
+        this._makeCategoryBtnStyle(this._categoryBricksBtn);
+        this._categoryBricksBtn.onclick = () => {
+            this.setCurrentCategory(InventoryCategory.Brick);
+        }
+        
+        this._categoryIngredientsBtn = document.createElement("div");
+        this._categoryIngredientsBtn.innerHTML = "INGREDIENTS";
+        categoriesContainer.appendChild(this._categoryIngredientsBtn);
+        this._makeCategoryBtnStyle(this._categoryIngredientsBtn);
+        this._categoryIngredientsBtn.onclick = () => {
+            this.setCurrentCategory(InventoryCategory.Ingredient);
+        }
+
+        this._categoryBtns = [
+            this._categoryBlocksBtn,
+            this._categoryBricksBtn,
+            this._categoryIngredientsBtn,
+        ]
+
         this._containerFrame = document.createElement("div");
         this._containerFrame.classList.add("container-frame");
         this.appendChild(this._containerFrame);
 
-        this._container = document.createElement("div");
-        this._container.classList.add("container");
-        this._containerFrame.appendChild(this._container);
+        this._containers = [];
+        for (let i = 0; i < InventoryCategory.End; i++) {
+            this._containers[i] = document.createElement("div");
+            this._containers[i].classList.add("container");
+            this._containerFrame.appendChild(this._containers[i]);
+        }
 
         let a = document.createElement("a");
         a.href = "#home";
         this.appendChild(a);
 
-        this._backButton = document.createElement("button");
-        this._backButton.classList.add("back-button");
-        this._backButton.innerText = "BACK";
-        a.appendChild(this._backButton);
+        this.setCurrentCategory(InventoryCategory.Block);
     }
 
     public attributeChangedCallback(name: string, oldValue: string, newValue: string) {}
@@ -118,14 +193,16 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
     }
 
     public createPage(): void {
-        this._container.innerHTML = "";
+        for (let i = 0; i < this._containers.length; i++) {
+            this._containers[i].innerHTML = "";
+        }
 
         for (let i = 0; i < this.inventory.items.length; i++) {
             let inventoryItem = this.inventory.items[i];
 
             let line = document.createElement("div");
             line.classList.add("line");
-            this._container.appendChild(line);
+            this._containers[inventoryItem.category].appendChild(line);
     
             let label = document.createElement("div");
             label.classList.add("label");

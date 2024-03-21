@@ -235,3 +235,28 @@ nabu-checkbox {
     margin: 1vh;
     border: 2px solid rgb(127, 127, 127);
 }
+
+inventory-page {
+    outline: 1px solid magenta;
+}
+
+inventory-page h1 {
+    font-size: min(4svh, 4vw);
+    margin: min(1svh, 1vw);
+}
+
+inventory-page .container-frame {
+    height: 90%;
+    overflow-y: auto;
+    scrollbar-color: #272b2e rgba(255, 255, 255, 80%);
+    scrollbar-width: thin;
+    outline: 1px solid cyan;
+}
+
+inventory-page .line {
+    font-size: min(2.5svh, 2.5vw);
+    height: min(3.5svh, 3.5vw);
+    margin-bottom: 0.5%;
+    padding-top: 0.5%;
+    background-color: rgba(0, 0, 0, 10%);
+}

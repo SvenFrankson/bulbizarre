@@ -1,7 +1,8 @@
 enum InventoryCategory {
     Block,
     Brick,
-    Ingredient
+    Ingredient,
+    End
 }
 
 class PlayerInventoryItem {
