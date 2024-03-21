@@ -2,9 +2,6 @@ class PlayerActionManager {
 
     public linkedActions: PlayerAction[] = [];
 
-    public get inventory(): Inventory {
-        return this.player.inventory;
-    }
     public get playerActionView(): PlayerActionView {
         return this.game.playerActionBar;
     }
@@ -109,17 +106,11 @@ class PlayerActionManager {
     }
 
     public startHint(slotIndex: number): void {
-        this.inventory.hintedSlotIndex.push(slotIndex);
-        setTimeout(() => {
-            if (this.inventory.hintedSlotIndex.contains(slotIndex)) {
-                this.playerActionView.onHintStart(slotIndex);
-            }
-        }, 200);
+        
     }
 
     public stopHint(slotIndex: number): void {
-        this.inventory.hintedSlotIndex.remove(slotIndex) >= 0;
-        this.playerActionView.onHintEnd(slotIndex);
+        
     }
 
     public serialize(): IPlayerActionManagerData {
@@ -138,11 +129,6 @@ class PlayerActionManager {
         if (data && data.linkedItemNames) {
             for (let i = 0; i < data.linkedItemNames.length; i++) {
                 let linkedItemName = data.linkedItemNames[i];
-                let item = this.player.inventory.getItemByName(linkedItemName);
-                if (item) {
-                    this.linkAction(item.playerAction, i);
-                    item.timeUse = (new Date()).getTime();
-                }
             }
         }
     }

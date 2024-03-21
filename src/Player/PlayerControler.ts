@@ -62,6 +62,15 @@ class PlayerControler {
                 this.player.playerActionManager.equipAction(this.player.playerActionManager.nextActionIndex());
             }
         })
+
+        this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY, () => {
+            if (this.player.game.playerInventoryView.shown) {
+                this.player.game.playerInventoryView.hide();
+            }
+            else {
+                this.player.game.playerInventoryView.show();
+            }
+        })
     }
 
     private _pointerDown = (event: PointerEvent) => {

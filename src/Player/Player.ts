@@ -1,7 +1,7 @@
 class Player extends BABYLON.Mesh {
 
     public controler: PlayerControler;
-    public inventory: Inventory;
+    public inventory: PlayerInventory;
     public playerActionManager: PlayerActionManager;
     public currentAction: PlayerAction;
 
@@ -33,6 +33,8 @@ class Player extends BABYLON.Mesh {
 
         this.head = new BABYLON.Mesh("head");
         this.head.parent = this;
+
+        this.inventory = new PlayerInventory(this);
     }
 
     public update(dt: number): void {

@@ -328,6 +328,7 @@ class GameConfiguration extends Nabu.Configuration {
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_EQUIP", KeyInput.PLAYER_ACTION_EQUIP, "GamepadBtn15"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_DEC", KeyInput.PLAYER_ACTION_DEC, "GamepadBtn12"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_INC", KeyInput.PLAYER_ACTION_INC, "GamepadBtn13"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY", KeyInput.INVENTORY, "GamepadBtn2"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_LEFT", KeyInput.MOVE_LEFT, "KeyA"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_BACK", KeyInput.MOVE_BACK, "KeyS"),
@@ -351,23 +352,29 @@ class GameConfiguration extends Nabu.Configuration {
         }
     }
 }
-var InventorySection;
-(function (InventorySection) {
-    InventorySection[InventorySection["Action"] = 0] = "Action";
-    InventorySection[InventorySection["Cube"] = 1] = "Cube";
-    InventorySection[InventorySection["Block"] = 2] = "Block";
-    InventorySection[InventorySection["Brick"] = 3] = "Brick";
-    InventorySection[InventorySection["TmpObject"] = 4] = "TmpObject";
-    InventorySection[InventorySection["DriderBait"] = 5] = "DriderBait";
-})(InventorySection || (InventorySection = {}));
+/*
+enum InventorySection {
+    Action,
+    Cube,
+    Block,
+    Brick,
+    TmpObject,
+    DriderBait
+}
+
 class InventoryItem {
-    constructor() {
-        this.count = 1;
-        this.size = 1;
-        this.timeUse = 0;
-    }
-    static async Block(player, blockType) {
-        return new Promise(async (resolve) => {
+
+    public section: InventorySection;
+    public subSection: string;
+    public count: number = 1;
+    public name: string;
+    public size: number = 1;
+    public playerAction: PlayerAction;
+    public iconUrl: string;
+    public timeUse: number = 0;
+
+    public static async Block(player: Player, blockType: Kulla.BlockType): Promise<InventoryItem> {
+        return new Promise<InventoryItem>(async resolve => {
             let it = new InventoryItem();
             it.section = InventorySection.Block;
             it.name = Kulla.BlockTypeNames[blockType];
@@ -378,8 +385,9 @@ class InventoryItem {
             resolve(it);
         });
     }
-    static async TmpObject(player, tmpObjectName) {
-        return new Promise(async (resolve) => {
+
+    public static async TmpObject(player: Player, tmpObjectName: string): Promise<InventoryItem> {
+        return new Promise<InventoryItem>(async resolve => {
             let it = new InventoryItem();
             it.section = InventorySection.TmpObject;
             it.name = tmpObjectName;
@@ -391,25 +399,39 @@ class InventoryItem {
         });
     }
 }
-var BrickSortingOrder;
-(function (BrickSortingOrder) {
-    BrickSortingOrder[BrickSortingOrder["Recent"] = 0] = "Recent";
-    BrickSortingOrder[BrickSortingOrder["TypeAsc"] = 1] = "TypeAsc";
-    BrickSortingOrder[BrickSortingOrder["TypeDesc"] = 2] = "TypeDesc";
-    BrickSortingOrder[BrickSortingOrder["SizeAsc"] = 3] = "SizeAsc";
-    BrickSortingOrder[BrickSortingOrder["SizeDesc"] = 4] = "SizeDesc";
-    BrickSortingOrder[BrickSortingOrder["ColorAsc"] = 5] = "ColorAsc";
-    BrickSortingOrder[BrickSortingOrder["ColorDesc"] = 6] = "ColorDesc";
-})(BrickSortingOrder || (BrickSortingOrder = {}));
+
+enum BrickSortingOrder {
+    Recent,
+    TypeAsc,
+    TypeDesc,
+    SizeAsc,
+    SizeDesc,
+    ColorAsc,
+    ColorDesc
+}
+
+interface IInventoryData {
+    items: { r: string, c: number }[];
+}
+
 class Inventory {
-    constructor(player) {
-        this.player = player;
-        this.items = [];
-        this._brickSorting = BrickSortingOrder.TypeAsc;
-        this.hintedSlotIndex = new Nabu.UniqueList();
+
+    public currentSection: InventorySection;
+    public items: InventoryItem[] = [];
+
+    private _brickSorting: BrickSortingOrder = BrickSortingOrder.TypeAsc;
+
+    public draggedItem: InventoryItem;
+    public hintedSlotIndex: Nabu.UniqueList<number> = new Nabu.UniqueList<number>();
+
+    constructor(
+        public player: Player
+    ) {
         player.inventory = this;
     }
-    async initialize() {
+
+    public async initialize(): Promise<void> {
+        
         let savedInventoryString = window.localStorage.getItem("player-inventory");
         if (savedInventoryString) {
             let savedInventory = JSON.parse(savedInventoryString);
@@ -418,9 +440,11 @@ class Inventory {
         else {
             this.addItem(await InventoryItem.Block(this.player, Kulla.BlockType.None));
         }
+
         this.update();
     }
-    addItem(item) {
+
+    public addItem(item: InventoryItem): void {
         let same = this.items.find(it => { return it.name === item.name; });
         if (same) {
             same.count++;
@@ -431,25 +455,32 @@ class Inventory {
         let data = this.serialize();
         window.localStorage.setItem("player-inventory", JSON.stringify(data));
     }
-    getCurrentSectionItems() {
-        let sectionItems = [];
+
+    public getCurrentSectionItems(): InventoryItem[] {
+        let sectionItems: InventoryItem[] = [];
         for (let i = 0; i < this.items.length; i++) {
             if (this.items[i].section === this.currentSection) {
                 sectionItems.push(this.items[i]);
             }
         }
+
         return sectionItems;
     }
-    getItemByName(name) {
+
+    public getItemByName(name: string): InventoryItem {
         return this.items.find(it => { return it.name === name; });
     }
-    getItemByPlayerActionName(playerActionName) {
+
+    public getItemByPlayerActionName(playerActionName: string): InventoryItem {
         return this.items.find(it => { return it.playerAction.name === playerActionName; });
     }
-    update() {
+
+    public update(): void {
+
     }
-    serialize() {
-        let data = {
+
+    public serialize(): IInventoryData {
+        let data: IInventoryData = {
             items: []
         };
         for (let i = 0; i < this.items.length; i++) {
@@ -461,7 +492,8 @@ class Inventory {
         }
         return data;
     }
-    async deserializeInPlace(input) {
+
+    public async deserializeInPlace(input: IInventoryData) {
         this.items = [];
         for (let i = 0; i < input.items.length; i++) {
             let data = input.items[i];
@@ -479,6 +511,7 @@ class Inventory {
         }
     }
 }
+*/ 
 /// <reference path="../lib/babylon.d.ts"/>
 /// <reference path="../lib/nabu/nabu.d.ts"/>
 /// <reference path="../lib/mummu/mummu.d.ts"/>
@@ -561,6 +594,7 @@ class Game {
         }
         this.router = new GameRouter(this);
         this.playerActionBar = new PlayerActionView();
+        this.playerInventoryView = document.getElementsByTagName("inventory-page")[0];
         this.propEditor = new PropEditor(this);
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.router.initialize();
@@ -602,14 +636,25 @@ class Game {
             let debugTerrainPerf = new DebugTerrainPerf(this);
             debugTerrainPerf.show();
             this.player = new Player(this);
+            this.playerInventoryView.setInventory(this.player.inventory);
             this.player.position.copyFrom(this.freeCamera.position);
             let playerControler = new PlayerControler(this.player);
             this.player.playerActionManager = new PlayerActionManager(this.player, this);
             this.player.playerActionManager.initialize();
-            this.player.inventory = new Inventory(this.player);
             this.inputManager.initialize();
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
@@ -1871,6 +1916,7 @@ class Player extends BABYLON.Mesh {
         body.parent = this;
         this.head = new BABYLON.Mesh("head");
         this.head.parent = this;
+        this.inventory = new PlayerInventory(this);
     }
     update(dt) {
         if (this.controler) {
@@ -1954,9 +2000,6 @@ class PlayerActionManager {
         this.update = () => {
         };
         player.playerActionManager = this;
-    }
-    get inventory() {
-        return this.player.inventory;
     }
     get playerActionView() {
         return this.game.playerActionBar;
@@ -2043,16 +2086,8 @@ class PlayerActionManager {
         this.playerActionView.onActionEquiped(slotIndex);
     }
     startHint(slotIndex) {
-        this.inventory.hintedSlotIndex.push(slotIndex);
-        setTimeout(() => {
-            if (this.inventory.hintedSlotIndex.contains(slotIndex)) {
-                this.playerActionView.onHintStart(slotIndex);
-            }
-        }, 200);
     }
     stopHint(slotIndex) {
-        this.inventory.hintedSlotIndex.remove(slotIndex) >= 0;
-        this.playerActionView.onHintEnd(slotIndex);
     }
     serialize() {
         let linkedActionsNames = [];
@@ -2069,11 +2104,6 @@ class PlayerActionManager {
         if (data && data.linkedItemNames) {
             for (let i = 0; i < data.linkedItemNames.length; i++) {
                 let linkedItemName = data.linkedItemNames[i];
-                let item = this.player.inventory.getItemByName(linkedItemName);
-                if (item) {
-                    this.linkAction(item.playerAction, i);
-                    item.timeUse = (new Date()).getTime();
-                }
             }
         }
     }
@@ -2392,6 +2422,14 @@ class PlayerControler {
                 this.player.playerActionManager.equipAction(this.player.playerActionManager.nextActionIndex());
             }
         });
+        this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY, () => {
+            if (this.player.game.playerInventoryView.shown) {
+                this.player.game.playerInventoryView.hide();
+            }
+            else {
+                this.player.game.playerInventoryView.show();
+            }
+        });
     }
     testDeadZone(v, threshold = 0.1) {
         if (Math.abs(v) > threshold) {
@@ -2453,6 +2491,169 @@ class PlayerControler {
         }
     }
 }
+var InventoryCategory;
+(function (InventoryCategory) {
+    InventoryCategory[InventoryCategory["Block"] = 0] = "Block";
+    InventoryCategory[InventoryCategory["Brick"] = 1] = "Brick";
+    InventoryCategory[InventoryCategory["Ingredient"] = 2] = "Ingredient";
+})(InventoryCategory || (InventoryCategory = {}));
+class PlayerInventoryItem {
+    constructor(name, category) {
+        this.count = 1;
+        this.name = name;
+        this.category = category;
+    }
+}
+class PlayerInventory {
+    constructor(player) {
+        this.player = player;
+        this.items = [];
+    }
+    addItem(item) {
+        let existingItem = this.items.find(it => { return it.name === item.name; });
+        if (existingItem) {
+            existingItem.count += item.count;
+        }
+        else {
+            this.items.push(item);
+        }
+    }
+}
+class PlayerInventoryView extends HTMLElement {
+    constructor() {
+        super(...arguments);
+        this._loaded = false;
+        this._shown = false;
+    }
+    static get observedAttributes() {
+        return [];
+    }
+    get shown() {
+        return this._shown;
+    }
+    get onLoad() {
+        return this._onLoad;
+    }
+    set onLoad(callback) {
+        this._onLoad = callback;
+        if (this._loaded) {
+            this._onLoad();
+        }
+    }
+    connectedCallback() {
+        this.style.display = "none";
+        this.style.opacity = "0";
+        this._title = document.createElement("h1");
+        this._title.innerHTML = "INVENTORY";
+        this.appendChild(this._title);
+        this._containerFrame = document.createElement("div");
+        this._containerFrame.classList.add("container-frame");
+        this.appendChild(this._containerFrame);
+        this._container = document.createElement("div");
+        this._container.classList.add("container");
+        this._containerFrame.appendChild(this._container);
+        let a = document.createElement("a");
+        a.href = "#home";
+        this.appendChild(a);
+        this._backButton = document.createElement("button");
+        this._backButton.classList.add("back-button");
+        this._backButton.innerText = "BACK";
+        a.appendChild(this._backButton);
+    }
+    attributeChangedCallback(name, oldValue, newValue) { }
+    async show(duration = 1) {
+        this.createPage();
+        return new Promise((resolve) => {
+            if (!this._shown) {
+                this._shown = true;
+                this.style.display = "block";
+                let opacity0 = parseFloat(this.style.opacity);
+                let opacity1 = 1;
+                let t0 = performance.now();
+                let step = () => {
+                    let t = performance.now();
+                    let dt = (t - t0) / 1000;
+                    if (dt >= duration) {
+                        this.style.opacity = "1";
+                        resolve();
+                    }
+                    else {
+                        let f = dt / duration;
+                        this.style.opacity = ((1 - f) * opacity0 + f * opacity1).toFixed(2);
+                        requestAnimationFrame(step);
+                    }
+                };
+                step();
+            }
+        });
+    }
+    async hide(duration = 1) {
+        if (duration === 0) {
+            this._shown = false;
+            this.style.display = "none";
+            this.style.opacity = "0";
+        }
+        else {
+            return new Promise((resolve) => {
+                if (this._shown) {
+                    this._shown = false;
+                    this.style.display = "block";
+                    let opacity0 = parseFloat(this.style.opacity);
+                    let opacity1 = 0;
+                    let t0 = performance.now();
+                    let step = () => {
+                        let t = performance.now();
+                        let dt = (t - t0) / 1000;
+                        if (dt >= duration) {
+                            this.style.display = "none";
+                            this.style.opacity = "0";
+                            resolve();
+                        }
+                        else {
+                            let f = dt / duration;
+                            this.style.opacity = ((1 - f) * opacity0 + f * opacity1).toFixed(2);
+                            requestAnimationFrame(step);
+                        }
+                    };
+                    step();
+                }
+            });
+        }
+    }
+    setInventory(inventory) {
+        this.inventory = inventory;
+    }
+    createPage() {
+        this._container.innerHTML = "";
+        for (let i = 0; i < this.inventory.items.length; i++) {
+            let inventoryItem = this.inventory.items[i];
+            let line = document.createElement("div");
+            line.classList.add("line");
+            this._container.appendChild(line);
+            let label = document.createElement("div");
+            label.classList.add("label");
+            label.innerHTML = inventoryItem.name;
+            label.style.display = "inline-block";
+            label.style.marginLeft = "1%";
+            label.style.marginRight = "1%";
+            label.style.paddingLeft = "1.5%";
+            label.style.paddingRight = "1.5%";
+            label.style.width = "45%";
+            line.appendChild(label);
+            let countBlock = document.createElement("div");
+            countBlock.classList.add("count-block");
+            countBlock.innerHTML = inventoryItem.count.toFixed(0);
+            countBlock.style.display = "inline-block";
+            countBlock.style.marginLeft = "1%";
+            countBlock.style.marginRight = "1%";
+            countBlock.style.paddingLeft = "1.5%";
+            countBlock.style.paddingRight = "1.5%";
+            countBlock.style.width = "15%";
+            line.appendChild(countBlock);
+        }
+    }
+}
+customElements.define("inventory-page", PlayerInventoryView);
 class GameRouter extends Nabu.Router {
     constructor(game) {
         super();

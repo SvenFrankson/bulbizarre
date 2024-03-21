@@ -6,7 +6,7 @@ class PlayerAction {
     public iconUrl: string;
     public backgroundColor: string = "#ffffff";
     public r: number = 0;
-    public item: InventoryItem;
+    public item: PlayerInventoryItem;
 
     public onUpdate: (chuncks?: Kulla.Chunck[]) => void;
     public onClick: (chuncks?: Kulla.Chunck[]) => void;

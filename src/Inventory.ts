@@ -1,3 +1,4 @@
+/*
 enum InventorySection {
     Action,
     Cube,
@@ -156,3 +157,4 @@ class Inventory {
         }
     }
 }
+*/

@@ -42,6 +42,7 @@ class Game {
     public propEditor: PropEditor;
     public player: Player;
     public playerActionBar: PlayerActionView;
+    public playerInventoryView: PlayerInventoryView;
 
     public router: GameRouter;
 
@@ -123,6 +124,7 @@ class Game {
 
         this.router = new GameRouter(this);
         this.playerActionBar = new PlayerActionView();
+        this.playerInventoryView = document.getElementsByTagName("inventory-page")[0] as PlayerInventoryView;
 
         this.propEditor = new PropEditor(this);
 
@@ -172,14 +174,26 @@ class Game {
             debugTerrainPerf.show();
 
             this.player = new Player(this);
+            this.playerInventoryView.setInventory(this.player.inventory);
             this.player.position.copyFrom(this.freeCamera.position);
             let playerControler = new PlayerControler(this.player);
             this.player.playerActionManager = new PlayerActionManager(this.player, this);
             this.player.playerActionManager.initialize();
-            this.player.inventory = new Inventory(this.player);
             this.inputManager.initialize();
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
+
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
 
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
             this.player.playerActionManager.linkAction(await PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
