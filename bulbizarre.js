@@ -256,14 +256,17 @@ var KeyInput;
     KeyInput[KeyInput["ACTION_SLOT_8"] = 8] = "ACTION_SLOT_8";
     KeyInput[KeyInput["ACTION_SLOT_9"] = 9] = "ACTION_SLOT_9";
     KeyInput[KeyInput["PLAYER_ACTION"] = 10] = "PLAYER_ACTION";
-    KeyInput[KeyInput["INVENTORY"] = 11] = "INVENTORY";
-    KeyInput[KeyInput["MOVE_FORWARD"] = 12] = "MOVE_FORWARD";
-    KeyInput[KeyInput["MOVE_LEFT"] = 13] = "MOVE_LEFT";
-    KeyInput[KeyInput["MOVE_BACK"] = 14] = "MOVE_BACK";
-    KeyInput[KeyInput["MOVE_RIGHT"] = 15] = "MOVE_RIGHT";
-    KeyInput[KeyInput["JUMP"] = 16] = "JUMP";
-    KeyInput[KeyInput["MAIN_MENU"] = 17] = "MAIN_MENU";
-    KeyInput[KeyInput["WORKBENCH"] = 18] = "WORKBENCH";
+    KeyInput[KeyInput["PLAYER_ACTION_EQUIP"] = 11] = "PLAYER_ACTION_EQUIP";
+    KeyInput[KeyInput["PLAYER_ACTION_INC"] = 12] = "PLAYER_ACTION_INC";
+    KeyInput[KeyInput["PLAYER_ACTION_DEC"] = 13] = "PLAYER_ACTION_DEC";
+    KeyInput[KeyInput["INVENTORY"] = 14] = "INVENTORY";
+    KeyInput[KeyInput["MOVE_FORWARD"] = 15] = "MOVE_FORWARD";
+    KeyInput[KeyInput["MOVE_LEFT"] = 16] = "MOVE_LEFT";
+    KeyInput[KeyInput["MOVE_BACK"] = 17] = "MOVE_BACK";
+    KeyInput[KeyInput["MOVE_RIGHT"] = 18] = "MOVE_RIGHT";
+    KeyInput[KeyInput["JUMP"] = 19] = "JUMP";
+    KeyInput[KeyInput["MAIN_MENU"] = 20] = "MAIN_MENU";
+    KeyInput[KeyInput["WORKBENCH"] = 21] = "WORKBENCH";
 })(KeyInput || (KeyInput = {}));
 class GameConfiguration extends Nabu.Configuration {
     constructor(configName, game) {
@@ -322,6 +325,9 @@ class GameConfiguration extends Nabu.Configuration {
                 }
             }),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION", KeyInput.PLAYER_ACTION, "GamepadBtn0"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_EQUIP", KeyInput.PLAYER_ACTION_EQUIP, "GamepadBtn15"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_DEC", KeyInput.PLAYER_ACTION_DEC, "GamepadBtn12"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_INC", KeyInput.PLAYER_ACTION_INC, "GamepadBtn13"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_LEFT", KeyInput.MOVE_LEFT, "KeyA"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_BACK", KeyInput.MOVE_BACK, "KeyS"),
@@ -1944,6 +1950,7 @@ class PlayerActionManager {
         this.player = player;
         this.game = game;
         this.linkedActions = [];
+        this.equipedActionIndex = -1;
         this.update = () => {
         };
         player.playerActionManager = this;
@@ -1953,6 +1960,30 @@ class PlayerActionManager {
     }
     get playerActionView() {
         return this.game.playerActionBar;
+    }
+    prevActionIndex() {
+        if (this.equipedActionIndex === 1) {
+            return -1;
+        }
+        if (this.equipedActionIndex === 0) {
+            return 9;
+        }
+        if (this.equipedActionIndex === 10) {
+            return 0;
+        }
+        return this.equipedActionIndex - 1;
+    }
+    nextActionIndex() {
+        if (this.equipedActionIndex === -1) {
+            return 1;
+        }
+        if (this.equipedActionIndex === 9) {
+            return 0;
+        }
+        if (this.equipedActionIndex === 0) {
+            return 10;
+        }
+        return this.equipedActionIndex + 1;
     }
     initialize() {
         let savedPlayerActionString = window.localStorage.getItem("player-action-manager");
@@ -1985,7 +2016,7 @@ class PlayerActionManager {
         }
     }
     equipAction(slotIndex) {
-        if (slotIndex >= 0 && slotIndex < 10) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
             // Unequip current action
             if (this.player.currentAction) {
                 if (this.player.currentAction.onUnequip) {
@@ -1993,27 +2024,23 @@ class PlayerActionManager {
                 }
                 this.playerActionView.onActionUnequiped(slotIndex);
             }
-            if (this.linkedActions[slotIndex]) {
-                // If request action was already equiped, remove it.
-                if (this.player.currentAction === this.linkedActions[slotIndex]) {
-                    this.player.currentAction = undefined;
-                }
-                // Otherwise, equip new action.
-                else {
-                    this.player.currentAction = this.linkedActions[slotIndex];
-                    if (this.player.currentAction) {
-                        //(document.querySelector("#player-action-" + slotIndex + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background-highlit.svg";
-                        if (this.player.currentAction.onEquip) {
-                            this.player.currentAction.onEquip();
-                        }
-                        this.playerActionView.onActionEquiped(slotIndex);
+            // If request action was already equiped, remove it.
+            if (this.player.currentAction === this.linkedActions[slotIndex]) {
+                this.player.currentAction = undefined;
+            }
+            // Otherwise, equip new action.
+            else {
+                this.player.currentAction = this.linkedActions[slotIndex];
+                if (this.player.currentAction) {
+                    //(document.querySelector("#player-action-" + slotIndex + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background-highlit.svg";
+                    if (this.player.currentAction.onEquip) {
+                        this.player.currentAction.onEquip();
                     }
                 }
             }
-            else {
-                this.player.currentAction = undefined;
-            }
         }
+        this.equipedActionIndex = Nabu.MinMax(slotIndex, -1, 10);
+        this.playerActionView.onActionEquiped(slotIndex);
     }
     startHint(slotIndex) {
         this.inventory.hintedSlotIndex.push(slotIndex);
@@ -2222,6 +2249,9 @@ class PlayerActionView {
         this._tiles = [];
     }
     getTile(slotIndex) {
+        if (slotIndex < 0 || slotIndex > 9) {
+            return undefined;
+        }
         if (!this._tiles[slotIndex]) {
             this._tiles[slotIndex] = document.querySelector("#action-" + slotIndex.toFixed(0));
         }
@@ -2303,7 +2333,7 @@ class PlayerControler {
             if (!this.player.game.router.inPlayMode) {
                 return;
             }
-            if (this._pointerIsDown || this.player.game.inputManager.isPointerLocked) {
+            if (this._pointerIsDown || this.inputManager.isPointerLocked) {
                 this.gamepadInControl = false;
                 this.player.inputDeltaX += event.movementX;
                 this.player.inputDeltaY += event.movementY;
@@ -2331,19 +2361,37 @@ class PlayerControler {
         this.aim.style.position = "fixed";
         this.aim.style.pointerEvents = "none";
     }
+    get inputManager() {
+        return this.player.game.inputManager;
+    }
     initialize() {
-        this.player.game.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
+        this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
             if (this.player.currentAction) {
                 this.player.currentAction.onClick(this.player.currentChuncks);
             }
         });
         for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
-            this.player.game.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
+            this.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
                 if (this.player.playerActionManager) {
                     this.player.playerActionManager.equipAction(slotIndex);
                 }
             });
         }
+        this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_EQUIP, () => {
+            if (this.player.playerActionManager) {
+                this.player.playerActionManager.equipAction(this.player.playerActionManager.equipedActionIndex);
+            }
+        });
+        this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_DEC, () => {
+            if (this.player.playerActionManager) {
+                this.player.playerActionManager.equipAction(this.player.playerActionManager.prevActionIndex());
+            }
+        });
+        this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_INC, () => {
+            if (this.player.playerActionManager) {
+                this.player.playerActionManager.equipAction(this.player.playerActionManager.nextActionIndex());
+            }
+        });
     }
     testDeadZone(v, threshold = 0.1) {
         if (Math.abs(v) > threshold) {
@@ -2355,19 +2403,19 @@ class PlayerControler {
         this.player.inputX = 0;
         this.player.inputZ = 0;
         if (this.player.game.router.inPlayMode) {
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
+            if (this.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
                 this.player.inputZ += 1;
                 this.gamepadInControl = false;
             }
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
+            if (this.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
                 this.player.inputZ -= 1;
                 this.gamepadInControl = false;
             }
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
+            if (this.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
                 this.player.inputX += 1;
                 this.gamepadInControl = false;
             }
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
+            if (this.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
                 this.player.inputX -= 1;
                 this.gamepadInControl = false;
             }
@@ -2393,7 +2441,7 @@ class PlayerControler {
         else {
             this.gamepadInControl = false;
         }
-        if (this.gamepadInControl || this.player.game.inputManager.isPointerLocked) {
+        if (this.gamepadInControl || this.inputManager.isPointerLocked) {
             this.aim.style.top = (window.innerHeight * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.left = (window.innerWidth * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.display = "block";

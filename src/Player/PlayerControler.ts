@@ -1,5 +1,9 @@
 class PlayerControler {
 
+    public get inputManager(): Nabu.InputManager {
+        return this.player.game.inputManager;
+    }
+
     private _pointerIsDown: boolean = false;
     public gamepadInControl: boolean = false;
 
@@ -27,19 +31,37 @@ class PlayerControler {
     }
 
     public initialize(): void {
-        this.player.game.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
+        this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
             if (this.player.currentAction) {
                 this.player.currentAction.onClick(this.player.currentChuncks);
             }
         })
         
         for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
-            this.player.game.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
+            this.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
                 if (this.player.playerActionManager) {
                     this.player.playerActionManager.equipAction(slotIndex);
                 }
             })
         }
+
+        this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_EQUIP, () => {
+            if (this.player.playerActionManager) {
+                this.player.playerActionManager.equipAction(this.player.playerActionManager.equipedActionIndex);
+            }
+        })
+
+        this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_DEC, () => {
+            if (this.player.playerActionManager) {
+                this.player.playerActionManager.equipAction(this.player.playerActionManager.prevActionIndex());
+            }
+        })
+
+        this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_INC, () => {
+            if (this.player.playerActionManager) {
+                this.player.playerActionManager.equipAction(this.player.playerActionManager.nextActionIndex());
+            }
+        })
     }
 
     private _pointerDown = (event: PointerEvent) => {
@@ -56,7 +78,7 @@ class PlayerControler {
         if (!this.player.game.router.inPlayMode) {
             return;
         }
-        if (this._pointerIsDown || this.player.game.inputManager.isPointerLocked) {
+        if (this._pointerIsDown || this.inputManager.isPointerLocked) {
             this.gamepadInControl = false;
             this.player.inputDeltaX += event.movementX;
             this.player.inputDeltaY += event.movementY;
@@ -82,19 +104,19 @@ class PlayerControler {
         this.player.inputZ = 0;
 
         if (this.player.game.router.inPlayMode) {
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
+            if (this.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
                 this.player.inputZ += 1;
                 this.gamepadInControl = false;
             }
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
+            if (this.inputManager.isKeyInputDown(KeyInput.MOVE_BACK)) {
                 this.player.inputZ -= 1;
                 this.gamepadInControl = false;
             }
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
+            if (this.inputManager.isKeyInputDown(KeyInput.MOVE_RIGHT)) {
                 this.player.inputX += 1;
                 this.gamepadInControl = false;
             }
-            if (this.player.game.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
+            if (this.inputManager.isKeyInputDown(KeyInput.MOVE_LEFT)) {
                 this.player.inputX -= 1;
                 this.gamepadInControl = false;
             }
@@ -124,7 +146,7 @@ class PlayerControler {
             this.gamepadInControl = false;
         }
         
-        if (this.gamepadInControl || this.player.game.inputManager.isPointerLocked) {
+        if (this.gamepadInControl || this.inputManager.isPointerLocked) {
             this.aim.style.top = (window.innerHeight * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.left = (window.innerWidth * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.display = "block";

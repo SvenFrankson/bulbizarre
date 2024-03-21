@@ -2,6 +2,9 @@ class PlayerActionView {
 
     private _tiles: HTMLDivElement[] = [];
     public getTile(slotIndex: number): HTMLDivElement {
+        if (slotIndex < 0 || slotIndex > 9) {
+            return undefined;
+        }
         if (!this._tiles[slotIndex]) {
             this._tiles[slotIndex] = document.querySelector("#action-" + slotIndex.toFixed(0));
         }

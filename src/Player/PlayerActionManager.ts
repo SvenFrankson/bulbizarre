@@ -9,6 +9,32 @@ class PlayerActionManager {
         return this.game.playerActionBar;
     }
 
+    public equipedActionIndex: number = - 1;
+    public prevActionIndex(): number {
+        if (this.equipedActionIndex === 1) {
+            return - 1;
+        }
+        if (this.equipedActionIndex === 0) {
+            return 9;
+        }
+        if (this.equipedActionIndex === 10) {
+            return 0;
+        }
+        return this.equipedActionIndex - 1;
+    }
+    public nextActionIndex(): number {
+        if (this.equipedActionIndex === - 1) {
+            return 1;
+        }
+        if (this.equipedActionIndex === 9) {
+            return 0;
+        }
+        if (this.equipedActionIndex === 0) {
+            return 10;
+        }
+        return this.equipedActionIndex + 1;
+    }
+
     constructor(
         public player: Player,
         public game: Game
@@ -55,7 +81,7 @@ class PlayerActionManager {
     }
 
     public equipAction(slotIndex: number): void {
-        if (slotIndex >= 0 && slotIndex < 10) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
             // Unequip current action
             if (this.player.currentAction) {
                 if (this.player.currentAction.onUnequip) {
@@ -63,27 +89,23 @@ class PlayerActionManager {
                 }
                 this.playerActionView.onActionUnequiped(slotIndex);
             }
-            if (this.linkedActions[slotIndex]) {
-                // If request action was already equiped, remove it.
-                if (this.player.currentAction === this.linkedActions[slotIndex]) {
-                    this.player.currentAction = undefined;
-                }
-                // Otherwise, equip new action.
-                else {
-                    this.player.currentAction = this.linkedActions[slotIndex];
-                    if (this.player.currentAction) {
-                        //(document.querySelector("#player-action-" + slotIndex + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background-highlit.svg";
-                        if (this.player.currentAction.onEquip) {
-                            this.player.currentAction.onEquip();
-                        }
-                        this.playerActionView.onActionEquiped(slotIndex);
+            // If request action was already equiped, remove it.
+            if (this.player.currentAction === this.linkedActions[slotIndex]) {
+                this.player.currentAction = undefined;
+            }
+            // Otherwise, equip new action.
+            else {
+                this.player.currentAction = this.linkedActions[slotIndex];
+                if (this.player.currentAction) {
+                    //(document.querySelector("#player-action-" + slotIndex + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background-highlit.svg";
+                    if (this.player.currentAction.onEquip) {
+                        this.player.currentAction.onEquip();
                     }
                 }
             }
-            else {
-                this.player.currentAction = undefined;
-            }
         }
+        this.equipedActionIndex = Nabu.MinMax(slotIndex, - 1, 10);
+        this.playerActionView.onActionEquiped(slotIndex);
     }
 
     public startHint(slotIndex: number): void {
