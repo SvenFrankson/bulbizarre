@@ -173,7 +173,7 @@ option-page .input-value {
     display: inline-block;
     padding: 2px;
     margin-right: min(2svh, 2vw);
-    min-width: min(15svh, 15vw);
+    min-width: min(12svh, 12vw);
     height: min(3svh, 3vw);
     text-align: center;
     outline: 1px solid white;
