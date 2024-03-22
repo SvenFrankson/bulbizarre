@@ -266,7 +266,8 @@ inventory-page .inventory-page-title {
 }
 
 inventory-page .container-frame {
-    height: 96%;
+    height: 95%;
+    padding-top: 1%;
     overflow-y: auto;
     scrollbar-color: #272b2e rgba(255, 255, 255, 80%);
     scrollbar-width: thin;
@@ -278,7 +279,13 @@ inventory-page .container-frame {
 inventory-page .line {
     font-size: min(2.5svh, 2.5vw);
     height: min(3.5svh, 3.5vw);
-    margin-bottom: 0.5%;
+    margin-top: 0.25%;
+    margin-bottom: 0.25%;
     padding-top: 0.5%;
     background-color: rgba(0, 0, 0, 10%);
+}
+
+inventory-page .line.highlit {
+    background-color: rgba(255, 255, 255, 20%);
+    outline: 1px solid white;
 }

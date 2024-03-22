@@ -260,13 +260,15 @@ var KeyInput;
     KeyInput[KeyInput["PLAYER_ACTION_INC"] = 12] = "PLAYER_ACTION_INC";
     KeyInput[KeyInput["PLAYER_ACTION_DEC"] = 13] = "PLAYER_ACTION_DEC";
     KeyInput[KeyInput["INVENTORY"] = 14] = "INVENTORY";
-    KeyInput[KeyInput["MOVE_FORWARD"] = 15] = "MOVE_FORWARD";
-    KeyInput[KeyInput["MOVE_LEFT"] = 16] = "MOVE_LEFT";
-    KeyInput[KeyInput["MOVE_BACK"] = 17] = "MOVE_BACK";
-    KeyInput[KeyInput["MOVE_RIGHT"] = 18] = "MOVE_RIGHT";
-    KeyInput[KeyInput["JUMP"] = 19] = "JUMP";
-    KeyInput[KeyInput["MAIN_MENU"] = 20] = "MAIN_MENU";
-    KeyInput[KeyInput["WORKBENCH"] = 21] = "WORKBENCH";
+    KeyInput[KeyInput["INVENTORY_PREV_CAT"] = 15] = "INVENTORY_PREV_CAT";
+    KeyInput[KeyInput["INVENTORY_NEXT_CAT"] = 16] = "INVENTORY_NEXT_CAT";
+    KeyInput[KeyInput["MOVE_FORWARD"] = 17] = "MOVE_FORWARD";
+    KeyInput[KeyInput["MOVE_LEFT"] = 18] = "MOVE_LEFT";
+    KeyInput[KeyInput["MOVE_BACK"] = 19] = "MOVE_BACK";
+    KeyInput[KeyInput["MOVE_RIGHT"] = 20] = "MOVE_RIGHT";
+    KeyInput[KeyInput["JUMP"] = 21] = "JUMP";
+    KeyInput[KeyInput["MAIN_MENU"] = 22] = "MAIN_MENU";
+    KeyInput[KeyInput["WORKBENCH"] = 23] = "WORKBENCH";
 })(KeyInput || (KeyInput = {}));
 class GameConfiguration extends Nabu.Configuration {
     constructor(configName, game) {
@@ -330,6 +332,8 @@ class GameConfiguration extends Nabu.Configuration {
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_INC", KeyInput.PLAYER_ACTION_INC, "GamepadBtn13"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY", KeyInput.INVENTORY, "GamepadBtn2"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY", KeyInput.INVENTORY, "KeyI"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_PREV_CAT", KeyInput.INVENTORY_PREV_CAT, "GamepadBtn4"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_NEXT_CAT", KeyInput.INVENTORY_NEXT_CAT, "GamepadBtn5"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_LEFT", KeyInput.MOVE_LEFT, "KeyA"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_BACK", KeyInput.MOVE_BACK, "KeyS"),
@@ -2399,6 +2403,9 @@ class PlayerControler {
     get inputManager() {
         return this.player.game.inputManager;
     }
+    get playerInventoryView() {
+        return this.player.game.playerInventoryView;
+    }
     initialize() {
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
             if (this.player.currentAction) {
@@ -2428,24 +2435,32 @@ class PlayerControler {
             }
         });
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY, () => {
-            if (this.player.game.playerInventoryView.shown) {
-                this.player.game.playerInventoryView.hide();
+            if (this.playerInventoryView.shown) {
+                this.playerInventoryView.hide();
             }
             else {
-                this.player.game.playerInventoryView.show();
+                this.playerInventoryView.show();
             }
         });
-    }
-    testDeadZone(v, threshold = 0.1) {
-        if (Math.abs(v) > threshold) {
-            return (v - threshold * Math.sign(v)) / (1 - threshold);
-        }
-        return 0;
+        this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_PREV_CAT, () => {
+            if (this.playerInventoryView.shown) {
+                this.playerInventoryView.setCurrentCategory(this.playerInventoryView.prevCategory);
+            }
+        });
+        this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_NEXT_CAT, () => {
+            if (this.playerInventoryView.shown) {
+                this.playerInventoryView.setCurrentCategory(this.playerInventoryView.nextCategory);
+            }
+        });
     }
     update(dt) {
         this.player.inputX = 0;
         this.player.inputZ = 0;
-        if (this.player.game.router.inPlayMode) {
+        if (this.playerInventoryView.shown) {
+            this.playerInventoryView.update(dt);
+            this.gamepadInControl = false;
+        }
+        else if (this.player.game.router.inPlayMode) {
             if (this.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
                 this.player.inputZ += 1;
                 this.gamepadInControl = false;
@@ -2465,10 +2480,10 @@ class PlayerControler {
             let gamepads = navigator.getGamepads();
             let gamepad = gamepads[0];
             if (gamepad) {
-                let axis0 = this.testDeadZone(gamepad.axes[0]);
-                let axis1 = -this.testDeadZone(gamepad.axes[1]);
-                let axis2 = this.testDeadZone(gamepad.axes[2]);
-                let axis3 = this.testDeadZone(gamepad.axes[3]);
+                let axis0 = Nabu.InputManager.DeadZoneAxis(gamepad.axes[0]);
+                let axis1 = -Nabu.InputManager.DeadZoneAxis(gamepad.axes[1]);
+                let axis2 = Nabu.InputManager.DeadZoneAxis(gamepad.axes[2]);
+                let axis3 = Nabu.InputManager.DeadZoneAxis(gamepad.axes[3]);
                 this.gamepadInControl = this.gamepadInControl || (axis0 != 0);
                 this.gamepadInControl = this.gamepadInControl || (axis1 != 0);
                 this.gamepadInControl = this.gamepadInControl || (axis2 != 0);
@@ -2484,7 +2499,11 @@ class PlayerControler {
         else {
             this.gamepadInControl = false;
         }
-        if (this.gamepadInControl || this.inputManager.isPointerLocked) {
+        if (this.playerInventoryView.shown) {
+            this.aim.style.display = "none";
+            document.body.style.cursor = "auto";
+        }
+        else if (this.gamepadInControl || this.inputManager.isPointerLocked) {
             this.aim.style.top = (window.innerHeight * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.left = (window.innerWidth * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.display = "block";
@@ -2530,7 +2549,9 @@ class PlayerInventoryView extends HTMLElement {
         super(...arguments);
         this._loaded = false;
         this._shown = false;
+        this.currentPointers = [0, 0, 0];
         this._currentCategory = InventoryCategory.Block;
+        this._timer = 0;
     }
     static get observedAttributes() {
         return [];
@@ -2547,6 +2568,28 @@ class PlayerInventoryView extends HTMLElement {
             this._onLoad();
         }
     }
+    currentPointerUp() {
+        if (this._lines[this._currentCategory].length > 0) {
+            this.setPointer((this.currentPointers[this._currentCategory] - 1 + this._lines[this._currentCategory].length) % this._lines[this._currentCategory].length);
+        }
+    }
+    currentPointerDown() {
+        if (this._lines[this._currentCategory].length > 0) {
+            this.setPointer((this.currentPointers[this._currentCategory] + 1) % this._lines[this._currentCategory].length);
+        }
+    }
+    setPointer(n, cat) {
+        if (!isFinite(cat)) {
+            cat = this._currentCategory;
+        }
+        if (this._lines[cat][this.currentPointers[cat]]) {
+            this._lines[cat][this.currentPointers[cat]].classList.remove("highlit");
+        }
+        this.currentPointers[cat] = n;
+        if (this._lines[cat][this.currentPointers[cat]]) {
+            this._lines[cat][this.currentPointers[cat]].classList.add("highlit");
+        }
+    }
     setCurrentCategory(cat) {
         this._currentCategory = cat;
         for (let i = 0; i < this._categoryBtns.length; i++) {
@@ -2555,6 +2598,12 @@ class PlayerInventoryView extends HTMLElement {
         }
         this._makeCategoryBtnActive(this._categoryBtns[this._currentCategory]);
         this._containers[this._currentCategory].style.display = "block";
+    }
+    get prevCategory() {
+        return (this._currentCategory - 1 + InventoryCategory.End) % InventoryCategory.End;
+    }
+    get nextCategory() {
+        return (this._currentCategory + 1) % InventoryCategory.End;
     }
     _makeCategoryBtnStyle(btn) {
         btn.style.fontSize = "min(2svh, 2vw)";
@@ -2701,14 +2750,17 @@ class PlayerInventoryView extends HTMLElement {
         this.inventory = inventory;
     }
     createPage() {
+        this._lines = [];
         for (let i = 0; i < this._containers.length; i++) {
             this._containers[i].innerHTML = "";
+            this._lines[i] = [];
         }
         for (let i = 0; i < this.inventory.items.length; i++) {
             let inventoryItem = this.inventory.items[i];
             let line = document.createElement("div");
             line.classList.add("line");
             this._containers[inventoryItem.category].appendChild(line);
+            this._lines[inventoryItem.category].push(line);
             let label = document.createElement("div");
             label.classList.add("label");
             label.innerHTML = inventoryItem.name;
@@ -2729,6 +2781,34 @@ class PlayerInventoryView extends HTMLElement {
             countBlock.style.paddingRight = "1.5%";
             countBlock.style.width = "15%";
             line.appendChild(countBlock);
+        }
+        this.setPointer(0, InventoryCategory.Block);
+        this.setPointer(0, InventoryCategory.Brick);
+        this.setPointer(0, InventoryCategory.Ingredient);
+    }
+    update(dt) {
+        if (this._timer > 0) {
+            this._timer -= dt;
+        }
+        let gamepads = navigator.getGamepads();
+        let gamepad = gamepads[0];
+        if (gamepad) {
+            let axis1 = -Nabu.InputManager.DeadZoneAxis(gamepad.axes[1]);
+            if (axis1 > 0.5) {
+                if (this._timer <= 0) {
+                    this.currentPointerUp();
+                    this._timer = 0.5;
+                }
+            }
+            else if (axis1 < -0.5) {
+                if (this._timer <= 0) {
+                    this.currentPointerDown();
+                    this._timer = 0.5;
+                }
+            }
+            else {
+                this._timer = 0;
+            }
         }
     }
 }

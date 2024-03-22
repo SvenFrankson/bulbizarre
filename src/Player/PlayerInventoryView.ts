@@ -31,6 +31,30 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
         }
     }
 
+    public currentPointers: number[] = [0, 0, 0];
+    public currentPointerUp(): void {
+        if (this._lines[this._currentCategory].length > 0) {
+            this.setPointer((this.currentPointers[this._currentCategory] - 1 + this._lines[this._currentCategory].length) % this._lines[this._currentCategory].length);
+        }
+    }
+    public currentPointerDown(): void {
+        if (this._lines[this._currentCategory].length > 0) {
+            this.setPointer((this.currentPointers[this._currentCategory] + 1) % this._lines[this._currentCategory].length);
+        }
+    }
+    public setPointer(n: number, cat?: InventoryCategory): void {
+        if (!isFinite(cat)) {
+            cat = this._currentCategory;
+        }
+        if (this._lines[cat][this.currentPointers[cat]]) {
+            this._lines[cat][this.currentPointers[cat]].classList.remove("highlit");
+        }
+        this.currentPointers[cat] = n;
+        if (this._lines[cat][this.currentPointers[cat]]) {
+            this._lines[cat][this.currentPointers[cat]].classList.add("highlit");
+        }
+    }
+
     private _currentCategory: InventoryCategory = InventoryCategory.Block;
     public setCurrentCategory(cat: InventoryCategory): void {
         this._currentCategory = cat;
@@ -40,6 +64,14 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
         }
         this._makeCategoryBtnActive(this._categoryBtns[this._currentCategory]);
         this._containers[this._currentCategory].style.display = "block";
+    }
+
+    public get prevCategory(): number {
+        return (this._currentCategory - 1 + InventoryCategory.End) % InventoryCategory.End;
+    }
+
+    public get nextCategory(): number {
+        return (this._currentCategory + 1) % InventoryCategory.End;
     }
 
     private _makeCategoryBtnStyle(btn: HTMLDivElement): void {
@@ -201,9 +233,14 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
         this.inventory = inventory;
     }
 
+    private _lines: HTMLDivElement[][];
+
     public createPage(): void {
+        this._lines = [];
+
         for (let i = 0; i < this._containers.length; i++) {
             this._containers[i].innerHTML = "";
+            this._lines[i] = [];
         }
 
         for (let i = 0; i < this.inventory.items.length; i++) {
@@ -212,6 +249,7 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
             let line = document.createElement("div");
             line.classList.add("line");
             this._containers[inventoryItem.category].appendChild(line);
+            this._lines[inventoryItem.category].push(line);
     
             let label = document.createElement("div");
             label.classList.add("label");
@@ -234,6 +272,37 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
             countBlock.style.paddingRight = "1.5%";
             countBlock.style.width = "15%";
             line.appendChild(countBlock);
+        }
+
+        this.setPointer(0, InventoryCategory.Block);
+        this.setPointer(0, InventoryCategory.Brick);
+        this.setPointer(0, InventoryCategory.Ingredient);
+    }
+
+    private _timer: number = 0;
+    public update(dt: number): void {
+        if (this._timer > 0) {
+            this._timer -= dt;
+        }
+        let gamepads = navigator.getGamepads();
+        let gamepad = gamepads[0];
+        if (gamepad) {
+            let axis1 = - Nabu.InputManager.DeadZoneAxis(gamepad.axes[1]);
+            if (axis1 > 0.5) {
+                if (this._timer <= 0) {
+                    this.currentPointerUp();
+                    this._timer = 0.5;
+                }
+            }
+            else if (axis1 < - 0.5) {
+                if (this._timer <= 0) {
+                    this.currentPointerDown();
+                    this._timer = 0.5;
+                }
+            }
+            else {
+                this._timer = 0;
+            }
         }
     }
 }

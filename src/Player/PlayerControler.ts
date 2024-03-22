@@ -4,6 +4,10 @@ class PlayerControler {
         return this.player.game.inputManager;
     }
 
+    public get playerInventoryView(): PlayerInventoryView {
+        return this.player.game.playerInventoryView;
+    }
+
     private _pointerIsDown: boolean = false;
     public gamepadInControl: boolean = false;
 
@@ -64,11 +68,23 @@ class PlayerControler {
         })
 
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY, () => {
-            if (this.player.game.playerInventoryView.shown) {
-                this.player.game.playerInventoryView.hide();
+            if (this.playerInventoryView.shown) {
+                this.playerInventoryView.hide();
             }
             else {
-                this.player.game.playerInventoryView.show();
+                this.playerInventoryView.show();
+            }
+        })
+
+        this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_PREV_CAT, () => {
+            if (this.playerInventoryView.shown) {
+                this.playerInventoryView.setCurrentCategory(this.playerInventoryView.prevCategory);
+            }
+        })
+
+        this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_NEXT_CAT, () => {
+            if (this.playerInventoryView.shown) {
+                this.playerInventoryView.setCurrentCategory(this.playerInventoryView.nextCategory);
             }
         })
     }
@@ -101,18 +117,15 @@ class PlayerControler {
         this._pointerIsDown = false;
     }
 
-    private testDeadZone(v: number, threshold: number = 0.1): number {
-        if (Math.abs(v) > threshold) {
-            return (v - threshold * Math.sign(v)) / (1 - threshold);
-        }
-        return 0;
-    }
-
     public update(dt: number): void {
         this.player.inputX = 0;
         this.player.inputZ = 0;
 
-        if (this.player.game.router.inPlayMode) {
+        if (this.playerInventoryView.shown) {
+            this.playerInventoryView.update(dt);
+            this.gamepadInControl = false;
+        }
+        else if (this.player.game.router.inPlayMode) {
             if (this.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
                 this.player.inputZ += 1;
                 this.gamepadInControl = false;
@@ -133,10 +146,10 @@ class PlayerControler {
             let gamepads = navigator.getGamepads();
             let gamepad = gamepads[0];
             if (gamepad) {
-                let axis0 = this.testDeadZone(gamepad.axes[0]);
-                let axis1 = - this.testDeadZone(gamepad.axes[1]);
-                let axis2 = this.testDeadZone(gamepad.axes[2]);
-                let axis3 = this.testDeadZone(gamepad.axes[3]);
+                let axis0 = Nabu.InputManager.DeadZoneAxis(gamepad.axes[0]);
+                let axis1 = - Nabu.InputManager.DeadZoneAxis(gamepad.axes[1]);
+                let axis2 = Nabu.InputManager.DeadZoneAxis(gamepad.axes[2]);
+                let axis3 = Nabu.InputManager.DeadZoneAxis(gamepad.axes[3]);
     
                 this.gamepadInControl = this.gamepadInControl || (axis0 != 0);
                 this.gamepadInControl = this.gamepadInControl || (axis1 != 0);
@@ -155,7 +168,11 @@ class PlayerControler {
             this.gamepadInControl = false;
         }
         
-        if (this.gamepadInControl || this.inputManager.isPointerLocked) {
+        if (this.playerInventoryView.shown) {
+            this.aim.style.display = "none";
+            document.body.style.cursor = "auto";
+        }
+        else if (this.gamepadInControl || this.inputManager.isPointerLocked) {
             this.aim.style.top = (window.innerHeight * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.left = (window.innerWidth * 0.5 - 10).toFixed(0) + "px";
             this.aim.style.display = "block";
