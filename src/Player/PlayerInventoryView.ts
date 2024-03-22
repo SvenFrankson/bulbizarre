@@ -45,27 +45,35 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
     private _makeCategoryBtnStyle(btn: HTMLDivElement): void {
         btn.style.fontSize = "min(2svh, 2vw)";
         btn.style.display = "inline-block";
-        btn.style.marginLeft = "1%";
         btn.style.marginRight = "1%";
+        btn.style.paddingTop = "0.5%";
+        btn.style.paddingBottom = "0.5%";
         btn.style.width = "20%";
         btn.style.textAlign = "center";
         btn.style.borderLeft = "2px solid white";
         btn.style.borderTop = "2px solid white";
         btn.style.borderRight = "2px solid white";
+        btn.style.borderTopLeftRadius = "10px";
+        btn.style.borderTopRightRadius = "10px";
     }
 
     private _makeCategoryBtnActive(btn: HTMLDivElement): void {
         btn.style.borderLeft = "2px solid white";
         btn.style.borderTop = "2px solid white";
         btn.style.borderRight = "2px solid white";
-        btn.style.color = "white";
+        btn.style.color = "#272b2e";
+        btn.style.backgroundColor = "white";
+        btn.style.fontWeight = "bold";
     }
 
     private _makeCategoryBtnInactive(btn: HTMLDivElement): void {
         btn.style.borderLeft = "2px solid #7F7F7F";
         btn.style.borderTop = "2px solid #7F7F7F";
         btn.style.borderRight = "2px solid #7F7F7F";
+        btn.style.borderBottom = "";
         btn.style.color = "#7F7F7F";
+        btn.style.backgroundColor = "";
+        btn.style.fontWeight = "";
     }
 
     public connectedCallback(): void {
@@ -73,6 +81,7 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
         this.style.opacity = "0";
 
         this._title = document.createElement("h1");
+        this._title.classList.add("inventory-page-title");
         this._title.innerHTML = "INVENTORY";
         this.appendChild(this._title);
 

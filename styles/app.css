@@ -237,20 +237,42 @@ nabu-checkbox {
 }
 
 inventory-page {
-    outline: 1px solid magenta;
+    outline: 4px solid white;
+    border-radius: 15px;
+    position: fixed;
+    padding: min(5svh, 5vw);
+    top: calc((100vh - min(90svh, 90vw)) * 0.75);
+    left: calc((100vw - min(90svh, 90vw)) * 0.5);
+    width: min(80svh, 80vw);
+    height: min(80svh, 80vw);
+    font-family: Arial, Helvetica, sans-serif;
+    color: white;
+    background-color: #272b2e;
 }
 
-inventory-page h1 {
+inventory-page .inventory-page-title {
     font-size: min(4svh, 4vw);
     margin: min(1svh, 1vw);
+    position: absolute;
+    left: min(10svh, 10vw);
+    top: min(-2svh, -2vw);
+    outline: 4px solid white;
+    border-radius: 10px;
+    background-color: #272b2e;
+    padding-left: 20px;
+    padding-top: 8px;
+    padding-right: 20px;
+    padding-bottom: 5px;
 }
 
 inventory-page .container-frame {
-    height: 90%;
+    height: 96%;
     overflow-y: auto;
     scrollbar-color: #272b2e rgba(255, 255, 255, 80%);
     scrollbar-width: thin;
-    outline: 1px solid cyan;
+    border: 2px solid white;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
 }
 
 inventory-page .line {
