@@ -89,6 +89,12 @@ option-page h1 {
     margin: min(2svh, 2vw);
 }
 
+option-page h2 {
+    font-size: min(4svh, 4vw);
+    margin: min(2svh, 2vw);
+    margin-left: min(4svh, 4vw);
+}
+
 option-page .container-frame {
     height: 74%;
     overflow-y: auto;
@@ -105,6 +111,10 @@ option-page .line {
 
 option-page .label {
     font-size: min(3svh, 3vw);
+}
+
+option-page .label.input {
+    font-size: min(2svh, 2vw);
 }
 
 option-page .value-block {

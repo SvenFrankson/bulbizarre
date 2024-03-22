@@ -39,6 +39,7 @@ class GameConfiguration extends Nabu.Configuration {
                 "quality",
                 Nabu.ConfigurationElementType.Enum,
                 0,
+                Nabu.ConfigurationElementCategory.Graphic,
                 {
                     displayName: "Graphic Quality",
                     min: 0,
@@ -60,6 +61,7 @@ class GameConfiguration extends Nabu.Configuration {
                 "renderDist",
                 Nabu.ConfigurationElementType.Number,
                 8,
+                Nabu.ConfigurationElementCategory.Graphic,
                 {
                     displayName: "Render Distance",
                     min: 1,
@@ -76,40 +78,9 @@ class GameConfiguration extends Nabu.Configuration {
                 "canLockPointer",
                 Nabu.ConfigurationElementType.Boolean,
                 0,
+                Nabu.ConfigurationElementCategory.Command,
                 {
                     displayName: "Can Lock Pointer"
-                }
-            ),
-            new Nabu.ConfigurationElement(
-                "godMode",
-                Nabu.ConfigurationElementType.Boolean,
-                0,
-                {
-                    displayName: "God Mode"
-                },
-                (newValue) => {
-                    if (newValue === 1) {
-                        this.game.freeCamera.speed = 1;
-                    }
-                    else {
-                        this.game.freeCamera.speed = 0.2;
-                    }
-                }
-            ),
-            new Nabu.ConfigurationElement(
-                "showRenderDistDebug",
-                Nabu.ConfigurationElementType.Boolean,
-                0,
-                {
-                    displayName: "Show Render Distance Debug"
-                },
-                (newValue) => {
-                    if (newValue === 1) {
-                        this.game.terrain.chunckManager.setShowDebugRenderDist(true);
-                    }
-                    else {
-                        this.game.terrain.chunckManager.setShowDebugRenderDist(false);
-                    }
                 }
             ),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION", KeyInput.PLAYER_ACTION, "GamepadBtn0"),
@@ -134,7 +105,41 @@ class GameConfiguration extends Nabu.Configuration {
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_6", KeyInput.ACTION_SLOT_6, "Digit6"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_7", KeyInput.ACTION_SLOT_7, "Digit7"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_8", KeyInput.ACTION_SLOT_8, "Digit8"),
-            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_9", KeyInput.ACTION_SLOT_9, "Digit9")
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ACTION_SLOT_9", KeyInput.ACTION_SLOT_9, "Digit9"),
+            new Nabu.ConfigurationElement(
+                "godMode",
+                Nabu.ConfigurationElementType.Boolean,
+                0,
+                Nabu.ConfigurationElementCategory.Dev,
+                {
+                    displayName: "God Mode"
+                },
+                (newValue) => {
+                    if (newValue === 1) {
+                        this.game.freeCamera.speed = 1;
+                    }
+                    else {
+                        this.game.freeCamera.speed = 0.2;
+                    }
+                }
+            ),
+            new Nabu.ConfigurationElement(
+                "showRenderDistDebug",
+                Nabu.ConfigurationElementType.Boolean,
+                0,
+                Nabu.ConfigurationElementCategory.Dev,
+                {
+                    displayName: "Show Render Distance Debug"
+                },
+                (newValue) => {
+                    if (newValue === 1) {
+                        this.game.terrain.chunckManager.setShowDebugRenderDist(true);
+                    }
+                    else {
+                        this.game.terrain.chunckManager.setShowDebugRenderDist(false);
+                    }
+                }
+            )
         ]
     }
 
