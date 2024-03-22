@@ -167,6 +167,18 @@ option-page .value {
     text-align: center;
 }
 
+option-page .input-value {
+    font-size: min(2.5svh, 2.5vw);
+    vertical-align: top;
+    display: inline-block;
+    padding: 2px;
+    margin-right: min(2svh, 2vw);
+    min-width: min(15svh, 15vw);
+    height: min(3svh, 3vw);
+    text-align: center;
+    outline: 1px solid white;
+}
+
 option-page .back-button {
     position: absolute;
     border-radius: min(1.5svh, 1.5vw);
