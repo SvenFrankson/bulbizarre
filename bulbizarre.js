@@ -262,13 +262,14 @@ var KeyInput;
     KeyInput[KeyInput["INVENTORY"] = 14] = "INVENTORY";
     KeyInput[KeyInput["INVENTORY_PREV_CAT"] = 15] = "INVENTORY_PREV_CAT";
     KeyInput[KeyInput["INVENTORY_NEXT_CAT"] = 16] = "INVENTORY_NEXT_CAT";
-    KeyInput[KeyInput["MOVE_FORWARD"] = 17] = "MOVE_FORWARD";
-    KeyInput[KeyInput["MOVE_LEFT"] = 18] = "MOVE_LEFT";
-    KeyInput[KeyInput["MOVE_BACK"] = 19] = "MOVE_BACK";
-    KeyInput[KeyInput["MOVE_RIGHT"] = 20] = "MOVE_RIGHT";
-    KeyInput[KeyInput["JUMP"] = 21] = "JUMP";
-    KeyInput[KeyInput["MAIN_MENU"] = 22] = "MAIN_MENU";
-    KeyInput[KeyInput["WORKBENCH"] = 23] = "WORKBENCH";
+    KeyInput[KeyInput["INVENTORY_EQUIP_ITEM"] = 17] = "INVENTORY_EQUIP_ITEM";
+    KeyInput[KeyInput["MOVE_FORWARD"] = 18] = "MOVE_FORWARD";
+    KeyInput[KeyInput["MOVE_LEFT"] = 19] = "MOVE_LEFT";
+    KeyInput[KeyInput["MOVE_BACK"] = 20] = "MOVE_BACK";
+    KeyInput[KeyInput["MOVE_RIGHT"] = 21] = "MOVE_RIGHT";
+    KeyInput[KeyInput["JUMP"] = 22] = "JUMP";
+    KeyInput[KeyInput["MAIN_MENU"] = 23] = "MAIN_MENU";
+    KeyInput[KeyInput["WORKBENCH"] = 24] = "WORKBENCH";
 })(KeyInput || (KeyInput = {}));
 class GameConfiguration extends Nabu.Configuration {
     constructor(configName, game) {
@@ -334,6 +335,7 @@ class GameConfiguration extends Nabu.Configuration {
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY.1", KeyInput.INVENTORY, "KeyI"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_PREV_CAT", KeyInput.INVENTORY_PREV_CAT, "GamepadBtn4"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_NEXT_CAT", KeyInput.INVENTORY_NEXT_CAT, "GamepadBtn5"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_EQUIP_ITEM", KeyInput.INVENTORY_EQUIP_ITEM, "GamepadBtn0"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_LEFT", KeyInput.MOVE_LEFT, "KeyA"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_BACK", KeyInput.MOVE_BACK, "KeyS"),
@@ -2432,18 +2434,10 @@ class PlayerControler {
     }
     initialize() {
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
-            if (this.playerInventoryView.shown) {
-                let item = this.playerInventoryView.getCurrentItem();
-                if (item) {
-                    let action = item.getPlayerAction(this.player);
-                    this.player.playerActionManager.linkAction(action, this.player.playerActionManager.currentActionIndex);
-                    if (this.player.playerActionManager.alwaysEquip) {
-                        this.player.playerActionManager.equipAction();
-                    }
+            if (!this.playerInventoryView.shown) {
+                if (this.player.currentAction) {
+                    this.player.currentAction.onClick(this.player.currentChuncks);
                 }
-            }
-            else if (this.player.currentAction) {
-                this.player.currentAction.onClick(this.player.currentChuncks);
             }
         });
         for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
@@ -2454,8 +2448,10 @@ class PlayerControler {
             });
         }
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_EQUIP, () => {
-            if (this.player.playerActionManager) {
-                this.player.playerActionManager.toggleEquipAction();
+            if (!this.playerInventoryView.shown) {
+                if (this.player.playerActionManager) {
+                    this.player.playerActionManager.toggleEquipAction();
+                }
             }
         });
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_DEC, () => {
@@ -2484,6 +2480,18 @@ class PlayerControler {
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_NEXT_CAT, () => {
             if (this.playerInventoryView.shown) {
                 this.playerInventoryView.setCurrentCategory(this.playerInventoryView.nextCategory);
+            }
+        });
+        this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_EQUIP_ITEM, () => {
+            if (this.playerInventoryView.shown) {
+                let item = this.playerInventoryView.getCurrentItem();
+                if (item) {
+                    let action = item.getPlayerAction(this.player);
+                    this.player.playerActionManager.linkAction(action, this.player.playerActionManager.currentActionIndex);
+                    if (this.player.playerActionManager.alwaysEquip) {
+                        this.player.playerActionManager.equipAction();
+                    }
+                }
             }
         });
     }

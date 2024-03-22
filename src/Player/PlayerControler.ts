@@ -40,18 +40,10 @@ class PlayerControler {
 
     public initialize(): void {
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
-            if (this.playerInventoryView.shown) {
-                let item = this.playerInventoryView.getCurrentItem();
-                if (item) {
-                    let action = item.getPlayerAction(this.player);
-                    this.player.playerActionManager.linkAction(action, this.player.playerActionManager.currentActionIndex);
-                    if (this.player.playerActionManager.alwaysEquip) {
-                        this.player.playerActionManager.equipAction();
-                    }
+            if (!this.playerInventoryView.shown) {
+                if (this.player.currentAction) {
+                    this.player.currentAction.onClick(this.player.currentChuncks);
                 }
-            }
-            else if (this.player.currentAction) {
-                this.player.currentAction.onClick(this.player.currentChuncks);
             }
         })
         
@@ -64,8 +56,10 @@ class PlayerControler {
         }
 
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_EQUIP, () => {
-            if (this.player.playerActionManager) {
-                this.player.playerActionManager.toggleEquipAction();
+            if (!this.playerInventoryView.shown) {
+                if (this.player.playerActionManager) {
+                    this.player.playerActionManager.toggleEquipAction();
+                }
             }
         })
 
@@ -99,6 +93,19 @@ class PlayerControler {
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_NEXT_CAT, () => {
             if (this.playerInventoryView.shown) {
                 this.playerInventoryView.setCurrentCategory(this.playerInventoryView.nextCategory);
+            }
+        })
+
+        this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_EQUIP_ITEM, () => {
+            if (this.playerInventoryView.shown) {
+                let item = this.playerInventoryView.getCurrentItem();
+                if (item) {
+                    let action = item.getPlayerAction(this.player);
+                    this.player.playerActionManager.linkAction(action, this.player.playerActionManager.currentActionIndex);
+                    if (this.player.playerActionManager.alwaysEquip) {
+                        this.player.playerActionManager.equipAction();
+                    }
+                }
             }
         })
     }
