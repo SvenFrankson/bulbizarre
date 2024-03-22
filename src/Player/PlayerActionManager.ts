@@ -90,9 +90,7 @@ class PlayerActionManager {
 
     public toggleEquipAction(): void {
         if (this.player.currentAction) {
-            if (!this.alwaysEquip) {
-                this.unEquipAction();
-            }
+            this.unEquipAction();
         }
         else {
             this.equipAction();

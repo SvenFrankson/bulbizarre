@@ -50,7 +50,13 @@ class PlayerControler {
         for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
             this.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
                 if (this.player.playerActionManager) {
-                    this.player.playerActionManager.setActionIndex(slotIndex);
+                    if (slotIndex === this.player.playerActionManager.currentActionIndex) {
+                        this.player.playerActionManager.toggleEquipAction();
+                    }
+                    else {
+                        this.player.playerActionManager.setActionIndex(slotIndex);
+                        this.player.playerActionManager.equipAction();
+                    }
                 }
             })
         }

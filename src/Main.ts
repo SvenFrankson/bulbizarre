@@ -310,14 +310,14 @@ class Game {
         this.freeCamera.position.copyFromFloats(0, 0, 0);
         this.freeCamera.rotation.copyFromFloats(0, 0, 0);
 
-        if (!(this.terrain && this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat)) {
+        if (!(this.terrain && this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFromMapSimple)) {
             if (this.terrain) {
                 this.terrain.dispose();
             }
             this.terrain = new Kulla.Terrain({
                 scene: this.scene,
                 generatorProps: {
-                    type: Kulla.GeneratorType.Flat,
+                    type: Kulla.GeneratorType.MapSimple,
                     altitude: 64,
                     blockType: Kulla.BlockType.Dirt
                 },

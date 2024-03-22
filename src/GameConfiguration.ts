@@ -84,7 +84,6 @@ class GameConfiguration extends Nabu.Configuration {
                 }
             ),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION", KeyInput.PLAYER_ACTION, "GamepadBtn0"),
-            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_EQUIP", KeyInput.PLAYER_ACTION_EQUIP, "GamepadBtn15"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_DEC", KeyInput.PLAYER_ACTION_DEC, "GamepadBtn12"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_INC", KeyInput.PLAYER_ACTION_INC, "GamepadBtn13"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY.0", KeyInput.INVENTORY, "GamepadBtn2"),

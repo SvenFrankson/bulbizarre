@@ -308,7 +308,6 @@ class GameConfiguration extends Nabu.Configuration {
                 displayName: "Can Lock Pointer"
             }),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION", KeyInput.PLAYER_ACTION, "GamepadBtn0"),
-            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_EQUIP", KeyInput.PLAYER_ACTION_EQUIP, "GamepadBtn15"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_DEC", KeyInput.PLAYER_ACTION_DEC, "GamepadBtn12"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_INC", KeyInput.PLAYER_ACTION_INC, "GamepadBtn13"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY.0", KeyInput.INVENTORY, "GamepadBtn2"),
@@ -760,14 +759,14 @@ class Game {
         this.freeCamera.parent = this.player.head;
         this.freeCamera.position.copyFromFloats(0, 0, 0);
         this.freeCamera.rotation.copyFromFloats(0, 0, 0);
-        if (!(this.terrain && this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat)) {
+        if (!(this.terrain && this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFromMapSimple)) {
             if (this.terrain) {
                 this.terrain.dispose();
             }
             this.terrain = new Kulla.Terrain({
                 scene: this.scene,
                 generatorProps: {
-                    type: Kulla.GeneratorType.Flat,
+                    type: Kulla.GeneratorType.MapSimple,
                     altitude: 64,
                     blockType: Kulla.BlockType.Dirt
                 },
@@ -2080,9 +2079,7 @@ class PlayerActionManager {
     }
     toggleEquipAction() {
         if (this.player.currentAction) {
-            if (!this.alwaysEquip) {
-                this.unEquipAction();
-            }
+            this.unEquipAction();
         }
         else {
             this.equipAction();
@@ -2442,7 +2439,13 @@ class PlayerControler {
         for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
             this.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
                 if (this.player.playerActionManager) {
-                    this.player.playerActionManager.setActionIndex(slotIndex);
+                    if (slotIndex === this.player.playerActionManager.currentActionIndex) {
+                        this.player.playerActionManager.toggleEquipAction();
+                    }
+                    else {
+                        this.player.playerActionManager.setActionIndex(slotIndex);
+                        this.player.playerActionManager.equipAction();
+                    }
                 }
             });
         }

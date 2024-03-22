@@ -147,7 +147,7 @@ void main() {
    }
 
    if (colorIndex == 2) {
-      if (vNormalW.y < 0.8) {
+      if (vNormalW.y < 0.9) {
          color = terrainColors[3];
       }
    }
