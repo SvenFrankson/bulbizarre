@@ -41,7 +41,7 @@ class Game {
     public terrainEditor: Kulla.TerrainEditor;
     public propEditor: PropEditor;
     public player: Player;
-    public playerActionBar: PlayerActionView;
+    public playerActionView: PlayerActionView;
     public playerInventoryView: PlayerInventoryView;
 
     public router: GameRouter;
@@ -123,7 +123,7 @@ class Game {
         }
 
         this.router = new GameRouter(this);
-        this.playerActionBar = new PlayerActionView();
+        this.playerActionView = new PlayerActionView();
         this.playerInventoryView = document.getElementsByTagName("inventory-page")[0] as PlayerInventoryView;
 
         this.propEditor = new PropEditor(this);

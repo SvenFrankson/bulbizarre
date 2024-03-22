@@ -66,6 +66,14 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
         this._containers[this._currentCategory].style.display = "block";
     }
 
+    public getCurrentItem(): PlayerInventoryItem {
+        if (this._lines[this._currentCategory]) {
+            if (this._lines[this._currentCategory][this.currentPointers[this._currentCategory]]) {
+                return this._lines[this._currentCategory][this.currentPointers[this._currentCategory]].item;
+            }
+        }
+    }
+
     public get prevCategory(): number {
         return (this._currentCategory - 1 + InventoryCategory.End) % InventoryCategory.End;
     }
@@ -233,7 +241,7 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
         this.inventory = inventory;
     }
 
-    private _lines: HTMLDivElement[][];
+    private _lines: PlayerInventoryLine[][];
 
     public createPage(): void {
         this._lines = [];
@@ -246,7 +254,9 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
         for (let i = 0; i < this.inventory.items.length; i++) {
             let inventoryItem = this.inventory.items[i];
 
-            let line = document.createElement("div");
+            let line = document.createElement("div") as PlayerInventoryLine;
+            line.setAttribute("is", "inventory-line");
+            line.item = inventoryItem;
             line.classList.add("line");
             this._containers[inventoryItem.category].appendChild(line);
             this._lines[inventoryItem.category].push(line);

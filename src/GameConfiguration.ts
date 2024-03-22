@@ -58,7 +58,7 @@ class GameConfiguration extends Nabu.Configuration {
             new Nabu.ConfigurationElement(
                 "renderDist",
                 Nabu.ConfigurationElementType.Number,
-                0,
+                8,
                 {
                     displayName: "Render Distance",
                     min: 1,
@@ -74,7 +74,7 @@ class GameConfiguration extends Nabu.Configuration {
             new Nabu.ConfigurationElement(
                 "canLockPointer",
                 Nabu.ConfigurationElementType.Boolean,
-                1,
+                0,
                 {
                     displayName: "Can Lock Pointer"
                 }
@@ -116,7 +116,6 @@ class GameConfiguration extends Nabu.Configuration {
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_DEC", KeyInput.PLAYER_ACTION_DEC, "GamepadBtn12"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_INC", KeyInput.PLAYER_ACTION_INC, "GamepadBtn13"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY", KeyInput.INVENTORY, "GamepadBtn2"),
-            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY", KeyInput.INVENTORY, "KeyI"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_PREV_CAT", KeyInput.INVENTORY_PREV_CAT, "GamepadBtn4"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_NEXT_CAT", KeyInput.INVENTORY_NEXT_CAT, "GamepadBtn5"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),

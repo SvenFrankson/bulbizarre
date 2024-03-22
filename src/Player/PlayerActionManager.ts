@@ -1,35 +1,36 @@
 class PlayerActionManager {
 
+    public alwaysEquip: boolean = true;
     public linkedActions: PlayerAction[] = [];
 
     public get playerActionView(): PlayerActionView {
-        return this.game.playerActionBar;
+        return this.game.playerActionView;
     }
 
-    public equipedActionIndex: number = - 1;
+    public currentActionIndex: number = - 1;
     public prevActionIndex(): number {
-        if (this.equipedActionIndex === 1) {
+        if (this.currentActionIndex === 1) {
             return - 1;
         }
-        if (this.equipedActionIndex === 0) {
+        if (this.currentActionIndex === 0) {
             return 9;
         }
-        if (this.equipedActionIndex === 10) {
+        if (this.currentActionIndex === 10) {
             return 0;
         }
-        return this.equipedActionIndex - 1;
+        return this.currentActionIndex - 1;
     }
     public nextActionIndex(): number {
-        if (this.equipedActionIndex === - 1) {
+        if (this.currentActionIndex === - 1) {
             return 1;
         }
-        if (this.equipedActionIndex === 9) {
+        if (this.currentActionIndex === 9) {
             return 0;
         }
-        if (this.equipedActionIndex === 0) {
+        if (this.currentActionIndex === 0) {
             return 10;
         }
-        return this.equipedActionIndex + 1;
+        return this.currentActionIndex + 1;
     }
 
     constructor(
@@ -77,40 +78,48 @@ class PlayerActionManager {
         }
     }
 
-    public equipAction(slotIndex: number): void {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            // Unequip current action
-            if (this.player.currentAction) {
-                if (this.player.currentAction.onUnequip) {
-                    this.player.currentAction.onUnequip();
-                }
-                this.playerActionView.onActionUnequiped(slotIndex);
-            }
-            // If request action was already equiped, remove it.
-            if (this.player.currentAction === this.linkedActions[slotIndex]) {
-                this.player.currentAction = undefined;
-            }
-            // Otherwise, equip new action.
-            else {
-                this.player.currentAction = this.linkedActions[slotIndex];
-                if (this.player.currentAction) {
-                    //(document.querySelector("#player-action-" + slotIndex + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background-highlit.svg";
-                    if (this.player.currentAction.onEquip) {
-                        this.player.currentAction.onEquip();
-                    }
-                }
+    public setActionIndex(slotIndex: number): void {
+        this.playerActionView.unlight(this.currentActionIndex);
+        this.currentActionIndex = Nabu.MinMax(slotIndex, - 1, 10);
+        if (this.alwaysEquip || this.player.currentAction) {
+            this.unEquipAction();
+            this.equipAction();
+        }
+        this.playerActionView.highlight(this.currentActionIndex);
+    }
+
+    public toggleEquipAction(): void {
+        if (this.player.currentAction) {
+            if (!this.alwaysEquip) {
+                this.unEquipAction();
             }
         }
-        this.equipedActionIndex = Nabu.MinMax(slotIndex, - 1, 10);
-        this.playerActionView.onActionEquiped(slotIndex);
+        else {
+            this.equipAction();
+        }
     }
 
-    public startHint(slotIndex: number): void {
-        
+    public equipAction(): void {
+        this.player.currentAction = this.linkedActions[this.currentActionIndex];
+        if (this.player.currentAction) {
+            if (this.player.currentAction.onEquip) {
+                this.player.currentAction.onEquip();
+            }
+            this.playerActionView.onActionEquiped(this.currentActionIndex);
+        }
+        else {
+            this.playerActionView.onActionEquiped(-1);
+        }
     }
 
-    public stopHint(slotIndex: number): void {
-        
+    public unEquipAction(): void {
+        if (this.player.currentAction) {
+            if (this.player.currentAction.onUnequip) {
+                this.player.currentAction.onUnequip();
+            }
+            this.player.currentAction = undefined;
+            this.playerActionView.onActionEquiped(-1);
+        }
     }
 
     public serialize(): IPlayerActionManagerData {

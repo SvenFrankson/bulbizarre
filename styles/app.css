@@ -232,8 +232,16 @@ nabu-checkbox {
 #action-bar .action-tile {
     width: 5vh;
     height: 5vh;
-    margin: 1vh;
-    border: 2px solid rgb(127, 127, 127);
+    margin: 1.5vh;
+    outline: 2px solid rgb(127, 127, 127);
+}
+
+#action-bar .action-tile.highlit {
+    outline: 2px solid rgb(255, 255, 255);
+}
+
+#action-bar .action-tile.equiped {
+    outline: 4px solid rgb(255, 255, 255);
 }
 
 inventory-page {

@@ -56,7 +56,7 @@ class PlayerActionTemplate {
         */
     }
 
-    public static async CreateBlockAction(player: Player, blockType: Kulla.BlockType): Promise<PlayerAction> {
+    public static CreateBlockAction(player: Player, blockType: Kulla.BlockType): PlayerAction {
         let action = new PlayerAction(Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh: BABYLON.Mesh;

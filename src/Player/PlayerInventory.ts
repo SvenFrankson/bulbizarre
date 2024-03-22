@@ -16,6 +16,15 @@ class PlayerInventoryItem {
         this.name = name;
         this.category = category;
     }
+
+    public getPlayerAction(player: Player): PlayerAction {
+        if (this.category === InventoryCategory.Block) {
+            let block = Kulla.BlockTypeNames.indexOf(this.name);
+            if (block >= Kulla.BlockType.None && block < Kulla.BlockType.Unknown) {
+                return PlayerActionTemplate.CreateBlockAction(player, block);
+            }
+        }
+    }
 }
 
 class PlayerInventory {

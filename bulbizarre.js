@@ -293,7 +293,7 @@ class GameConfiguration extends Nabu.Configuration {
                     }
                 }
             }),
-            new Nabu.ConfigurationElement("renderDist", Nabu.ConfigurationElementType.Number, 0, {
+            new Nabu.ConfigurationElement("renderDist", Nabu.ConfigurationElementType.Number, 8, {
                 displayName: "Render Distance",
                 min: 1,
                 max: 15,
@@ -303,7 +303,7 @@ class GameConfiguration extends Nabu.Configuration {
             }, (newValue) => {
                 this.game.terrain.chunckManager.setDistance(newValue * this.game.terrain.chunckLengthIJ);
             }),
-            new Nabu.ConfigurationElement("canLockPointer", Nabu.ConfigurationElementType.Boolean, 1, {
+            new Nabu.ConfigurationElement("canLockPointer", Nabu.ConfigurationElementType.Boolean, 0, {
                 displayName: "Can Lock Pointer"
             }),
             new Nabu.ConfigurationElement("godMode", Nabu.ConfigurationElementType.Boolean, 0, {
@@ -331,7 +331,6 @@ class GameConfiguration extends Nabu.Configuration {
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_DEC", KeyInput.PLAYER_ACTION_DEC, "GamepadBtn12"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION_INC", KeyInput.PLAYER_ACTION_INC, "GamepadBtn13"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY", KeyInput.INVENTORY, "GamepadBtn2"),
-            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY", KeyInput.INVENTORY, "KeyI"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_PREV_CAT", KeyInput.INVENTORY_PREV_CAT, "GamepadBtn4"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_NEXT_CAT", KeyInput.INVENTORY_NEXT_CAT, "GamepadBtn5"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),
@@ -598,7 +597,7 @@ class Game {
             }
         }
         this.router = new GameRouter(this);
-        this.playerActionBar = new PlayerActionView();
+        this.playerActionView = new PlayerActionView();
         this.playerInventoryView = document.getElementsByTagName("inventory-page")[0];
         this.propEditor = new PropEditor(this);
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
@@ -2004,38 +2003,39 @@ class PlayerActionManager {
     constructor(player, game) {
         this.player = player;
         this.game = game;
+        this.alwaysEquip = true;
         this.linkedActions = [];
-        this.equipedActionIndex = -1;
+        this.currentActionIndex = -1;
         this.update = () => {
         };
         player.playerActionManager = this;
     }
     get playerActionView() {
-        return this.game.playerActionBar;
+        return this.game.playerActionView;
     }
     prevActionIndex() {
-        if (this.equipedActionIndex === 1) {
+        if (this.currentActionIndex === 1) {
             return -1;
         }
-        if (this.equipedActionIndex === 0) {
+        if (this.currentActionIndex === 0) {
             return 9;
         }
-        if (this.equipedActionIndex === 10) {
+        if (this.currentActionIndex === 10) {
             return 0;
         }
-        return this.equipedActionIndex - 1;
+        return this.currentActionIndex - 1;
     }
     nextActionIndex() {
-        if (this.equipedActionIndex === -1) {
+        if (this.currentActionIndex === -1) {
             return 1;
         }
-        if (this.equipedActionIndex === 9) {
+        if (this.currentActionIndex === 9) {
             return 0;
         }
-        if (this.equipedActionIndex === 0) {
+        if (this.currentActionIndex === 0) {
             return 10;
         }
-        return this.equipedActionIndex + 1;
+        return this.currentActionIndex + 1;
     }
     initialize() {
         let savedPlayerActionString = window.localStorage.getItem("player-action-manager");
@@ -2067,36 +2067,45 @@ class PlayerActionManager {
             */
         }
     }
-    equipAction(slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            // Unequip current action
-            if (this.player.currentAction) {
-                if (this.player.currentAction.onUnequip) {
-                    this.player.currentAction.onUnequip();
-                }
-                this.playerActionView.onActionUnequiped(slotIndex);
-            }
-            // If request action was already equiped, remove it.
-            if (this.player.currentAction === this.linkedActions[slotIndex]) {
-                this.player.currentAction = undefined;
-            }
-            // Otherwise, equip new action.
-            else {
-                this.player.currentAction = this.linkedActions[slotIndex];
-                if (this.player.currentAction) {
-                    //(document.querySelector("#player-action-" + slotIndex + " .background") as HTMLImageElement).src ="/datas/images/inventory-item-background-highlit.svg";
-                    if (this.player.currentAction.onEquip) {
-                        this.player.currentAction.onEquip();
-                    }
-                }
+    setActionIndex(slotIndex) {
+        this.playerActionView.unlight(this.currentActionIndex);
+        this.currentActionIndex = Nabu.MinMax(slotIndex, -1, 10);
+        if (this.alwaysEquip || this.player.currentAction) {
+            this.unEquipAction();
+            this.equipAction();
+        }
+        this.playerActionView.highlight(this.currentActionIndex);
+    }
+    toggleEquipAction() {
+        if (this.player.currentAction) {
+            if (!this.alwaysEquip) {
+                this.unEquipAction();
             }
         }
-        this.equipedActionIndex = Nabu.MinMax(slotIndex, -1, 10);
-        this.playerActionView.onActionEquiped(slotIndex);
+        else {
+            this.equipAction();
+        }
     }
-    startHint(slotIndex) {
+    equipAction() {
+        this.player.currentAction = this.linkedActions[this.currentActionIndex];
+        if (this.player.currentAction) {
+            if (this.player.currentAction.onEquip) {
+                this.player.currentAction.onEquip();
+            }
+            this.playerActionView.onActionEquiped(this.currentActionIndex);
+        }
+        else {
+            this.playerActionView.onActionEquiped(-1);
+        }
     }
-    stopHint(slotIndex) {
+    unEquipAction() {
+        if (this.player.currentAction) {
+            if (this.player.currentAction.onUnequip) {
+                this.player.currentAction.onUnequip();
+            }
+            this.player.currentAction = undefined;
+            this.playerActionView.onActionEquiped(-1);
+        }
     }
     serialize() {
         let linkedActionsNames = [];
@@ -2171,7 +2180,7 @@ class PlayerActionTemplate {
         return action;
         */
     }
-    static async CreateBlockAction(player, blockType) {
+    static CreateBlockAction(player, blockType) {
         let action = new PlayerAction(Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh;
@@ -2300,29 +2309,40 @@ class PlayerActionView {
         if (slotIndex >= 0 && slotIndex <= 9) {
             let tile = this.getTile(slotIndex);
             if (tile) {
-                tile.style.border = "2px solid rgb(255, 255, 255)";
+                tile.classList.add("highlit");
             }
         }
     }
-    unlit(slotIndex) {
+    unlight(slotIndex) {
         if (slotIndex >= 0 && slotIndex <= 9) {
             let tile = this.getTile(slotIndex);
             if (tile) {
-                tile.style.border = "2px solid rgb(127, 127, 127)";
+                tile.classList.remove("highlit");
+            }
+        }
+    }
+    equip(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            let tile = this.getTile(slotIndex);
+            if (tile) {
+                tile.classList.add("equiped");
+            }
+        }
+    }
+    unEquip(slotIndex) {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            let tile = this.getTile(slotIndex);
+            if (tile) {
+                tile.classList.remove("equiped");
             }
         }
     }
     onActionEquiped(slotIndex) {
         for (let i = 0; i <= 9; i++) {
-            this.unlit(i);
+            this.unEquip(i);
         }
         if (slotIndex >= 0 && slotIndex <= 9) {
-            this.highlight(slotIndex);
-        }
-    }
-    onActionUnequiped(slotIndex) {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.unlit(slotIndex);
+            this.equip(slotIndex);
         }
     }
     onHintStart(slotIndex) {
@@ -2403,35 +2423,48 @@ class PlayerControler {
     get inputManager() {
         return this.player.game.inputManager;
     }
+    get playerActionView() {
+        return this.player.game.playerActionView;
+    }
     get playerInventoryView() {
         return this.player.game.playerInventoryView;
     }
     initialize() {
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
-            if (this.player.currentAction) {
+            if (this.playerInventoryView.shown) {
+                let item = this.playerInventoryView.getCurrentItem();
+                if (item) {
+                    let action = item.getPlayerAction(this.player);
+                    this.player.playerActionManager.linkAction(action, this.player.playerActionManager.currentActionIndex);
+                    if (this.player.playerActionManager.alwaysEquip) {
+                        this.player.playerActionManager.equipAction();
+                    }
+                }
+            }
+            else if (this.player.currentAction) {
                 this.player.currentAction.onClick(this.player.currentChuncks);
             }
         });
         for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
             this.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
                 if (this.player.playerActionManager) {
-                    this.player.playerActionManager.equipAction(slotIndex);
+                    this.player.playerActionManager.setActionIndex(slotIndex);
                 }
             });
         }
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_EQUIP, () => {
             if (this.player.playerActionManager) {
-                this.player.playerActionManager.equipAction(this.player.playerActionManager.equipedActionIndex);
+                this.player.playerActionManager.toggleEquipAction();
             }
         });
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_DEC, () => {
             if (this.player.playerActionManager) {
-                this.player.playerActionManager.equipAction(this.player.playerActionManager.prevActionIndex());
+                this.player.playerActionManager.setActionIndex(this.player.playerActionManager.prevActionIndex());
             }
         });
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_INC, () => {
             if (this.player.playerActionManager) {
-                this.player.playerActionManager.equipAction(this.player.playerActionManager.nextActionIndex());
+                this.player.playerActionManager.setActionIndex(this.player.playerActionManager.nextActionIndex());
             }
         });
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY, () => {
@@ -2528,6 +2561,14 @@ class PlayerInventoryItem {
         this.name = name;
         this.category = category;
     }
+    getPlayerAction(player) {
+        if (this.category === InventoryCategory.Block) {
+            let block = Kulla.BlockTypeNames.indexOf(this.name);
+            if (block >= Kulla.BlockType.None && block < Kulla.BlockType.Unknown) {
+                return PlayerActionTemplate.CreateBlockAction(player, block);
+            }
+        }
+    }
 }
 class PlayerInventory {
     constructor(player) {
@@ -2544,6 +2585,12 @@ class PlayerInventory {
         }
     }
 }
+class PlayerInventoryLine extends HTMLDivElement {
+    constructor() {
+        super();
+    }
+}
+customElements.define("inventory-line", PlayerInventoryLine, { extends: "div" });
 class PlayerInventoryView extends HTMLElement {
     constructor() {
         super(...arguments);
@@ -2598,6 +2645,13 @@ class PlayerInventoryView extends HTMLElement {
         }
         this._makeCategoryBtnActive(this._categoryBtns[this._currentCategory]);
         this._containers[this._currentCategory].style.display = "block";
+    }
+    getCurrentItem() {
+        if (this._lines[this._currentCategory]) {
+            if (this._lines[this._currentCategory][this.currentPointers[this._currentCategory]]) {
+                return this._lines[this._currentCategory][this.currentPointers[this._currentCategory]].item;
+            }
+        }
     }
     get prevCategory() {
         return (this._currentCategory - 1 + InventoryCategory.End) % InventoryCategory.End;
@@ -2758,6 +2812,8 @@ class PlayerInventoryView extends HTMLElement {
         for (let i = 0; i < this.inventory.items.length; i++) {
             let inventoryItem = this.inventory.items[i];
             let line = document.createElement("div");
+            line.setAttribute("is", "inventory-line");
+            line.item = inventoryItem;
             line.classList.add("line");
             this._containers[inventoryItem.category].appendChild(line);
             this._lines[inventoryItem.category].push(line);

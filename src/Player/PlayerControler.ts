@@ -4,6 +4,10 @@ class PlayerControler {
         return this.player.game.inputManager;
     }
 
+    public get playerActionView(): PlayerActionView {
+        return this.player.game.playerActionView;
+    }
+
     public get playerInventoryView(): PlayerInventoryView {
         return this.player.game.playerInventoryView;
     }
@@ -36,7 +40,17 @@ class PlayerControler {
 
     public initialize(): void {
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
-            if (this.player.currentAction) {
+            if (this.playerInventoryView.shown) {
+                let item = this.playerInventoryView.getCurrentItem();
+                if (item) {
+                    let action = item.getPlayerAction(this.player);
+                    this.player.playerActionManager.linkAction(action, this.player.playerActionManager.currentActionIndex);
+                    if (this.player.playerActionManager.alwaysEquip) {
+                        this.player.playerActionManager.equipAction();
+                    }
+                }
+            }
+            else if (this.player.currentAction) {
                 this.player.currentAction.onClick(this.player.currentChuncks);
             }
         })
@@ -44,26 +58,26 @@ class PlayerControler {
         for (let slotIndex = 0; slotIndex < 10; slotIndex++) {
             this.inputManager.addMappedKeyDownListener(KeyInput.ACTION_SLOT_0 + slotIndex, () => {
                 if (this.player.playerActionManager) {
-                    this.player.playerActionManager.equipAction(slotIndex);
+                    this.player.playerActionManager.setActionIndex(slotIndex);
                 }
             })
         }
 
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_EQUIP, () => {
             if (this.player.playerActionManager) {
-                this.player.playerActionManager.equipAction(this.player.playerActionManager.equipedActionIndex);
+                this.player.playerActionManager.toggleEquipAction();
             }
         })
 
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_DEC, () => {
             if (this.player.playerActionManager) {
-                this.player.playerActionManager.equipAction(this.player.playerActionManager.prevActionIndex());
+                this.player.playerActionManager.setActionIndex(this.player.playerActionManager.prevActionIndex());
             }
         })
 
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_INC, () => {
             if (this.player.playerActionManager) {
-                this.player.playerActionManager.equipAction(this.player.playerActionManager.nextActionIndex());
+                this.player.playerActionManager.setActionIndex(this.player.playerActionManager.nextActionIndex());
             }
         })
 

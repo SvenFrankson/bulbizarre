@@ -19,32 +19,44 @@ class PlayerActionView {
         if (slotIndex >= 0 && slotIndex <= 9) {
             let tile = this.getTile(slotIndex);
             if (tile) {
-                tile.style.border = "2px solid rgb(255, 255, 255)";
+                tile.classList.add("highlit");
             }
         }
     }
 
-    public unlit(slotIndex: number): void {
+    public unlight(slotIndex: number): void {
         if (slotIndex >= 0 && slotIndex <= 9) {
             let tile = this.getTile(slotIndex);
             if (tile) {
-                tile.style.border = "2px solid rgb(127, 127, 127)";
+                tile.classList.remove("highlit");
+            }
+        }
+    }
+
+    public equip(slotIndex: number): void {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            let tile = this.getTile(slotIndex);
+            if (tile) {
+                tile.classList.add("equiped");
+            }
+        }
+    }
+
+    public unEquip(slotIndex: number): void {
+        if (slotIndex >= 0 && slotIndex <= 9) {
+            let tile = this.getTile(slotIndex);
+            if (tile) {
+                tile.classList.remove("equiped");
             }
         }
     }
 
     public onActionEquiped(slotIndex: number): void {
         for (let i = 0; i <= 9; i++) {
-            this.unlit(i);
+            this.unEquip(i);
         }
         if (slotIndex >= 0 && slotIndex <= 9) {
-            this.highlight(slotIndex);
-        }
-    }
-
-    public onActionUnequiped(slotIndex: number): void {
-        if (slotIndex >= 0 && slotIndex <= 9) {
-            this.unlit(slotIndex);
+            this.equip(slotIndex);
         }
     }
 
