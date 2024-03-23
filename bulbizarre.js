@@ -1916,7 +1916,7 @@ class Brick {
         this.colorIndex = colorIndex;
         this.position = BABYLON.Vector3.Zero();
         if (parent) {
-            this.parent = parent;
+            this._parent = parent;
             if (!parent.children) {
                 parent.children = [];
             }
@@ -1926,6 +1926,13 @@ class Brick {
             this._rotationQuaternion = BABYLON.Quaternion.Identity();
         }
     }
+    setParent(b) {
+        this._parent = b;
+        if (!b.children) {
+            b.children = [];
+        }
+        b.children.push(this);
+    }
     get childrenCount() {
         if (this.children) {
             return this.children.length;
@@ -1933,13 +1940,17 @@ class Brick {
         return 0;
     }
     get root() {
-        if (this.parent) {
-            return this.parent.root;
+        if (this._parent) {
+            return this._parent.root;
         }
         return this;
     }
     updateMesh() {
         if (this != this.root) {
+            if (this.mesh) {
+                this.mesh.dispose();
+                this.mesh = undefined;
+            }
             this.root.updateMesh();
             return;
         }
@@ -1962,19 +1973,21 @@ class Brick {
             this.mesh.renderOutline = false;
         }
     }
-    generateMeshVertexData(vDatas) {
+    generateMeshVertexData(vDatas, parentGlobalPosition) {
         if (!vDatas) {
             vDatas = [];
         }
         let template = BrickTemplateManager.Instance.getTemplate(this.templateIndex);
         let vData = Mummu.CloneVertexData(template.vertexData);
+        let globalPosition = parentGlobalPosition ? parentGlobalPosition.clone() : BABYLON.Vector3.Zero();
         if (this != this.root) {
-            Mummu.TranslateVertexDataInPlace(vData, this.position);
+            globalPosition.addInPlace(this.position);
+            Mummu.TranslateVertexDataInPlace(vData, globalPosition);
         }
         vDatas.push(vData);
         if (this.children) {
             for (let i = 0; i < this.children.length; i++) {
-                this.children[i].generateMeshVertexData(vDatas);
+                this.children[i].generateMeshVertexData(vDatas, globalPosition);
             }
         }
         return Mummu.MergeVertexDatas(...vDatas);
@@ -2937,7 +2950,45 @@ class PlayerActionMoveBrick {
             }
         };
         brickAction.onClick = () => {
-            initPos.copyFrom(brick.root.position);
+            let terrain = player.game.terrain;
+            if (player.game.router.inPlayMode) {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined || (mesh instanceof BrickMesh && mesh.brick != brick);
+                });
+                if (hit && hit.pickedPoint) {
+                    let n = hit.getNormal(true).scaleInPlace(0.2);
+                    if (hit.pickedMesh instanceof BrickMesh) {
+                        let root = hit.pickedMesh.brick.root;
+                        if (root.mesh) {
+                            let rootPosition = root.position;
+                            let dp = hit.pickedPoint.add(n).subtract(rootPosition);
+                            dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
+                            dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
+                            dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
+                            brick.position.copyFrom(dp);
+                            brick.setParent(root);
+                            brick.updateMesh();
+                        }
+                    }
+                    else {
+                        let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                        if (chunckIJK) {
+                            brick.root.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
+                        }
+                    }
+                }
+            }
+            brickAction.onUnequip = () => { };
             player.currentAction = undefined;
         };
         brickAction.onUnequip = () => {
