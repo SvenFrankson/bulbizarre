@@ -5,6 +5,7 @@ uniform vec3 terrainColors[13];
 uniform vec3 lightInvDirW;
 uniform int level;
 uniform float blockSize_m;
+uniform sampler2D noiseTexture;
 
 in vec3 vPositionW;
 in vec3 vNormalW;
@@ -51,6 +52,8 @@ void main() {
    float period = 1.;
    float ampli = 0.1;
 
+   float noise = 2. * (texture(noiseTexture, vec2(vPositionW.x * 0.1, vPositionW.z * 0.1)).r - 0.5);
+
    // case all same
    if (colorIndex1 == colorIndex2 && colorIndex2 == colorIndex3) {
       color = color1;
@@ -58,7 +61,7 @@ void main() {
    }
    // case one pair
    else if (colorIndex1 == colorIndex2) {
-      float offset = 0.;
+      float offset = noise * 0.35;
       if (baryPos.r > baryPos.g) {
          offset += f(baryPos.g, vPositionW.x, vPositionW.z);
       }
@@ -76,7 +79,7 @@ void main() {
       }
    }
    else if (colorIndex1 == colorIndex3) {
-      float offset = 0.;
+      float offset = noise * 0.35;
       if (baryPos.r > baryPos.b) {
          offset += f(baryPos.b, vPositionW.x, vPositionW.z);
       }
@@ -94,7 +97,7 @@ void main() {
       }
    }
    else if (colorIndex2 == colorIndex3) {
-      float offset = 0.;
+      float offset = noise * 0.35;
       if (baryPos.g > baryPos.b) {
          offset += f(baryPos.b, vPositionW.x, vPositionW.z);
       }
@@ -121,9 +124,9 @@ void main() {
       //float offset2 = (cos(vPositionW.x * factor2 + vPositionW.y * factor2 * 0.5) + cos(vPositionW.y * factor2 + vPositionW.z * factor2 * 0.5) + cos(vPositionW.z * factor2 + vPositionW.x * factor2 * 0.5)) * 0.1;
       //float offset3 = (cos(vPositionW.x * factor3 + vPositionW.y * factor3 * 0.5) + cos(vPositionW.y * factor3 + vPositionW.z * factor3 * 0.5) + cos(vPositionW.z * factor3 + vPositionW.x * factor3 * 0.5)) * 0.1;
 
-      float offset1 = 0.;
+      float offset1 = noise * 0.35;
       float offset2 = 0.;
-      float offset3 = 0.;
+      float offset3 = - noise * 0.35;
 
 
       baryPos.r += offset1;
@@ -147,7 +150,7 @@ void main() {
    }
 
    if (colorIndex == 2) {
-      if (vNormalW.y < 0.9) {
+      if (vNormalW.y < 0.8 + noise * 0.1) {
          color = terrainColors[3];
       }
    }
@@ -204,27 +207,11 @@ void main() {
    }
    */
 
-   if (level == 0) {
-      float dy = vPositionW.y / blockSize_m - floor(vPositionW.y / blockSize_m);
-      if (vNormalW.y > 0.8 && (dy < 0.1 || dy > 0.9)) {
-         lightFactor *= 1.3;
-      }
+   float dy = vPositionW.y / blockSize_m - floor(vPositionW.y / blockSize_m) + noise * 0.15;
+   if ((dy > 0.15 && dy < 0.85)) {
+      lightFactor *= 0.7;
    }
-   else if (level == 1) {
-      float dy = vPositionW.y / blockSize_m - floor(vPositionW.y / blockSize_m);
-      if (vNormalW.y > 0.7 && (dy < 0.1 || dy > 0.9)) {
-         lightFactor *= 1.3;
-      }
-   }
-   else {
-      if (vNormalW.y > 0.9) {
-         lightFactor *= 1.3;
-      }
-      else if (vNormalW.y > 0.8) {
-         lightFactor *= 1. + 0.3 * ((vNormalW.y - 0.8) * 10.);
-      }
-   }
-
+   
    lightFactor = round(lightFactor * 12.) / 12.;
 
    /*
