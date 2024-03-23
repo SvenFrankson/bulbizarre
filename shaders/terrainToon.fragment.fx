@@ -136,11 +136,12 @@ void main() {
    }
 
    if (colorIndex == 2) {
-      if (vNormalW.y < 0.8 + noise * 0.1) {
+      if (vNormalW.y < 0.75 + noise * 0.1) {
          color = terrainColors[3];
       }
    }
 
+   /*
    // show triangles
    if (baryPos.r < 0.005) {
       color = vec3(0., 0., 0.);
@@ -152,7 +153,6 @@ void main() {
       color = vec3(0., 0., 0.);
    }
 
-   /*
    // show Chunck Parts
    float dx = vPositionW.x + 0.5 - floor(vPositionW.x + 0.5);
    float dy = vPositionW.y + 0.5 - floor(vPositionW.y + 0.5);
