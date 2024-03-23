@@ -55,8 +55,7 @@ class Brick {
         let data = this.generateMeshVertexData();
         if (!this.mesh) {
             this.mesh = new BrickMesh(this);
-            this.mesh.position.copyFrom(this.position);
-            console.log(this.mesh.position);
+            this.mesh.position = this.position;
         }
         data.applyToMesh(this.mesh);
     }

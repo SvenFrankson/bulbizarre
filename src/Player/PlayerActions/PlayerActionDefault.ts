@@ -52,7 +52,9 @@ class PlayerActionDefault {
         }
 
         brickAction.onClick = () => {
-            
+            if (aimedBrick) {
+                player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrick);
+            }
         }
 
         brickAction.onUnequip = () => {

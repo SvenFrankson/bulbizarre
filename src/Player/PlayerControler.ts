@@ -44,6 +44,9 @@ class PlayerControler {
                 if (this.player.currentAction) {
                     this.player.currentAction.onClick(this.player.currentChuncks);
                 }
+                else {
+                    this.player.defaultAction.onClick(this.player.currentChuncks);
+                }
             }
         })
         
@@ -123,6 +126,9 @@ class PlayerControler {
         this._pointerIsDown = true;
         if (this.player.currentAction) {
             this.player.currentAction.onClick(this.player.currentChuncks);
+        }
+        else {
+            this.player.defaultAction.onClick(this.player.currentChuncks);
         }
     }
 
