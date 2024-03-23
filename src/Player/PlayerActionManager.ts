@@ -98,6 +98,7 @@ class PlayerActionManager {
     }
 
     public equipAction(): void {
+        this.player.defaultAction.onUnequip();
         this.player.currentAction = this.linkedActions[this.currentActionIndex];
         if (this.player.currentAction) {
             if (this.player.currentAction.onEquip) {

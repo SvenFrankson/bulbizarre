@@ -61,6 +61,21 @@ class Brick {
         data.applyToMesh(this.mesh);
     }
 
+    
+    public highlight(): void {
+        if (this.mesh) {
+            this.mesh.renderOutline = true;
+            this.mesh.outlineColor = new BABYLON.Color3(0, 1, 1);
+            this.mesh.outlineWidth = 0.05;
+        }
+    }
+
+    public unlight(): void {
+        if (this.mesh) {
+            this.mesh.renderOutline = false;
+        }
+    }
+
     private generateMeshVertexData(vDatas?: BABYLON.VertexData[]): BABYLON.VertexData {
         if (!vDatas) {
             vDatas = [];

@@ -4,6 +4,7 @@ class Player extends BABYLON.Mesh {
     public inventory: PlayerInventory;
     public playerActionManager: PlayerActionManager;
     public currentAction: PlayerAction;
+    public defaultAction: PlayerAction;
 
     public mass: number = 2;
     public height: number = 2;
@@ -35,6 +36,8 @@ class Player extends BABYLON.Mesh {
         this.head.parent = this;
 
         this.inventory = new PlayerInventory(this);
+
+        this.defaultAction = PlayerActionDefault.Create(this);
     }
 
     public update(dt: number): void {
@@ -50,6 +53,9 @@ class Player extends BABYLON.Mesh {
 
         if (this.currentAction) {
             this.currentAction.onUpdate(this.currentChuncks);
+        }
+        else {
+            this.defaultAction.onUpdate(this.currentChuncks);
         }
 
         let ray = new BABYLON.Ray(this.position, new BABYLON.Vector3(0, - 1, 0));
