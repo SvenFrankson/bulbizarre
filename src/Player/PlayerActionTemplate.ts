@@ -187,19 +187,18 @@ class PlayerActionTemplate {
     }
 
     public static CreateBrickAction(player: Player): PlayerAction {
-        let action = new PlayerAction("brick", player);
-        action.backgroundColor = "#000000";
+        let brickAction = new PlayerAction("brick", player);
+        brickAction.backgroundColor = "#000000";
         let previewMesh: BABYLON.Mesh;
         let previewBox: BABYLON.Mesh;
-        action.iconUrl = "/datas/images/brick-icon.png";
+        brickAction.iconUrl = "/datas/images/brick-icon.png";
 
         let lastSize: number;
         let lastI: number;
         let lastJ: number;
         let lastK: number;
 
-
-        action.onUpdate = () => {
+        brickAction.onUpdate = () => {
             let terrain = player.game.terrain;
             if (player.game.router.inPlayMode) {
                 let x: number;
@@ -225,7 +224,7 @@ class PlayerActionTemplate {
                     if (chunckIJK) {
                         // Redraw block preview
                         if (!previewMesh) {
-                            previewMesh = Mummu.CreateLineBox("preview", { width: 1 * terrain.blockSizeIJ_m, height: 0.333 * terrain.blockSizeK_m, depth: 1 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
+                            previewMesh = Mummu.CreateLineBox("preview", { width: 1 * terrain.blockSizeIJ_m, height: 1 / 3 * terrain.blockSizeK_m, depth: 1 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
                         }
                         
                         let needRedrawMesh: boolean = false;
@@ -242,7 +241,7 @@ class PlayerActionTemplate {
                             needRedrawMesh = true;
                         }
                         
-                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j) * terrain.blockSizeIJ_m);
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5 / 3) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m);
                         previewMesh.parent = chunckIJK.chunck.mesh;
 
                         return;
@@ -260,7 +259,8 @@ class PlayerActionTemplate {
             }
         }
 
-        action.onClick = () => {
+        brickAction.onClick = () => {
+            let terrain = player.game.terrain;
             if (player.game.router.inPlayMode) {
                 let x: number;
                 let y: number;
@@ -281,16 +281,20 @@ class PlayerActionTemplate {
                 )
                 if (hit && hit.pickedPoint) {
                     let n =  hit.getNormal(true).scaleInPlace(0.2);
-                    let brick = new Brick(0, 0);
-                    let vData = brick.generateMeshVertexData();
-                    let mesh = new BABYLON.Mesh("brick");
-                    mesh.position.copyFrom(hit.pickedPoint).addInPlace(n);
-                    vData.applyToMesh(mesh);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                    if (chunckIJK) {
+                        let brick = new Brick(0, 0);
+                        let vData = brick.generateMeshVertexData();
+                        let brickMesh = new BABYLON.Mesh("brick");
+                        brickMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m);
+                        brickMesh.parent = chunckIJK.chunck.mesh;
+                        vData.applyToMesh(brickMesh);
+                    }
                 }
             }
         }
 
-        action.onUnequip = () => {
+        brickAction.onUnequip = () => {
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;
@@ -305,6 +309,6 @@ class PlayerActionTemplate {
             lastK = undefined;
         }
         
-        return action;
+        return brickAction;
     }
 }

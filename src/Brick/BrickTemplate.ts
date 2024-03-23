@@ -28,8 +28,9 @@ class BrickTemplate {
     constructor(public index: number) {
         let w = 0.78;
         let h = 0.32;
-        this.vertexData = Mummu.CreateBeveledBoxVertexData({ width: (1 * w / h), height: 1, depth: (1 * w / h) });
-        Mummu.TranslateVertexDataInPlace(this.vertexData, new BABYLON.Vector3(0, 0.5, 0));
-        Mummu.ScaleVertexDataInPlace(this.vertexData, h);
+        let s = 2;
+        this.vertexData = Mummu.CreateBeveledBoxVertexData({ width: (s * w / h), height: s, depth: (s * w / h), flat: true });
+        Mummu.TranslateVertexDataInPlace(this.vertexData, new BABYLON.Vector3(0, s * 0.5, 0));
+        Mummu.ScaleVertexDataInPlace(this.vertexData, h / s);
     }
 }
