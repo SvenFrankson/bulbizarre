@@ -54,6 +54,7 @@ void main() {
 
    float noise = 2. * (texture(noiseTexture, vec2(vPositionW.x * 0.1, vPositionW.z * 0.1)).r - 0.5);
 
+   float offset = noise * 0.5;
    // case all same
    if (colorIndex1 == colorIndex2 && colorIndex2 == colorIndex3) {
       color = color1;
@@ -61,14 +62,9 @@ void main() {
    }
    // case one pair
    else if (colorIndex1 == colorIndex2) {
-      float offset = noise * 0.35;
-      if (baryPos.r > baryPos.g) {
-         offset += f(baryPos.g, vPositionW.x, vPositionW.z);
-      }
-      else if (baryPos.g > baryPos.r) {
-         offset -= f(baryPos.r, vPositionW.x, vPositionW.z);
-      }
-      
+      if (colorIndex1 > colorIndex3) {
+         offset *= -1.;
+      }  
       if (baryPos.b + offset > baryPos.r && baryPos.b + offset > baryPos.g) {
          color = color3;
          colorIndex = colorIndex3;
@@ -79,14 +75,9 @@ void main() {
       }
    }
    else if (colorIndex1 == colorIndex3) {
-      float offset = noise * 0.35;
-      if (baryPos.r > baryPos.b) {
-         offset += f(baryPos.b, vPositionW.x, vPositionW.z);
-      }
-      else if (baryPos.b > baryPos.r) {
-         offset -= f(baryPos.r, vPositionW.x, vPositionW.z);
-      }
-
+      if (colorIndex1 > colorIndex2) {
+         offset *= -1.;
+      }  
       if (baryPos.g + offset > baryPos.r && baryPos.g + offset > baryPos.b) {
          color = color2;
          colorIndex = colorIndex2;
@@ -97,14 +88,9 @@ void main() {
       }
    }
    else if (colorIndex2 == colorIndex3) {
-      float offset = noise * 0.35;
-      if (baryPos.g > baryPos.b) {
-         offset += f(baryPos.b, vPositionW.x, vPositionW.z);
-      }
-      else if (baryPos.b > baryPos.g) {
-         offset -= f(baryPos.g, vPositionW.x, vPositionW.z);
-      }
-
+      if (colorIndex1 < colorIndex2) {
+         offset *= -1.;
+      }  
       if (baryPos.r + offset > baryPos.g && baryPos.r + offset > baryPos.b) {
          color = color1;
          colorIndex = colorIndex1;
@@ -124,14 +110,14 @@ void main() {
       //float offset2 = (cos(vPositionW.x * factor2 + vPositionW.y * factor2 * 0.5) + cos(vPositionW.y * factor2 + vPositionW.z * factor2 * 0.5) + cos(vPositionW.z * factor2 + vPositionW.x * factor2 * 0.5)) * 0.1;
       //float offset3 = (cos(vPositionW.x * factor3 + vPositionW.y * factor3 * 0.5) + cos(vPositionW.y * factor3 + vPositionW.z * factor3 * 0.5) + cos(vPositionW.z * factor3 + vPositionW.x * factor3 * 0.5)) * 0.1;
 
-      float offset1 = noise * 0.35;
+      float offset1 = 0.;
       float offset2 = 0.;
-      float offset3 = - noise * 0.35;
-
+      float offset3 = 0.;
 
       baryPos.r += offset1;
       baryPos.g += offset2;
       baryPos.b += offset3;
+
       if (baryPos.r >= baryPos.g && baryPos.r >= baryPos.b) {
          color = color1;
          colorIndex = colorIndex1;
@@ -155,7 +141,6 @@ void main() {
       }
    }
 
-   /*
    // show triangles
    if (baryPos.r < 0.005) {
       color = vec3(0., 0., 0.);
@@ -167,6 +152,7 @@ void main() {
       color = vec3(0., 0., 0.);
    }
 
+   /*
    // show Chunck Parts
    float dx = vPositionW.x + 0.5 - floor(vPositionW.x + 0.5);
    float dy = vPositionW.y + 0.5 - floor(vPositionW.y + 0.5);
