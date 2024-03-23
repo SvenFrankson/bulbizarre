@@ -1954,7 +1954,10 @@ class Brick {
             this.root.updateMesh();
             return;
         }
-        let data = this.generateMeshVertexData();
+        let vDatas = [];
+        let subMeshInfos = [];
+        this.generateMeshVertexData(vDatas, subMeshInfos);
+        let data = Brick.MergeVertexDatas(subMeshInfos, ...vDatas);
         if (!this.mesh) {
             this.mesh = new BrickMesh(this);
             this.mesh.position = this.position;
@@ -1973,9 +1976,12 @@ class Brick {
             this.mesh.renderOutline = false;
         }
     }
-    generateMeshVertexData(vDatas, parentGlobalPosition) {
+    generateMeshVertexData(vDatas, subMeshInfos, parentGlobalPosition) {
         if (!vDatas) {
             vDatas = [];
+        }
+        if (!subMeshInfos) {
+            subMeshInfos = [];
         }
         let template = BrickTemplateManager.Instance.getTemplate(this.templateIndex);
         let vData = Mummu.CloneVertexData(template.vertexData);
@@ -1985,12 +1991,43 @@ class Brick {
             Mummu.TranslateVertexDataInPlace(vData, globalPosition);
         }
         vDatas.push(vData);
+        subMeshInfos.push({ faceId: 0, brick: this });
         if (this.children) {
             for (let i = 0; i < this.children.length; i++) {
-                this.children[i].generateMeshVertexData(vDatas, globalPosition);
+                this.children[i].generateMeshVertexData(vDatas, subMeshInfos, globalPosition);
             }
         }
-        return Mummu.MergeVertexDatas(...vDatas);
+    }
+    static MergeVertexDatas(subMeshInfos, ...datas) {
+        let mergedData = new BABYLON.VertexData();
+        let positions = [];
+        let indices = [];
+        let normals = [];
+        let uvs = [];
+        let colors = [];
+        for (let i = 0; i < datas.length; i++) {
+            let offset = positions.length / 3;
+            positions.push(...datas[i].positions);
+            indices.push(...datas[i].indices.map(index => { return index + offset; }));
+            normals.push(...datas[i].normals);
+            if (datas[i].uvs) {
+                uvs.push(...datas[i].uvs);
+            }
+            if (datas[i].colors) {
+                colors.push(...datas[i].colors);
+            }
+            subMeshInfos[i].faceId = indices.length / 3;
+        }
+        mergedData.positions = positions;
+        mergedData.indices = indices;
+        mergedData.normals = normals;
+        if (uvs.length > 0) {
+            mergedData.uvs = uvs;
+        }
+        if (colors.length > 0) {
+            mergedData.colors = colors;
+        }
+        return mergedData;
     }
 }
 class BrickTemplateManager {
