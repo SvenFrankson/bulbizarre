@@ -4,6 +4,13 @@ interface BrickProp {
 
 }
 
+class BrickMesh extends BABYLON.Mesh {
+
+    constructor(public brick: Brick) {
+        super("brick");
+    }
+}
+
 class Brick {
 
     public position: BABYLON.Vector3 = BABYLON.Vector3.Zero();
@@ -18,6 +25,7 @@ class Brick {
         return 0;
     }
 
+    public mesh: BrickMesh;
     private _rotationQuaternion: BABYLON.Quaternion;
     public get root(): Brick {
         if (this.parent) {
@@ -39,13 +47,29 @@ class Brick {
         }
     }
 
-    public generateMeshVertexData(vDatas?: BABYLON.VertexData[]): BABYLON.VertexData {
+    public updateMesh(): void {
+        if (this != this.root) {
+            this.root.updateMesh();
+            return;
+        }
+        let data = this.generateMeshVertexData();
+        if (!this.mesh) {
+            this.mesh = new BrickMesh(this);
+            this.mesh.position.copyFrom(this.position);
+            console.log(this.mesh.position);
+        }
+        data.applyToMesh(this.mesh);
+    }
+
+    private generateMeshVertexData(vDatas?: BABYLON.VertexData[]): BABYLON.VertexData {
         if (!vDatas) {
             vDatas = [];
         }
         let template = BrickTemplateManager.Instance.getTemplate(this.templateIndex);
         let vData = Mummu.CloneVertexData(template.vertexData);
-        Mummu.TranslateVertexDataInPlace(vData, this.position);
+        if (this != this.root) {
+            Mummu.TranslateVertexDataInPlace(vData, this.position);
+        }
         vDatas.push(vData);
 
         if (this.children) {
