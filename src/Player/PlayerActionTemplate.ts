@@ -185,4 +185,126 @@ class PlayerActionTemplate {
         
         return action;
     }
+
+    public static CreateBrickAction(player: Player): PlayerAction {
+        let action = new PlayerAction("brick", player);
+        action.backgroundColor = "#000000";
+        let previewMesh: BABYLON.Mesh;
+        let previewBox: BABYLON.Mesh;
+        action.iconUrl = "/datas/images/brick-icon.png";
+
+        let lastSize: number;
+        let lastI: number;
+        let lastJ: number;
+        let lastK: number;
+
+
+        action.onUpdate = () => {
+            let terrain = player.game.terrain;
+            if (player.game.router.inPlayMode) {
+                let x: number;
+                let y: number;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(
+                    x,
+                    y,
+                    (mesh) => {
+                        return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                    }
+                )
+                if (hit && hit.pickedPoint) {
+                    let n =  hit.getNormal(true).scaleInPlace(0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                    if (chunckIJK) {
+                        // Redraw block preview
+                        if (!previewMesh) {
+                            previewMesh = Mummu.CreateLineBox("preview", { width: 1 * terrain.blockSizeIJ_m, height: 0.333 * terrain.blockSizeK_m, depth: 1 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
+                        }
+                        
+                        let needRedrawMesh: boolean = false;
+                        if (lastI != chunckIJK.ijk.i) {
+                            lastI = chunckIJK.ijk.i;
+                            needRedrawMesh = true;
+                        }
+                        if (lastJ != chunckIJK.ijk.j) {
+                            lastJ = chunckIJK.ijk.j;
+                            needRedrawMesh = true;
+                        }
+                        if (lastK != chunckIJK.ijk.k) {
+                            lastK = chunckIJK.ijk.k;
+                            needRedrawMesh = true;
+                        }
+                        
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j) * terrain.blockSizeIJ_m);
+                        previewMesh.parent = chunckIJK.chunck.mesh;
+
+                        return;
+                    }
+                }
+            }
+            
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+        }
+
+        action.onClick = () => {
+            if (player.game.router.inPlayMode) {
+                let x: number;
+                let y: number;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(
+                    x,
+                    y,
+                    (mesh) => {
+                        return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                    }
+                )
+                if (hit && hit.pickedPoint) {
+                    let n =  hit.getNormal(true).scaleInPlace(0.2);
+                    let brick = new Brick(0, 0);
+                    let vData = brick.generateMeshVertexData();
+                    let mesh = new BABYLON.Mesh("brick");
+                    mesh.position.copyFrom(hit.pickedPoint).addInPlace(n);
+                    vData.applyToMesh(mesh);
+                }
+            }
+        }
+
+        action.onUnequip = () => {
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+            lastSize = undefined;
+            lastI = undefined;
+            lastJ = undefined;
+            lastK = undefined;
+        }
+        
+        return action;
+    }
 }

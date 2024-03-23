@@ -668,6 +668,7 @@ class Game {
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Rock), 4);
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction(this.player), 5);
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -1903,6 +1904,80 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
         this.setFloat("specularPower", this._specularPower);
     }
 }
+class Brick {
+    constructor(templateIndex, colorIndex, parent) {
+        this.templateIndex = templateIndex;
+        this.colorIndex = colorIndex;
+        this.position = BABYLON.Vector3.Zero();
+        if (parent) {
+            this.parent = parent;
+            if (!parent.children) {
+                parent.children = [];
+            }
+            parent.children.push(this);
+        }
+        else {
+            this._rotationQuaternion = BABYLON.Quaternion.Identity();
+        }
+    }
+    get childrenCount() {
+        if (this.children) {
+            return this.children.length;
+        }
+        return 0;
+    }
+    get root() {
+        if (this.parent) {
+            return this.parent.root;
+        }
+        return this;
+    }
+    generateMeshVertexData(vDatas) {
+        if (!vDatas) {
+            vDatas = [];
+        }
+        let template = BrickTemplateManager.Instance.getTemplate(this.templateIndex);
+        let vData = Mummu.CloneVertexData(template.vertexData);
+        Mummu.TranslateVertexDataInPlace(vData, this.position);
+        vDatas.push(vData);
+        if (this.children) {
+            for (let i = 0; i < this.children.length; i++) {
+                this.children[i].generateMeshVertexData(vDatas);
+            }
+        }
+        return Mummu.MergeVertexDatas(...vDatas);
+    }
+}
+class BrickTemplateManager {
+    constructor() {
+        this._templates = [];
+    }
+    static get Instance() {
+        if (!BrickTemplateManager._Instance) {
+            BrickTemplateManager._Instance = new BrickTemplateManager();
+        }
+        return BrickTemplateManager._Instance;
+    }
+    getTemplate(index) {
+        if (!this._templates[index]) {
+            this._templates[index] = this.createTemplate(index);
+        }
+        return this._templates[index];
+    }
+    createTemplate(index) {
+        return new BrickTemplate(index);
+    }
+}
+class BrickTemplate {
+    constructor(index) {
+        this.index = index;
+        let w = 0.78;
+        let h = 0.32;
+        this.vertexData = Mummu.CreateBeveledBoxVertexData({ width: (1 * w / h), height: 1, depth: (1 * w / h) });
+        Mummu.TranslateVertexDataInPlace(this.vertexData, new BABYLON.Vector3(0, 0.5, 0));
+        Mummu.ScaleVertexDataInPlace(this.vertexData, h);
+    }
+}
 class Player extends BABYLON.Mesh {
     constructor(game) {
         super("player");
@@ -2272,6 +2347,109 @@ class PlayerActionTemplate {
                             saveToLocalStorage: true
                         });
                     }
+                }
+            }
+        };
+        action.onUnequip = () => {
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+            lastSize = undefined;
+            lastI = undefined;
+            lastJ = undefined;
+            lastK = undefined;
+        };
+        return action;
+    }
+    static CreateBrickAction(player) {
+        let action = new PlayerAction("brick", player);
+        action.backgroundColor = "#000000";
+        let previewMesh;
+        let previewBox;
+        action.iconUrl = "/datas/images/brick-icon.png";
+        let lastSize;
+        let lastI;
+        let lastJ;
+        let lastK;
+        action.onUpdate = () => {
+            let terrain = player.game.terrain;
+            if (player.game.router.inPlayMode) {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                });
+                if (hit && hit.pickedPoint) {
+                    let n = hit.getNormal(true).scaleInPlace(0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                    if (chunckIJK) {
+                        // Redraw block preview
+                        if (!previewMesh) {
+                            previewMesh = Mummu.CreateLineBox("preview", { width: 1 * terrain.blockSizeIJ_m, height: 0.333 * terrain.blockSizeK_m, depth: 1 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
+                        }
+                        let needRedrawMesh = false;
+                        if (lastI != chunckIJK.ijk.i) {
+                            lastI = chunckIJK.ijk.i;
+                            needRedrawMesh = true;
+                        }
+                        if (lastJ != chunckIJK.ijk.j) {
+                            lastJ = chunckIJK.ijk.j;
+                            needRedrawMesh = true;
+                        }
+                        if (lastK != chunckIJK.ijk.k) {
+                            lastK = chunckIJK.ijk.k;
+                            needRedrawMesh = true;
+                        }
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j) * terrain.blockSizeIJ_m);
+                        previewMesh.parent = chunckIJK.chunck.mesh;
+                        return;
+                    }
+                }
+            }
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+        };
+        action.onClick = () => {
+            if (player.game.router.inPlayMode) {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                });
+                if (hit && hit.pickedPoint) {
+                    let n = hit.getNormal(true).scaleInPlace(0.2);
+                    let brick = new Brick(0, 0);
+                    let vData = brick.generateMeshVertexData();
+                    let mesh = new BABYLON.Mesh("brick");
+                    mesh.position.copyFrom(hit.pickedPoint).addInPlace(n);
+                    vData.applyToMesh(mesh);
                 }
             }
         };
