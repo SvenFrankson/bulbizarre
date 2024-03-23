@@ -1926,12 +1926,33 @@ class Brick {
             this._rotationQuaternion = BABYLON.Quaternion.Identity();
         }
     }
-    setParent(b) {
-        this._parent = b;
-        if (!b.children) {
-            b.children = [];
+    getPositionFromRoot() {
+        let p = this.position.clone();
+        let parent = this.parent;
+        while (parent && parent != this.root) {
+            p.addInPlace(parent.position);
         }
-        b.children.push(this);
+        return p;
+    }
+    get parent() {
+        return this._parent;
+    }
+    setParent(b) {
+        if (this._parent != b) {
+            if (this._parent) {
+                let index = this._parent.children.indexOf(this);
+                if (index > -1) {
+                    this._parent.children.splice(index, 1);
+                }
+            }
+            this._parent = b;
+            if (this._parent) {
+                if (!this._parent.children) {
+                    this._parent.children = [];
+                }
+                this._parent.children.push(this);
+            }
+        }
     }
     get childrenCount() {
         if (this.children) {
@@ -1951,13 +1972,14 @@ class Brick {
                 this.mesh.dispose();
                 this.mesh = undefined;
             }
+            this.subMeshInfos = undefined;
             this.root.updateMesh();
             return;
         }
         let vDatas = [];
-        let subMeshInfos = [];
-        this.generateMeshVertexData(vDatas, subMeshInfos);
-        let data = Brick.MergeVertexDatas(subMeshInfos, ...vDatas);
+        this.subMeshInfos = [];
+        this.generateMeshVertexData(vDatas, this.subMeshInfos);
+        let data = Brick.MergeVertexDatas(this.subMeshInfos, ...vDatas);
         if (!this.mesh) {
             this.mesh = new BrickMesh(this);
             this.mesh.position = this.position;
@@ -1995,6 +2017,13 @@ class Brick {
         if (this.children) {
             for (let i = 0; i < this.children.length; i++) {
                 this.children[i].generateMeshVertexData(vDatas, subMeshInfos, globalPosition);
+            }
+        }
+    }
+    getBrickForFaceId(faceId) {
+        for (let i = 0; i < this.subMeshInfos.length; i++) {
+            if (this.subMeshInfos[i].faceId >= faceId) {
+                return this.subMeshInfos[i].brick;
             }
         }
     }
@@ -2382,10 +2411,28 @@ class PlayerControler {
             }
             this._pointerIsDown = true;
             if (this.player.currentAction) {
-                this.player.currentAction.onClick(this.player.currentChuncks);
+                if (event.button === 0) {
+                    if (this.player.currentAction.onClick) {
+                        this.player.currentAction.onClick(this.player.currentChuncks);
+                    }
+                }
+                else if (event.button === 2) {
+                    if (this.player.currentAction.onRightClick) {
+                        this.player.currentAction.onRightClick(this.player.currentChuncks);
+                    }
+                }
             }
             else {
-                this.player.defaultAction.onClick(this.player.currentChuncks);
+                if (event.button === 0) {
+                    if (this.player.defaultAction.onClick) {
+                        this.player.defaultAction.onClick(this.player.currentChuncks);
+                    }
+                }
+                else if (event.button === 2) {
+                    if (this.player.defaultAction.onRightClick) {
+                        this.player.defaultAction.onRightClick(this.player.currentChuncks);
+                    }
+                }
             }
         };
         this._pointerMove = (event) => {
@@ -2889,16 +2936,22 @@ class PlayerActionDefault {
         let brickAction = new PlayerAction("default-action", player);
         brickAction.backgroundColor = "#FF00FF";
         brickAction.iconUrl = "";
+        let aimedBrickRoot;
+        let setAimedBrickRoot = (b) => {
+            if (b != aimedBrickRoot) {
+                if (aimedBrickRoot) {
+                    aimedBrickRoot.unlight();
+                }
+                aimedBrickRoot = b;
+                if (aimedBrickRoot) {
+                    aimedBrickRoot.highlight();
+                }
+            }
+        };
         let aimedBrick;
         let setAimedBrick = (b) => {
             if (b != aimedBrick) {
-                if (aimedBrick) {
-                    aimedBrick.unlight();
-                }
                 aimedBrick = b;
-                if (aimedBrick) {
-                    aimedBrick.highlight();
-                }
             }
         };
         brickAction.onUpdate = () => {
@@ -2918,23 +2971,38 @@ class PlayerActionDefault {
                 });
                 if (hit.hit && hit.pickedPoint) {
                     if (hit.pickedMesh instanceof BrickMesh) {
-                        let root = hit.pickedMesh.brick.root;
-                        if (root) {
-                            setAimedBrick(root);
+                        let brickRoot = hit.pickedMesh.brick.root;
+                        if (brickRoot) {
+                            setAimedBrickRoot(brickRoot);
+                            let brick = brickRoot.getBrickForFaceId(hit.faceId);
+                            if (brick) {
+                                setAimedBrick(brick);
+                            }
                             return;
                         }
                     }
                 }
             }
+            setAimedBrickRoot(undefined);
             setAimedBrick(undefined);
         };
         brickAction.onClick = () => {
+            if (aimedBrickRoot) {
+                player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+            }
+        };
+        brickAction.onRightClick = () => {
             if (aimedBrick) {
-                player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrick);
+                let prevParent = aimedBrick.parent;
+                let p = aimedBrick.getPositionFromRoot();
+                aimedBrick.setParent(undefined);
+                aimedBrick.position.copyFrom(p).addInPlace(prevParent.root.position);
+                prevParent.updateMesh();
+                aimedBrick.updateMesh();
             }
         };
         brickAction.onUnequip = () => {
-            setAimedBrick(undefined);
+            setAimedBrickRoot(undefined);
         };
         return brickAction;
     }

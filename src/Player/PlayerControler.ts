@@ -125,10 +125,28 @@ class PlayerControler {
         }
         this._pointerIsDown = true;
         if (this.player.currentAction) {
-            this.player.currentAction.onClick(this.player.currentChuncks);
+            if (event.button === 0) {
+                if (this.player.currentAction.onClick) {
+                    this.player.currentAction.onClick(this.player.currentChuncks);
+                }
+            }
+            else if (event.button === 2) {
+                if (this.player.currentAction.onRightClick) {
+                    this.player.currentAction.onRightClick(this.player.currentChuncks);
+                }
+            }
         }
         else {
-            this.player.defaultAction.onClick(this.player.currentChuncks);
+            if (event.button === 0) {
+                if (this.player.defaultAction.onClick) {
+                    this.player.defaultAction.onClick(this.player.currentChuncks);
+                }
+            }
+            else if (event.button === 2) {
+                if (this.player.defaultAction.onRightClick) {
+                    this.player.defaultAction.onRightClick(this.player.currentChuncks);
+                }
+            }
         }
     }
 

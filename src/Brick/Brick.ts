@@ -14,15 +14,36 @@ class BrickMesh extends BABYLON.Mesh {
 class Brick {
 
     public position: BABYLON.Vector3 = BABYLON.Vector3.Zero();
+    public getPositionFromRoot(): BABYLON.Vector3 {
+        let p = this.position.clone();
+        let parent = this.parent;
+        while (parent && parent != this.root) {
+            p.addInPlace(parent.position);
+        }
+        return p;
+    }
     public direction: number;
 
     private _parent: Brick;
+    public get parent(): Brick {
+        return this._parent;
+    }
     public setParent(b: Brick): void {
-        this._parent = b;
-        if (!b.children) {
-            b.children = [];
+        if (this._parent != b) {
+            if (this._parent) {
+                let index = this._parent.children.indexOf(this);
+                if (index > - 1) {
+                    this._parent.children.splice(index, 1);
+                }
+            }
+            this._parent = b;
+            if (this._parent) {
+                if (!this._parent.children) {
+                    this._parent.children = [];
+                }
+                this._parent.children.push(this);
+            }
         }
-        b.children.push(this);
     }
     public children: Brick[];
     public get childrenCount(): number {
@@ -60,13 +81,14 @@ class Brick {
                 this.mesh.dispose();
                 this.mesh = undefined;
             }
+            this.subMeshInfos = undefined;
             this.root.updateMesh();
             return;
         }
         let vDatas: BABYLON.VertexData[] = []
-        let subMeshInfos: { faceId: number, brick: Brick }[] = [];
-        this.generateMeshVertexData(vDatas, subMeshInfos);
-        let data = Brick.MergeVertexDatas(subMeshInfos, ...vDatas);
+        this.subMeshInfos = [];
+        this.generateMeshVertexData(vDatas, this.subMeshInfos);
+        let data = Brick.MergeVertexDatas(this.subMeshInfos, ...vDatas);
         if (!this.mesh) {
             this.mesh = new BrickMesh(this);
             this.mesh.position = this.position;
@@ -114,6 +136,13 @@ class Brick {
     }
 
     public subMeshInfos: { faceId: number, brick: Brick }[];
+    public getBrickForFaceId(faceId: number): Brick {
+        for (let i = 0; i < this.subMeshInfos.length; i++) {
+            if (this.subMeshInfos[i].faceId >= faceId) {
+                return this.subMeshInfos[i].brick;
+            }
+        }
+    }
 
     public static MergeVertexDatas(subMeshInfos: { faceId: number, brick: Brick }[], ...datas: BABYLON.VertexData[]): BABYLON.VertexData {
         let mergedData = new BABYLON.VertexData();

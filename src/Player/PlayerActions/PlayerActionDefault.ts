@@ -5,16 +5,23 @@ class PlayerActionDefault {
         brickAction.backgroundColor = "#FF00FF";
         brickAction.iconUrl = "";
 
+        let aimedBrickRoot: Brick;
+        let setAimedBrickRoot = (b: Brick) => {
+            if (b != aimedBrickRoot) {
+                if (aimedBrickRoot) {
+                    aimedBrickRoot.unlight();
+                }
+                aimedBrickRoot = b;
+                if (aimedBrickRoot) {
+                    aimedBrickRoot.highlight();
+                }
+            }
+        }
+        
         let aimedBrick: Brick;
         let setAimedBrick = (b: Brick) => {
             if (b != aimedBrick) {
-                if (aimedBrick) {
-                    aimedBrick.unlight();
-                }
                 aimedBrick = b;
-                if (aimedBrick) {
-                    aimedBrick.highlight();
-                }
             }
         }
 
@@ -40,25 +47,41 @@ class PlayerActionDefault {
 
                 if (hit.hit && hit.pickedPoint) {
                     if (hit.pickedMesh instanceof BrickMesh) {
-                        let root = hit.pickedMesh.brick.root;
-                        if (root) {
-                            setAimedBrick(root);
+                        let brickRoot = hit.pickedMesh.brick.root;
+                        if (brickRoot) {
+                            setAimedBrickRoot(brickRoot);
+                            let brick = brickRoot.getBrickForFaceId(hit.faceId);
+                            if (brick) {
+                                setAimedBrick(brick);
+                            }
                             return;
                         }
                     }
                 }
             }
+            setAimedBrickRoot(undefined);
             setAimedBrick(undefined);
         }
 
         brickAction.onClick = () => {
+            if (aimedBrickRoot) {
+                player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+            }
+        }
+
+        brickAction.onRightClick = () => {
             if (aimedBrick) {
-                player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrick);
+                let prevParent = aimedBrick.parent;
+                let p = aimedBrick.getPositionFromRoot();
+                aimedBrick.setParent(undefined);
+                aimedBrick.position.copyFrom(p).addInPlace(prevParent.root.position);
+                prevParent.updateMesh();
+                aimedBrick.updateMesh();
             }
         }
 
         brickAction.onUnequip = () => {
-            setAimedBrick(undefined);
+            setAimedBrickRoot(undefined);
         }
         
         return brickAction;

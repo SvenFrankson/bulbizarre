@@ -10,6 +10,7 @@ class PlayerAction {
 
     public onUpdate: (chuncks?: Kulla.Chunck[]) => void;
     public onClick: (chuncks?: Kulla.Chunck[]) => void;
+    public onRightClick: (chuncks?: Kulla.Chunck[]) => void;
     public onWheel: (e: WheelEvent) => void;
     public onKeyDown: (e: KeyboardEvent) => void;
     public onKeyUp: (e: KeyboardEvent) => void;
