@@ -74,7 +74,7 @@ class PlayerActionMoveBrick {
                 if (hit && hit.pickedPoint) {
                     let n =  hit.getNormal(true).scaleInPlace(0.1);
                     if (hit.pickedMesh instanceof BrickMesh) {
-                        if (duration > 0.5) {
+                        if (duration > 0.3) {
                             let root = hit.pickedMesh.brick.root;
                             let aimedBrick = root.getBrickForFaceId(hit.faceId);
                             let dp = hit.pickedPoint.subtract(aimedBrick.absolutePosition).subtract(root.position);

@@ -186,7 +186,7 @@ class PlayerActionTemplate {
         return action;
     }
 
-    public static CreateBrickAction(player: Player): PlayerAction {
+    public static CreateBrickAction(brickId: number | string, player: Player): PlayerAction {
         let brickAction = new PlayerAction("brick", player);
         brickAction.backgroundColor = "#000000";
         let previewMesh: BABYLON.Mesh;
@@ -289,14 +289,14 @@ class PlayerActionTemplate {
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        let brick = new Brick(0, 0, aimedBrick);
+                        let brick = new Brick(brickId, 0, aimedBrick);
                         brick.position.copyFrom(dp);
                         brick.updateMesh();
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                         if (chunckIJK) {
-                            let brick = new Brick(0, 0);
+                            let brick = new Brick(brickId, 0);
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
                             brick.updateMesh();
                         }

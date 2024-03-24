@@ -91,8 +91,21 @@ class Brick {
         }
         return this;
     }
+    public index: number;
+    public get name(): string {
+        return BRICK_LIST[this.index];
+    }
 
-    constructor(public templateIndex: number, public colorIndex: number, parent?: Brick) {
+    constructor(index: number, colorIndex: number, parent?: Brick);
+    constructor(name: string, colorIndex: number, parent?: Brick);
+    constructor(brickId: number | string, colorIndex: number, parent?: Brick);
+    constructor(arg1: any, public colorIndex: number, parent?: Brick) {
+        if (typeof(arg1) === "number") {
+            this.index = arg1;
+        }
+        else {
+            this.index = BRICK_LIST.indexOf(arg1);
+        }
         if (parent) {
             this._parent = parent;
             if (!parent.children) {
@@ -142,14 +155,8 @@ class Brick {
         }
     }
 
-    private async generateMeshVertexData(vDatas?: BABYLON.VertexData[], subMeshInfos?: { faceId: number, brick: Brick }[], depth: number = 0): Promise<void> {
-        if (!vDatas) {
-            vDatas = [];
-        }
-        if (!subMeshInfos) {
-            subMeshInfos = [];
-        }
-        let template = await BrickTemplateManager.Instance.getTemplate(this.templateIndex);
+    private async generateMeshVertexData(vDatas: BABYLON.VertexData[], subMeshInfos: { faceId: number, brick: Brick }[], depth: number = 0): Promise<void> {
+        let template = await BrickTemplateManager.Instance.getTemplate(this.index);
         let vData = Mummu.CloneVertexData(template.vertexData);
         let colors = [];
         let color = Brick.depthColors[depth];
@@ -173,7 +180,7 @@ class Brick {
     public subMeshInfos: { faceId: number, brick: Brick }[];
     public getBrickForFaceId(faceId: number): Brick {
         for (let i = 0; i < this.subMeshInfos.length; i++) {
-            if (this.subMeshInfos[i].faceId >= faceId) {
+            if (this.subMeshInfos[i].faceId > faceId) {
                 return this.subMeshInfos[i].brick;
             }
         }

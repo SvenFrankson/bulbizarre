@@ -30,18 +30,28 @@ class BrickTemplateManager {
 
 class BrickTemplate {
     public vertexData: BABYLON.VertexData;
+    public get name(): string {
+        return BRICK_LIST[this.index];
+    }
 
     constructor(public index: number, public brickTemplateManager: BrickTemplateManager) {
-        let w = 0.78;
-        let h = 0.32;
-        let s = 2;
-        this.vertexData = Mummu.CreateBeveledBoxVertexData({ width: (s * w / h), height: s, depth: (s * w / h), flat: true });
-        Mummu.TranslateVertexDataInPlace(this.vertexData, new BABYLON.Vector3(0, s * 0.5, 0));
-        Mummu.ScaleVertexDataInPlace(this.vertexData, h / s);
+        
     }
 
     public async load(): Promise<void> {
         //this.vertexData = (await this.brickTemplateManager.vertexDataLoader.get("./datas/meshes/plate_1x1.babylon"))[0];
-        this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(4, 3, 1);
+        if (this.name.startsWith("brick_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let w = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 3, w);
+        }
+        else if (this.name.startsWith("plate_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let w = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 1, w);
+        }
+        else {
+            this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(1, 1, 1);
+        }
     }
 }

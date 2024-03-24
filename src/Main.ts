@@ -202,7 +202,8 @@ class Game {
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Rock), 4);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction(this.player), 5);
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_1x1", this.player), 5);
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("brick_2x1", this.player), 6);
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {

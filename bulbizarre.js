@@ -668,7 +668,8 @@ class Game {
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Rock), 4);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction(this.player), 5);
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_1x1", this.player), 5);
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("brick_2x1", this.player), 6);
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -1911,11 +1912,16 @@ class BrickMesh extends BABYLON.Mesh {
     }
 }
 class Brick {
-    constructor(templateIndex, colorIndex, parent) {
-        this.templateIndex = templateIndex;
+    constructor(arg1, colorIndex, parent) {
         this.colorIndex = colorIndex;
         this.position = BABYLON.Vector3.Zero();
         this.absolutePosition = BABYLON.Vector3.Zero();
+        if (typeof (arg1) === "number") {
+            this.index = arg1;
+        }
+        else {
+            this.index = BRICK_LIST.indexOf(arg1);
+        }
         if (parent) {
             this._parent = parent;
             if (!parent.children) {
@@ -1978,6 +1984,9 @@ class Brick {
         }
         return this;
     }
+    get name() {
+        return BRICK_LIST[this.index];
+    }
     async updateMesh() {
         if (this != this.root) {
             if (this.mesh) {
@@ -2012,13 +2021,7 @@ class Brick {
         }
     }
     async generateMeshVertexData(vDatas, subMeshInfos, depth = 0) {
-        if (!vDatas) {
-            vDatas = [];
-        }
-        if (!subMeshInfos) {
-            subMeshInfos = [];
-        }
-        let template = await BrickTemplateManager.Instance.getTemplate(this.templateIndex);
+        let template = await BrickTemplateManager.Instance.getTemplate(this.index);
         let vData = Mummu.CloneVertexData(template.vertexData);
         let colors = [];
         let color = Brick.depthColors[depth];
@@ -2039,7 +2042,7 @@ class Brick {
     }
     getBrickForFaceId(faceId) {
         for (let i = 0; i < this.subMeshInfos.length; i++) {
-            if (this.subMeshInfos[i].faceId >= faceId) {
+            if (this.subMeshInfos[i].faceId > faceId) {
                 return this.subMeshInfos[i].brick;
             }
         }
@@ -2092,6 +2095,16 @@ Brick.depthColors = [
     new BABYLON.Color4(1, 0.5, 1, 1),
     new BABYLON.Color4(0.2, 0.2, 0.2, 1)
 ];
+var BRICK_LIST = [
+    "plate_1x1",
+    "plate_2x1",
+    "plate_3x1",
+    "plate_4x1",
+    "brick_1x1",
+    "brick_2x1",
+    "brick_3x1",
+    "brick_4x1",
+];
 class BrickTemplateManager {
     constructor(vertexDataLoader) {
         this.vertexDataLoader = vertexDataLoader;
@@ -2119,16 +2132,25 @@ class BrickTemplate {
     constructor(index, brickTemplateManager) {
         this.index = index;
         this.brickTemplateManager = brickTemplateManager;
-        let w = 0.78;
-        let h = 0.32;
-        let s = 2;
-        this.vertexData = Mummu.CreateBeveledBoxVertexData({ width: (s * w / h), height: s, depth: (s * w / h), flat: true });
-        Mummu.TranslateVertexDataInPlace(this.vertexData, new BABYLON.Vector3(0, s * 0.5, 0));
-        Mummu.ScaleVertexDataInPlace(this.vertexData, h / s);
+    }
+    get name() {
+        return BRICK_LIST[this.index];
     }
     async load() {
         //this.vertexData = (await this.brickTemplateManager.vertexDataLoader.get("./datas/meshes/plate_1x1.babylon"))[0];
-        this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(4, 3, 1);
+        if (this.name.startsWith("brick_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let w = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 3, w);
+        }
+        else if (this.name.startsWith("plate_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let w = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 1, w);
+        }
+        else {
+            this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(1, 1, 1);
+        }
     }
 }
 var BRICK_S = 0.375;
@@ -3215,7 +3237,7 @@ class PlayerActionMoveBrick {
                 if (hit && hit.pickedPoint) {
                     let n = hit.getNormal(true).scaleInPlace(0.1);
                     if (hit.pickedMesh instanceof BrickMesh) {
-                        if (duration > 0.5) {
+                        if (duration > 0.3) {
                             let root = hit.pickedMesh.brick.root;
                             let aimedBrick = root.getBrickForFaceId(hit.faceId);
                             let dp = hit.pickedPoint.subtract(aimedBrick.absolutePosition).subtract(root.position);
@@ -3419,7 +3441,7 @@ class PlayerActionTemplate {
         };
         return action;
     }
-    static CreateBrickAction(player) {
+    static CreateBrickAction(brickId, player) {
         let brickAction = new PlayerAction("brick", player);
         brickAction.backgroundColor = "#000000";
         let previewMesh;
@@ -3509,14 +3531,14 @@ class PlayerActionTemplate {
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        let brick = new Brick(0, 0, aimedBrick);
+                        let brick = new Brick(brickId, 0, aimedBrick);
                         brick.position.copyFrom(dp);
                         brick.updateMesh();
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                         if (chunckIJK) {
-                            let brick = new Brick(0, 0);
+                            let brick = new Brick(brickId, 0);
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
                             brick.updateMesh();
                         }
