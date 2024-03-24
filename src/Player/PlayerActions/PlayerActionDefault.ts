@@ -63,13 +63,13 @@ class PlayerActionDefault {
             setAimedBrick(undefined);
         }
 
-        brickAction.onClick = () => {
+        brickAction.onPointerUp = () => {
             if (aimedBrickRoot) {
                 player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
             }
         }
 
-        brickAction.onRightClick = () => {
+        brickAction.onRightPointerUp = () => {
             if (aimedBrick) {
                 let prevParent = aimedBrick.parent;
                 if (prevParent) {

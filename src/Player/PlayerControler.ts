@@ -42,10 +42,10 @@ class PlayerControler {
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
             if (!this.playerInventoryView.shown) {
                 if (this.player.currentAction) {
-                    this.player.currentAction.onClick(this.player.currentChuncks);
+                    this.player.currentAction.onPointerDown(this.player.currentChuncks);
                 }
                 else {
-                    this.player.defaultAction.onClick(this.player.currentChuncks);
+                    this.player.defaultAction.onPointerDown(this.player.currentChuncks);
                 }
             }
         })
@@ -119,32 +119,34 @@ class PlayerControler {
         })
     }
 
+    private _pointerDownTime: number;
     private _pointerDown = (event: PointerEvent) => {
+        this._pointerDownTime = performance.now();
         if (!this.player.game.router.inPlayMode) {
             return;
         }
         this._pointerIsDown = true;
         if (this.player.currentAction) {
             if (event.button === 0) {
-                if (this.player.currentAction.onClick) {
-                    this.player.currentAction.onClick(this.player.currentChuncks);
+                if (this.player.currentAction.onPointerDown) {
+                    this.player.currentAction.onPointerDown(this.player.currentChuncks);
                 }
             }
             else if (event.button === 2) {
-                if (this.player.currentAction.onRightClick) {
-                    this.player.currentAction.onRightClick(this.player.currentChuncks);
+                if (this.player.currentAction.onRightPointerDown) {
+                    this.player.currentAction.onRightPointerDown(this.player.currentChuncks);
                 }
             }
         }
         else {
             if (event.button === 0) {
-                if (this.player.defaultAction.onClick) {
-                    this.player.defaultAction.onClick(this.player.currentChuncks);
+                if (this.player.defaultAction.onPointerDown) {
+                    this.player.defaultAction.onPointerDown(this.player.currentChuncks);
                 }
             }
             else if (event.button === 2) {
-                if (this.player.defaultAction.onRightClick) {
-                    this.player.defaultAction.onRightClick(this.player.currentChuncks);
+                if (this.player.defaultAction.onRightPointerDown) {
+                    this.player.defaultAction.onRightPointerDown(this.player.currentChuncks);
                 }
             }
         }
@@ -166,6 +168,31 @@ class PlayerControler {
             return;
         }
         this._pointerIsDown = false;
+        let duration = (performance.now() - this._pointerDownTime) / 1000;
+        if (this.player.currentAction) {
+            if (event.button === 0) {
+                if (this.player.currentAction.onPointerUp) {
+                    this.player.currentAction.onPointerUp(duration, this.player.currentChuncks);
+                }
+            }
+            else if (event.button === 2) {
+                if (this.player.currentAction.onRightPointerUp) {
+                    this.player.currentAction.onRightPointerUp(duration, this.player.currentChuncks);
+                }
+            }
+        }
+        else {
+            if (event.button === 0) {
+                if (this.player.defaultAction.onPointerUp) {
+                    this.player.defaultAction.onPointerUp(duration, this.player.currentChuncks);
+                }
+            }
+            else if (event.button === 2) {
+                if (this.player.defaultAction.onRightPointerUp) {
+                    this.player.defaultAction.onRightPointerUp(duration, this.player.currentChuncks);
+                }
+            }
+        }
     }
 
     public update(dt: number): void {

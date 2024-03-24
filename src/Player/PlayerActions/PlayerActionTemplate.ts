@@ -135,7 +135,7 @@ class PlayerActionTemplate {
             }
         }
 
-        action.onClick = () => {
+        action.onPointerDown = () => {
             if (player.game.router.inPlayMode) {
                 let x: number;
                 let y: number;
@@ -260,7 +260,7 @@ class PlayerActionTemplate {
             }
         }
 
-        brickAction.onClick = () => {
+        brickAction.onPointerDown = () => {
             let terrain = player.game.terrain;
             if (player.game.router.inPlayMode) {
                 let x: number;

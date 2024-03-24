@@ -2439,31 +2439,32 @@ class PlayerControler {
         this._pointerIsDown = false;
         this.gamepadInControl = false;
         this._pointerDown = (event) => {
+            this._pointerDownTime = performance.now();
             if (!this.player.game.router.inPlayMode) {
                 return;
             }
             this._pointerIsDown = true;
             if (this.player.currentAction) {
                 if (event.button === 0) {
-                    if (this.player.currentAction.onClick) {
-                        this.player.currentAction.onClick(this.player.currentChuncks);
+                    if (this.player.currentAction.onPointerDown) {
+                        this.player.currentAction.onPointerDown(this.player.currentChuncks);
                     }
                 }
                 else if (event.button === 2) {
-                    if (this.player.currentAction.onRightClick) {
-                        this.player.currentAction.onRightClick(this.player.currentChuncks);
+                    if (this.player.currentAction.onRightPointerDown) {
+                        this.player.currentAction.onRightPointerDown(this.player.currentChuncks);
                     }
                 }
             }
             else {
                 if (event.button === 0) {
-                    if (this.player.defaultAction.onClick) {
-                        this.player.defaultAction.onClick(this.player.currentChuncks);
+                    if (this.player.defaultAction.onPointerDown) {
+                        this.player.defaultAction.onPointerDown(this.player.currentChuncks);
                     }
                 }
                 else if (event.button === 2) {
-                    if (this.player.defaultAction.onRightClick) {
-                        this.player.defaultAction.onRightClick(this.player.currentChuncks);
+                    if (this.player.defaultAction.onRightPointerDown) {
+                        this.player.defaultAction.onRightPointerDown(this.player.currentChuncks);
                     }
                 }
             }
@@ -2483,6 +2484,31 @@ class PlayerControler {
                 return;
             }
             this._pointerIsDown = false;
+            let duration = (performance.now() - this._pointerDownTime) / 1000;
+            if (this.player.currentAction) {
+                if (event.button === 0) {
+                    if (this.player.currentAction.onPointerUp) {
+                        this.player.currentAction.onPointerUp(duration, this.player.currentChuncks);
+                    }
+                }
+                else if (event.button === 2) {
+                    if (this.player.currentAction.onRightPointerUp) {
+                        this.player.currentAction.onRightPointerUp(duration, this.player.currentChuncks);
+                    }
+                }
+            }
+            else {
+                if (event.button === 0) {
+                    if (this.player.defaultAction.onPointerUp) {
+                        this.player.defaultAction.onPointerUp(duration, this.player.currentChuncks);
+                    }
+                }
+                else if (event.button === 2) {
+                    if (this.player.defaultAction.onRightPointerUp) {
+                        this.player.defaultAction.onRightPointerUp(duration, this.player.currentChuncks);
+                    }
+                }
+            }
         };
         player.controler = this;
         window.addEventListener("pointerdown", this._pointerDown);
@@ -2513,10 +2539,10 @@ class PlayerControler {
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
             if (!this.playerInventoryView.shown) {
                 if (this.player.currentAction) {
-                    this.player.currentAction.onClick(this.player.currentChuncks);
+                    this.player.currentAction.onPointerDown(this.player.currentChuncks);
                 }
                 else {
-                    this.player.defaultAction.onClick(this.player.currentChuncks);
+                    this.player.defaultAction.onPointerDown(this.player.currentChuncks);
                 }
             }
         });
@@ -3019,12 +3045,12 @@ class PlayerActionDefault {
             setAimedBrickRoot(undefined);
             setAimedBrick(undefined);
         };
-        brickAction.onClick = () => {
+        brickAction.onPointerUp = () => {
             if (aimedBrickRoot) {
                 player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
             }
         };
-        brickAction.onRightClick = () => {
+        brickAction.onRightPointerUp = () => {
             if (aimedBrick) {
                 let prevParent = aimedBrick.parent;
                 if (prevParent) {
@@ -3089,7 +3115,7 @@ class PlayerActionMoveBrick {
                 }
             }
         };
-        brickAction.onClick = () => {
+        brickAction.onPointerUp = (duration) => {
             let terrain = player.game.terrain;
             if (player.game.router.inPlayMode) {
                 let x;
@@ -3108,15 +3134,27 @@ class PlayerActionMoveBrick {
                 if (hit && hit.pickedPoint) {
                     let n = hit.getNormal(true).scaleInPlace(0.2);
                     if (hit.pickedMesh instanceof BrickMesh) {
-                        let root = hit.pickedMesh.brick.root;
-                        let aimedBrick = root.getBrickForFaceId(hit.faceId);
-                        let dp = hit.pickedPoint.add(n).subtract(aimedBrick.absolutePosition).subtract(root.position);
-                        dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
-                        dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
-                        dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        brick.position.copyFrom(dp);
-                        brick.setParent(aimedBrick);
-                        brick.updateMesh();
+                        if (duration > 0.5) {
+                            let root = hit.pickedMesh.brick.root;
+                            let aimedBrick = root.getBrickForFaceId(hit.faceId);
+                            let dp = hit.pickedPoint.add(n).subtract(aimedBrick.absolutePosition).subtract(root.position);
+                            dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
+                            dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
+                            dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
+                            brick.position.copyFrom(dp);
+                            brick.setParent(aimedBrick);
+                            brick.updateMesh();
+                        }
+                        else {
+                            let root = hit.pickedMesh.brick.root;
+                            let rootPosition = root.position;
+                            let dp = hit.pickedPoint.add(n).subtract(rootPosition);
+                            dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
+                            dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
+                            dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
+                            brick.root.position.copyFrom(dp);
+                            brick.root.position.addInPlace(rootPosition);
+                        }
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
@@ -3256,7 +3294,7 @@ class PlayerActionTemplate {
                 previewBox = undefined;
             }
         };
-        action.onClick = () => {
+        action.onPointerDown = () => {
             if (player.game.router.inPlayMode) {
                 let x;
                 let y;
@@ -3365,7 +3403,7 @@ class PlayerActionTemplate {
                 previewBox = undefined;
             }
         };
-        brickAction.onClick = () => {
+        brickAction.onPointerDown = () => {
             let terrain = player.game.terrain;
             if (player.game.router.inPlayMode) {
                 let x;

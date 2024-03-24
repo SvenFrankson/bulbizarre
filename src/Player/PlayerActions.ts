@@ -9,8 +9,10 @@ class PlayerAction {
     public item: PlayerInventoryItem;
 
     public onUpdate: (chuncks?: Kulla.Chunck[]) => void;
-    public onClick: (chuncks?: Kulla.Chunck[]) => void;
-    public onRightClick: (chuncks?: Kulla.Chunck[]) => void;
+    public onPointerDown: (chuncks?: Kulla.Chunck[]) => void;
+    public onRightPointerDown: (chuncks?: Kulla.Chunck[]) => void;
+    public onPointerUp: (duration: number, chuncks?: Kulla.Chunck[]) => void;
+    public onRightPointerUp: (duration: number, chuncks?: Kulla.Chunck[]) => void;
     public onWheel: (e: WheelEvent) => void;
     public onKeyDown: (e: KeyboardEvent) => void;
     public onKeyUp: (e: KeyboardEvent) => void;

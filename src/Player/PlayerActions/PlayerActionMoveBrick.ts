@@ -53,7 +53,7 @@ class PlayerActionMoveBrick {
             }
         }
 
-        brickAction.onClick = () => {
+        brickAction.onPointerUp = (duration: number) => {
             let terrain = player.game.terrain;
             if (player.game.router.inPlayMode) {
                 let x: number;
@@ -76,15 +76,27 @@ class PlayerActionMoveBrick {
                 if (hit && hit.pickedPoint) {
                     let n =  hit.getNormal(true).scaleInPlace(0.2);
                     if (hit.pickedMesh instanceof BrickMesh) {
-                        let root = hit.pickedMesh.brick.root;
-                        let aimedBrick = root.getBrickForFaceId(hit.faceId);
-                        let dp = hit.pickedPoint.add(n).subtract(aimedBrick.absolutePosition).subtract(root.position);
-                        dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
-                        dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
-                        dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        brick.position.copyFrom(dp);
-                        brick.setParent(aimedBrick);
-                        brick.updateMesh();
+                        if (duration > 0.5) {
+                            let root = hit.pickedMesh.brick.root;
+                            let aimedBrick = root.getBrickForFaceId(hit.faceId);
+                            let dp = hit.pickedPoint.add(n).subtract(aimedBrick.absolutePosition).subtract(root.position);
+                            dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
+                            dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
+                            dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
+                            brick.position.copyFrom(dp);
+                            brick.setParent(aimedBrick);
+                            brick.updateMesh();
+                        }
+                        else {
+                            let root = hit.pickedMesh.brick.root;
+                            let rootPosition = root.position;
+                            let dp = hit.pickedPoint.add(n).subtract(rootPosition);
+                            dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
+                            dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
+                            dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
+                            brick.root.position.copyFrom(dp);
+                            brick.root.position.addInPlace(rootPosition);
+                        }
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
