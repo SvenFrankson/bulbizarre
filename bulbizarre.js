@@ -263,14 +263,15 @@ var KeyInput;
     KeyInput[KeyInput["INVENTORY_PREV_CAT"] = 15] = "INVENTORY_PREV_CAT";
     KeyInput[KeyInput["INVENTORY_NEXT_CAT"] = 16] = "INVENTORY_NEXT_CAT";
     KeyInput[KeyInput["INVENTORY_EQUIP_ITEM"] = 17] = "INVENTORY_EQUIP_ITEM";
-    KeyInput[KeyInput["DELETE_SELECTED"] = 18] = "DELETE_SELECTED";
-    KeyInput[KeyInput["MOVE_FORWARD"] = 19] = "MOVE_FORWARD";
-    KeyInput[KeyInput["MOVE_LEFT"] = 20] = "MOVE_LEFT";
-    KeyInput[KeyInput["MOVE_BACK"] = 21] = "MOVE_BACK";
-    KeyInput[KeyInput["MOVE_RIGHT"] = 22] = "MOVE_RIGHT";
-    KeyInput[KeyInput["JUMP"] = 23] = "JUMP";
-    KeyInput[KeyInput["MAIN_MENU"] = 24] = "MAIN_MENU";
-    KeyInput[KeyInput["WORKBENCH"] = 25] = "WORKBENCH";
+    KeyInput[KeyInput["ROTATE_SELECTED"] = 18] = "ROTATE_SELECTED";
+    KeyInput[KeyInput["DELETE_SELECTED"] = 19] = "DELETE_SELECTED";
+    KeyInput[KeyInput["MOVE_FORWARD"] = 20] = "MOVE_FORWARD";
+    KeyInput[KeyInput["MOVE_LEFT"] = 21] = "MOVE_LEFT";
+    KeyInput[KeyInput["MOVE_BACK"] = 22] = "MOVE_BACK";
+    KeyInput[KeyInput["MOVE_RIGHT"] = 23] = "MOVE_RIGHT";
+    KeyInput[KeyInput["JUMP"] = 24] = "JUMP";
+    KeyInput[KeyInput["MAIN_MENU"] = 25] = "MAIN_MENU";
+    KeyInput[KeyInput["WORKBENCH"] = 26] = "WORKBENCH";
 })(KeyInput || (KeyInput = {}));
 class GameConfiguration extends Nabu.Configuration {
     constructor(configName, game) {
@@ -316,6 +317,7 @@ class GameConfiguration extends Nabu.Configuration {
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_PREV_CAT", KeyInput.INVENTORY_PREV_CAT, "GamepadBtn4"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_NEXT_CAT", KeyInput.INVENTORY_NEXT_CAT, "GamepadBtn5"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_EQUIP_ITEM", KeyInput.INVENTORY_EQUIP_ITEM, "GamepadBtn0"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ROTATE_SELECTED", KeyInput.ROTATE_SELECTED, "KeyR"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "DELETE_SELECTED", KeyInput.DELETE_SELECTED, "KeyX"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_LEFT", KeyInput.MOVE_LEFT, "KeyA"),
@@ -1917,7 +1919,10 @@ class Brick {
     constructor(arg1, colorIndex, parent) {
         this.colorIndex = colorIndex;
         this.position = BABYLON.Vector3.Zero();
+        this.rotationQuaternion = BABYLON.Quaternion.Identity();
         this.absolutePosition = BABYLON.Vector3.Zero();
+        this.absoluteRotationQuaternion = BABYLON.Quaternion.Identity();
+        this.absoluteMatrix = BABYLON.Matrix.Identity();
         if (typeof (arg1) === "number") {
             this.index = arg1;
         }
@@ -1931,26 +1936,24 @@ class Brick {
             }
             parent.children.push(this);
         }
-        else {
-            this._rotationQuaternion = BABYLON.Quaternion.Identity();
-        }
     }
     get isRoot() {
         return this._parent === undefined;
     }
-    updatePosition() {
+    updatePositionRotation() {
         if (this.isRoot) {
-            this.absolutePosition.copyFromFloats(0, 0, 0);
+            BABYLON.Matrix.IdentityToRef(this.absoluteMatrix);
         }
         else {
-            this.absolutePosition.copyFrom(this.position);
+            BABYLON.Matrix.ComposeToRef(BABYLON.Vector3.One(), this.rotationQuaternion, this.position, this.absoluteMatrix);
         }
         if (this.parent) {
-            this.absolutePosition.addInPlace(this.parent.absolutePosition);
+            this.parent.absoluteMatrix.multiplyToRef(this.absoluteMatrix, this.absoluteMatrix);
         }
+        this.absoluteMatrix.decompose(BABYLON.Vector3.One(), this.absoluteRotationQuaternion, this.absolutePosition);
         if (this.children) {
             this.children.forEach(child => {
-                child.updatePosition();
+                child.updatePositionRotation();
             });
         }
     }
@@ -2011,7 +2014,7 @@ class Brick {
             this.root.updateMesh();
             return;
         }
-        this.updatePosition();
+        this.updatePositionRotation();
         let vDatas = [];
         this.subMeshInfos = [];
         await this.generateMeshVertexData(vDatas, this.subMeshInfos);
@@ -2019,6 +2022,7 @@ class Brick {
         if (!this.mesh) {
             this.mesh = new BrickMesh(this);
             this.mesh.position = this.position;
+            this.mesh.rotationQuaternion = this.rotationQuaternion;
         }
         data.applyToMesh(this.mesh);
     }
@@ -2044,6 +2048,7 @@ class Brick {
         }
         vData.colors = colors;
         if (this != this.root) {
+            Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
             Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
         }
         vDatas.push(vData);
@@ -3302,6 +3307,12 @@ class PlayerActionMoveBrick {
             }
             player.currentAction = undefined;
         };
+        let rotateBrick = () => {
+            if (brick) {
+                let quat = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, Math.PI / 2);
+                quat.multiplyToRef(brick.rotationQuaternion, brick.rotationQuaternion);
+            }
+        };
         let deleteBrick = () => {
             if (brick) {
                 brick.dispose();
@@ -3310,10 +3321,12 @@ class PlayerActionMoveBrick {
         };
         brickAction.onEquip = () => {
             console.log("Map DELETE BRICK");
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
             player.game.inputManager.addMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick);
         };
         brickAction.onUnequip = () => {
             console.log("Unmap DELETE BRICK");
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick);
         };
         return brickAction;

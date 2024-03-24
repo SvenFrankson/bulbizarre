@@ -35,20 +35,26 @@ class Brick {
     }
 
     public position: BABYLON.Vector3 = BABYLON.Vector3.Zero();
+    public rotationQuaternion: BABYLON.Quaternion = BABYLON.Quaternion.Identity();
     public absolutePosition: BABYLON.Vector3 = BABYLON.Vector3.Zero();
-    public updatePosition(): void {
+    public absoluteRotationQuaternion: BABYLON.Quaternion = BABYLON.Quaternion.Identity();
+    public absoluteMatrix: BABYLON.Matrix = BABYLON.Matrix.Identity();
+    public updatePositionRotation(): void {
         if (this.isRoot) {
-            this.absolutePosition.copyFromFloats(0, 0, 0);
+            BABYLON.Matrix.IdentityToRef(this.absoluteMatrix);
         }
         else {
-            this.absolutePosition.copyFrom(this.position);
+            BABYLON.Matrix.ComposeToRef(BABYLON.Vector3.One(), this.rotationQuaternion, this.position, this.absoluteMatrix);
         }
+
         if (this.parent) {
-            this.absolutePosition.addInPlace(this.parent.absolutePosition);
+            this.parent.absoluteMatrix.multiplyToRef(this.absoluteMatrix, this.absoluteMatrix);
         }
+        this.absoluteMatrix.decompose(BABYLON.Vector3.One(), this.absoluteRotationQuaternion, this.absolutePosition);
+
         if (this.children) {
             this.children.forEach(child => {
-                child.updatePosition();
+                child.updatePositionRotation();
             })
         }
     }
@@ -84,7 +90,6 @@ class Brick {
     }
 
     public mesh: BrickMesh;
-    private _rotationQuaternion: BABYLON.Quaternion;
     public get root(): Brick {
         if (this._parent) {
             return this._parent.root;
@@ -113,9 +118,6 @@ class Brick {
             }
             parent.children.push(this);
         }
-        else {
-            this._rotationQuaternion = BABYLON.Quaternion.Identity();
-        }
     }
 
     public dispose(): void {
@@ -141,7 +143,7 @@ class Brick {
             this.root.updateMesh();
             return;
         }
-        this.updatePosition();
+        this.updatePositionRotation();
         let vDatas: BABYLON.VertexData[] = []
         this.subMeshInfos = [];
         await this.generateMeshVertexData(vDatas, this.subMeshInfos);
@@ -149,6 +151,7 @@ class Brick {
         if (!this.mesh) {
             this.mesh = new BrickMesh(this);
             this.mesh.position = this.position;
+            this.mesh.rotationQuaternion = this.rotationQuaternion;
         }
         data.applyToMesh(this.mesh);
     }
@@ -178,6 +181,7 @@ class Brick {
         }
         vData.colors = colors;
         if (this != this.root) {
+            Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
             Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
         }
         vDatas.push(vData);

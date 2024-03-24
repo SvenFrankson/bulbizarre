@@ -107,6 +107,13 @@ class PlayerActionMoveBrick {
             player.currentAction = undefined;
         }
 
+        let rotateBrick = () => {
+            if (brick) {
+                let quat = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, Math.PI / 2);
+                quat.multiplyToRef(brick.rotationQuaternion, brick.rotationQuaternion);
+            }
+        }
+
         let deleteBrick = () => {
             if (brick) {
                 brick.dispose();
@@ -116,10 +123,12 @@ class PlayerActionMoveBrick {
 
         brickAction.onEquip = () => {
             console.log("Map DELETE BRICK");
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick)
             player.game.inputManager.addMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick)
         }
         brickAction.onUnequip = () => {
             console.log("Unmap DELETE BRICK");
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick)
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick)
         }
         
