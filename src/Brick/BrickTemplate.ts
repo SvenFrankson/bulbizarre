@@ -41,6 +41,7 @@ class BrickTemplate {
     }
 
     public async load(): Promise<void> {
-        this.vertexData = (await this.brickTemplateManager.vertexDataLoader.get("./datas/meshes/plate_1x1.babylon"))[0];
+        //this.vertexData = (await this.brickTemplateManager.vertexDataLoader.get("./datas/meshes/plate_1x1.babylon"))[0];
+        this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(4, 3, 1);
     }
 }

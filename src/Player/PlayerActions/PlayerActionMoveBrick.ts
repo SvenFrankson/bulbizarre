@@ -88,7 +88,7 @@ class PlayerActionMoveBrick {
                         else {
                             let root = hit.pickedMesh.brick.root;
                             let rootPosition = root.position;
-                            let dp = hit.pickedPoint.add(n).subtract(rootPosition);
+                            let dp = hit.pickedPoint.subtract(rootPosition);
                             dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                             dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                             dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
