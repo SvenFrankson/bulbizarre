@@ -104,12 +104,23 @@ class PlayerActionMoveBrick {
                     }
                 }
             }
-            brickAction.onUnequip = () => {};
             player.currentAction = undefined;
         }
 
+        let deleteBrick = () => {
+            if (brick) {
+                brick.dispose();
+                player.currentAction = undefined;
+            }
+        }
+
+        brickAction.onEquip = () => {
+            console.log("Map DELETE BRICK");
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick)
+        }
         brickAction.onUnequip = () => {
-            brick.root.position.copyFrom(initPos);
+            console.log("Unmap DELETE BRICK");
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick)
         }
         
         return brickAction;

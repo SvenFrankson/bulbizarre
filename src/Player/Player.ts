@@ -3,7 +3,34 @@ class Player extends BABYLON.Mesh {
     public controler: PlayerControler;
     public inventory: PlayerInventory;
     public playerActionManager: PlayerActionManager;
-    public currentAction: PlayerAction;
+    private _currentAction: PlayerAction;
+    public get currentAction(): PlayerAction {
+        return this._currentAction;
+    }
+    public set currentAction(action: PlayerAction) {
+        if (action) {
+            console.log("set current action " + action.name);
+        }
+        else {
+            console.log("set current action undefined");
+        }
+        
+        if (this._currentAction && this._currentAction.onUnequip) {
+            console.log("unequip " + ((this._currentAction != undefined) ? this._currentAction.name : "undefined"))
+            this._currentAction.onUnequip();
+        }
+        else {
+            console.log("no unequip callback");
+        }
+        this._currentAction = action;
+        if (this._currentAction && this._currentAction.onEquip) {
+            console.log("equip " + ((this._currentAction != undefined) ? this._currentAction.name : "undefined"))
+            this._currentAction.onEquip();
+        }
+        else {
+            console.log("no equip callback");
+        }
+    }
     public defaultAction: PlayerAction;
 
     public mass: number = 2;

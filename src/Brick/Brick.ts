@@ -118,6 +118,19 @@ class Brick {
         }
     }
 
+    public dispose(): void {
+        if (this.isRoot) {
+            if (this.mesh) {
+                this.mesh.dispose();
+            }
+        }
+        else {
+            let root = this.root;
+            this.setParent(undefined);
+            root.updateMesh();
+        }
+    }
+
     public async updateMesh(): Promise<void> {
         if (this != this.root) {
             if (this.mesh) {

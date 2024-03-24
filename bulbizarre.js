@@ -263,13 +263,14 @@ var KeyInput;
     KeyInput[KeyInput["INVENTORY_PREV_CAT"] = 15] = "INVENTORY_PREV_CAT";
     KeyInput[KeyInput["INVENTORY_NEXT_CAT"] = 16] = "INVENTORY_NEXT_CAT";
     KeyInput[KeyInput["INVENTORY_EQUIP_ITEM"] = 17] = "INVENTORY_EQUIP_ITEM";
-    KeyInput[KeyInput["MOVE_FORWARD"] = 18] = "MOVE_FORWARD";
-    KeyInput[KeyInput["MOVE_LEFT"] = 19] = "MOVE_LEFT";
-    KeyInput[KeyInput["MOVE_BACK"] = 20] = "MOVE_BACK";
-    KeyInput[KeyInput["MOVE_RIGHT"] = 21] = "MOVE_RIGHT";
-    KeyInput[KeyInput["JUMP"] = 22] = "JUMP";
-    KeyInput[KeyInput["MAIN_MENU"] = 23] = "MAIN_MENU";
-    KeyInput[KeyInput["WORKBENCH"] = 24] = "WORKBENCH";
+    KeyInput[KeyInput["DELETE_SELECTED"] = 18] = "DELETE_SELECTED";
+    KeyInput[KeyInput["MOVE_FORWARD"] = 19] = "MOVE_FORWARD";
+    KeyInput[KeyInput["MOVE_LEFT"] = 20] = "MOVE_LEFT";
+    KeyInput[KeyInput["MOVE_BACK"] = 21] = "MOVE_BACK";
+    KeyInput[KeyInput["MOVE_RIGHT"] = 22] = "MOVE_RIGHT";
+    KeyInput[KeyInput["JUMP"] = 23] = "JUMP";
+    KeyInput[KeyInput["MAIN_MENU"] = 24] = "MAIN_MENU";
+    KeyInput[KeyInput["WORKBENCH"] = 25] = "WORKBENCH";
 })(KeyInput || (KeyInput = {}));
 class GameConfiguration extends Nabu.Configuration {
     constructor(configName, game) {
@@ -315,6 +316,7 @@ class GameConfiguration extends Nabu.Configuration {
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_PREV_CAT", KeyInput.INVENTORY_PREV_CAT, "GamepadBtn4"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_NEXT_CAT", KeyInput.INVENTORY_NEXT_CAT, "GamepadBtn5"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_EQUIP_ITEM", KeyInput.INVENTORY_EQUIP_ITEM, "GamepadBtn0"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "DELETE_SELECTED", KeyInput.DELETE_SELECTED, "KeyX"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_LEFT", KeyInput.MOVE_LEFT, "KeyA"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_BACK", KeyInput.MOVE_BACK, "KeyS"),
@@ -1987,6 +1989,18 @@ class Brick {
     get name() {
         return BRICK_LIST[this.index];
     }
+    dispose() {
+        if (this.isRoot) {
+            if (this.mesh) {
+                this.mesh.dispose();
+            }
+        }
+        else {
+            let root = this.root;
+            this.setParent(undefined);
+            root.updateMesh();
+        }
+    }
     async updateMesh() {
         if (this != this.root) {
             if (this.mesh) {
@@ -2254,6 +2268,32 @@ class Player extends BABYLON.Mesh {
         this.inventory = new PlayerInventory(this);
         this.defaultAction = PlayerActionDefault.Create(this);
     }
+    get currentAction() {
+        return this._currentAction;
+    }
+    set currentAction(action) {
+        if (action) {
+            console.log("set current action " + action.name);
+        }
+        else {
+            console.log("set current action undefined");
+        }
+        if (this._currentAction && this._currentAction.onUnequip) {
+            console.log("unequip " + ((this._currentAction != undefined) ? this._currentAction.name : "undefined"));
+            this._currentAction.onUnequip();
+        }
+        else {
+            console.log("no unequip callback");
+        }
+        this._currentAction = action;
+        if (this._currentAction && this._currentAction.onEquip) {
+            console.log("equip " + ((this._currentAction != undefined) ? this._currentAction.name : "undefined"));
+            this._currentAction.onEquip();
+        }
+        else {
+            console.log("no equip callback");
+        }
+    }
     update(dt) {
         if (this.controler) {
             this.controler.update(dt);
@@ -2416,12 +2456,8 @@ class PlayerActionManager {
         }
     }
     equipAction() {
-        this.player.defaultAction.onUnequip();
         this.player.currentAction = this.linkedActions[this.currentActionIndex];
         if (this.player.currentAction) {
-            if (this.player.currentAction.onEquip) {
-                this.player.currentAction.onEquip();
-            }
             this.playerActionView.onActionEquiped(this.currentActionIndex);
         }
         else {
@@ -2430,9 +2466,6 @@ class PlayerActionManager {
     }
     unEquipAction() {
         if (this.player.currentAction) {
-            if (this.player.currentAction.onUnequip) {
-                this.player.currentAction.onUnequip();
-            }
             this.player.currentAction = undefined;
             this.playerActionView.onActionEquiped(-1);
         }
@@ -3267,11 +3300,21 @@ class PlayerActionMoveBrick {
                     }
                 }
             }
-            brickAction.onUnequip = () => { };
             player.currentAction = undefined;
         };
+        let deleteBrick = () => {
+            if (brick) {
+                brick.dispose();
+                player.currentAction = undefined;
+            }
+        };
+        brickAction.onEquip = () => {
+            console.log("Map DELETE BRICK");
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick);
+        };
         brickAction.onUnequip = () => {
-            brick.root.position.copyFrom(initPos);
+            console.log("Unmap DELETE BRICK");
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick);
         };
         return brickAction;
     }

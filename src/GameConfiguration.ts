@@ -18,6 +18,7 @@ enum KeyInput {
     INVENTORY_PREV_CAT,
     INVENTORY_NEXT_CAT,
     INVENTORY_EQUIP_ITEM,
+    DELETE_SELECTED,
     MOVE_FORWARD,
     MOVE_LEFT,
     MOVE_BACK,
@@ -25,6 +26,7 @@ enum KeyInput {
     JUMP,
     MAIN_MENU,
     WORKBENCH,
+
 }
 
 class GameConfiguration extends Nabu.Configuration {
@@ -91,6 +93,7 @@ class GameConfiguration extends Nabu.Configuration {
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_PREV_CAT", KeyInput.INVENTORY_PREV_CAT, "GamepadBtn4"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_NEXT_CAT", KeyInput.INVENTORY_NEXT_CAT, "GamepadBtn5"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_EQUIP_ITEM", KeyInput.INVENTORY_EQUIP_ITEM, "GamepadBtn0"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "DELETE_SELECTED", KeyInput.DELETE_SELECTED, "KeyX"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_LEFT", KeyInput.MOVE_LEFT, "KeyA"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_BACK", KeyInput.MOVE_BACK, "KeyS"),

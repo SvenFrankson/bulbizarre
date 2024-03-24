@@ -98,12 +98,8 @@ class PlayerActionManager {
     }
 
     public equipAction(): void {
-        this.player.defaultAction.onUnequip();
         this.player.currentAction = this.linkedActions[this.currentActionIndex];
         if (this.player.currentAction) {
-            if (this.player.currentAction.onEquip) {
-                this.player.currentAction.onEquip();
-            }
             this.playerActionView.onActionEquiped(this.currentActionIndex);
         }
         else {
@@ -113,9 +109,6 @@ class PlayerActionManager {
 
     public unEquipAction(): void {
         if (this.player.currentAction) {
-            if (this.player.currentAction.onUnequip) {
-                this.player.currentAction.onUnequip();
-            }
             this.player.currentAction = undefined;
             this.playerActionView.onActionEquiped(-1);
         }
