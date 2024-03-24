@@ -72,11 +72,13 @@ class PlayerActionDefault {
         brickAction.onRightClick = () => {
             if (aimedBrick) {
                 let prevParent = aimedBrick.parent;
-                let p = aimedBrick.getPositionFromRoot();
-                aimedBrick.setParent(undefined);
-                aimedBrick.position.copyFrom(p).addInPlace(prevParent.root.position);
-                prevParent.updateMesh();
-                aimedBrick.updateMesh();
+                if (prevParent) {
+                    let p = aimedBrick.absolutePosition;
+                    aimedBrick.setParent(undefined);
+                    aimedBrick.position.copyFrom(p).addInPlace(prevParent.root.position);
+                    prevParent.updateMesh();
+                    aimedBrick.updateMesh();
+                }
             }
         }
 

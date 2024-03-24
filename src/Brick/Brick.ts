@@ -13,14 +13,44 @@ class BrickMesh extends BABYLON.Mesh {
 
 class Brick {
 
+    public static depthColors = [
+        new BABYLON.Color4(1, 1, 1, 1),
+        new BABYLON.Color4(1, 0, 0, 1),
+        new BABYLON.Color4(0, 1, 0, 1),
+        new BABYLON.Color4(0, 0, 1, 1),
+        new BABYLON.Color4(1, 1, 0, 1),
+        new BABYLON.Color4(0, 1, 1, 1),
+        new BABYLON.Color4(1, 0, 1, 1),
+        new BABYLON.Color4(1, 0.5, 0, 1),
+        new BABYLON.Color4(0, 1, 0.5, 1),
+        new BABYLON.Color4(0.5, 0, 1, 1),
+        new BABYLON.Color4(1, 1, 0.5, 1),
+        new BABYLON.Color4(0.5, 1, 1, 1),
+        new BABYLON.Color4(1, 0.5, 1, 1),
+        new BABYLON.Color4(0.2, 0.2, 0.2, 1)
+    ]
+
+    public get isRoot(): boolean {
+        return this._parent === undefined;
+    }
+
     public position: BABYLON.Vector3 = BABYLON.Vector3.Zero();
-    public getPositionFromRoot(): BABYLON.Vector3 {
-        let p = this.position.clone();
-        let parent = this.parent;
-        while (parent && parent != this.root) {
-            p.addInPlace(parent.position);
+    public absolutePosition: BABYLON.Vector3 = BABYLON.Vector3.Zero();
+    public updatePosition(): void {
+        if (this.isRoot) {
+            this.absolutePosition.copyFromFloats(0, 0, 0);
         }
-        return p;
+        else {
+            this.absolutePosition.copyFrom(this.position);
+        }
+        if (this.parent) {
+            this.absolutePosition.addInPlace(this.parent.absolutePosition);
+        }
+        if (this.children) {
+            this.children.forEach(child => {
+                child.updatePosition();
+            })
+        }
     }
     public direction: number;
 
@@ -85,6 +115,7 @@ class Brick {
             this.root.updateMesh();
             return;
         }
+        this.updatePosition();
         let vDatas: BABYLON.VertexData[] = []
         this.subMeshInfos = [];
         this.generateMeshVertexData(vDatas, this.subMeshInfos);
@@ -111,7 +142,7 @@ class Brick {
         }
     }
 
-    private generateMeshVertexData(vDatas?: BABYLON.VertexData[], subMeshInfos?: { faceId: number, brick: Brick }[], parentGlobalPosition?: BABYLON.Vector3): void {
+    private generateMeshVertexData(vDatas?: BABYLON.VertexData[], subMeshInfos?: { faceId: number, brick: Brick }[], depth: number = 0): void {
         if (!vDatas) {
             vDatas = [];
         }
@@ -120,17 +151,21 @@ class Brick {
         }
         let template = BrickTemplateManager.Instance.getTemplate(this.templateIndex);
         let vData = Mummu.CloneVertexData(template.vertexData);
-        let globalPosition = parentGlobalPosition ? parentGlobalPosition.clone() : BABYLON.Vector3.Zero();
+        let colors = [];
+        let color = Brick.depthColors[depth];
+        for (let i = 0; i < vData.positions.length / 3; i++) {
+            colors.push(color.r, color.g, color.b, color.a);
+        }
+        vData.colors = colors;
         if (this != this.root) {
-            globalPosition.addInPlace(this.position);
-            Mummu.TranslateVertexDataInPlace(vData, globalPosition);
+            Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
         }
         vDatas.push(vData);
         subMeshInfos.push({ faceId: 0, brick: this });
 
         if (this.children) {
             for (let i = 0; i < this.children.length; i++) {
-                this.children[i].generateMeshVertexData(vDatas, subMeshInfos, globalPosition);
+                this.children[i].generateMeshVertexData(vDatas, subMeshInfos, depth + 1);
             }
         }
     }

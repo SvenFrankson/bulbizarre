@@ -1915,6 +1915,7 @@ class Brick {
         this.templateIndex = templateIndex;
         this.colorIndex = colorIndex;
         this.position = BABYLON.Vector3.Zero();
+        this.absolutePosition = BABYLON.Vector3.Zero();
         if (parent) {
             this._parent = parent;
             if (!parent.children) {
@@ -1926,13 +1927,24 @@ class Brick {
             this._rotationQuaternion = BABYLON.Quaternion.Identity();
         }
     }
-    getPositionFromRoot() {
-        let p = this.position.clone();
-        let parent = this.parent;
-        while (parent && parent != this.root) {
-            p.addInPlace(parent.position);
+    get isRoot() {
+        return this._parent === undefined;
+    }
+    updatePosition() {
+        if (this.isRoot) {
+            this.absolutePosition.copyFromFloats(0, 0, 0);
         }
-        return p;
+        else {
+            this.absolutePosition.copyFrom(this.position);
+        }
+        if (this.parent) {
+            this.absolutePosition.addInPlace(this.parent.absolutePosition);
+        }
+        if (this.children) {
+            this.children.forEach(child => {
+                child.updatePosition();
+            });
+        }
     }
     get parent() {
         return this._parent;
@@ -1976,6 +1988,7 @@ class Brick {
             this.root.updateMesh();
             return;
         }
+        this.updatePosition();
         let vDatas = [];
         this.subMeshInfos = [];
         this.generateMeshVertexData(vDatas, this.subMeshInfos);
@@ -1998,7 +2011,7 @@ class Brick {
             this.mesh.renderOutline = false;
         }
     }
-    generateMeshVertexData(vDatas, subMeshInfos, parentGlobalPosition) {
+    generateMeshVertexData(vDatas, subMeshInfos, depth = 0) {
         if (!vDatas) {
             vDatas = [];
         }
@@ -2007,16 +2020,20 @@ class Brick {
         }
         let template = BrickTemplateManager.Instance.getTemplate(this.templateIndex);
         let vData = Mummu.CloneVertexData(template.vertexData);
-        let globalPosition = parentGlobalPosition ? parentGlobalPosition.clone() : BABYLON.Vector3.Zero();
+        let colors = [];
+        let color = Brick.depthColors[depth];
+        for (let i = 0; i < vData.positions.length / 3; i++) {
+            colors.push(color.r, color.g, color.b, color.a);
+        }
+        vData.colors = colors;
         if (this != this.root) {
-            globalPosition.addInPlace(this.position);
-            Mummu.TranslateVertexDataInPlace(vData, globalPosition);
+            Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
         }
         vDatas.push(vData);
         subMeshInfos.push({ faceId: 0, brick: this });
         if (this.children) {
             for (let i = 0; i < this.children.length; i++) {
-                this.children[i].generateMeshVertexData(vDatas, subMeshInfos, globalPosition);
+                this.children[i].generateMeshVertexData(vDatas, subMeshInfos, depth + 1);
             }
         }
     }
@@ -2059,6 +2076,22 @@ class Brick {
         return mergedData;
     }
 }
+Brick.depthColors = [
+    new BABYLON.Color4(1, 1, 1, 1),
+    new BABYLON.Color4(1, 0, 0, 1),
+    new BABYLON.Color4(0, 1, 0, 1),
+    new BABYLON.Color4(0, 0, 1, 1),
+    new BABYLON.Color4(1, 1, 0, 1),
+    new BABYLON.Color4(0, 1, 1, 1),
+    new BABYLON.Color4(1, 0, 1, 1),
+    new BABYLON.Color4(1, 0.5, 0, 1),
+    new BABYLON.Color4(0, 1, 0.5, 1),
+    new BABYLON.Color4(0.5, 0, 1, 1),
+    new BABYLON.Color4(1, 1, 0.5, 1),
+    new BABYLON.Color4(0.5, 1, 1, 1),
+    new BABYLON.Color4(1, 0.5, 1, 1),
+    new BABYLON.Color4(0.2, 0.2, 0.2, 1)
+];
 class BrickTemplateManager {
     constructor() {
         this._templates = [];
@@ -2994,11 +3027,13 @@ class PlayerActionDefault {
         brickAction.onRightClick = () => {
             if (aimedBrick) {
                 let prevParent = aimedBrick.parent;
-                let p = aimedBrick.getPositionFromRoot();
-                aimedBrick.setParent(undefined);
-                aimedBrick.position.copyFrom(p).addInPlace(prevParent.root.position);
-                prevParent.updateMesh();
-                aimedBrick.updateMesh();
+                if (prevParent) {
+                    let p = aimedBrick.absolutePosition;
+                    aimedBrick.setParent(undefined);
+                    aimedBrick.position.copyFrom(p).addInPlace(prevParent.root.position);
+                    prevParent.updateMesh();
+                    aimedBrick.updateMesh();
+                }
             }
         };
         brickAction.onUnequip = () => {
@@ -3074,16 +3109,14 @@ class PlayerActionMoveBrick {
                     let n = hit.getNormal(true).scaleInPlace(0.2);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
-                        if (root.mesh) {
-                            let rootPosition = root.position;
-                            let dp = hit.pickedPoint.add(n).subtract(rootPosition);
-                            dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
-                            dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
-                            dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                            brick.position.copyFrom(dp);
-                            brick.setParent(root);
-                            brick.updateMesh();
-                        }
+                        let aimedBrick = root.getBrickForFaceId(hit.faceId);
+                        let dp = hit.pickedPoint.add(n).subtract(aimedBrick.absolutePosition).subtract(root.position);
+                        dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
+                        dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
+                        dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
+                        brick.position.copyFrom(dp);
+                        brick.setParent(aimedBrick);
+                        brick.updateMesh();
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
@@ -3352,12 +3385,14 @@ class PlayerActionTemplate {
                     let n = hit.getNormal(true).scaleInPlace(0.2);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
-                        let rootPosition = root.position;
-                        let dp = hit.pickedPoint.add(n).subtract(rootPosition);
+                        let aimedBrick = root.getBrickForFaceId(hit.faceId);
+                        console.log(aimedBrick.position);
+                        console.log(aimedBrick.absolutePosition);
+                        let dp = hit.pickedPoint.add(n).subtract(aimedBrick.absolutePosition).subtract(root.position);
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        let brick = new Brick(0, 0, root);
+                        let brick = new Brick(0, 0, aimedBrick);
                         brick.position.copyFrom(dp);
                         brick.updateMesh();
                     }

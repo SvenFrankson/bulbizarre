@@ -284,12 +284,14 @@ class PlayerActionTemplate {
                     let n =  hit.getNormal(true).scaleInPlace(0.2);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
-                        let rootPosition = root.position;
-                        let dp = hit.pickedPoint.add(n).subtract(rootPosition);
+                        let aimedBrick = root.getBrickForFaceId(hit.faceId);
+                        console.log(aimedBrick.position);
+                        console.log(aimedBrick.absolutePosition);
+                        let dp = hit.pickedPoint.add(n).subtract(aimedBrick.absolutePosition).subtract(root.position);
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        let brick = new Brick(0, 0, root);
+                        let brick = new Brick(0, 0, aimedBrick);
                         brick.position.copyFrom(dp);
                         brick.updateMesh();
                     }
