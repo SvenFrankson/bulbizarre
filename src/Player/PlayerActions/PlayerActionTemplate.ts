@@ -224,12 +224,12 @@ class PlayerActionTemplate {
                         previewMesh = Mummu.CreateLineBox("preview", { width: 1 * terrain.blockSizeIJ_m, height: 1 / 3 * terrain.blockSizeK_m, depth: 1 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
                     }
 
-                    let n =  hit.getNormal(true).scaleInPlace(0.2);
+                    let n =  hit.getNormal(true).scaleInPlace(0.1);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
                         if (root.mesh) {
                             let rootPosition = root.position;
-                            let dp = hit.pickedPoint.add(n).subtract(rootPosition);
+                            let dp = hit.pickedPoint.subtract(rootPosition);
                             dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                             dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                             dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
@@ -281,13 +281,11 @@ class PlayerActionTemplate {
                     }
                 )
                 if (hit && hit.pickedPoint) {
-                    let n =  hit.getNormal(true).scaleInPlace(0.2);
+                    let n =  hit.getNormal(true).scaleInPlace(0.1);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
                         let aimedBrick = root.getBrickForFaceId(hit.faceId);
-                        console.log(aimedBrick.position);
-                        console.log(aimedBrick.absolutePosition);
-                        let dp = hit.pickedPoint.add(n).subtract(aimedBrick.absolutePosition).subtract(root.position);
+                        let dp = hit.pickedPoint.subtract(aimedBrick.absolutePosition).subtract(root.position);
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);

@@ -105,7 +105,7 @@ class Brick {
         }
     }
 
-    public updateMesh(): void {
+    public async updateMesh(): Promise<void> {
         if (this != this.root) {
             if (this.mesh) {
                 this.mesh.dispose();
@@ -118,7 +118,7 @@ class Brick {
         this.updatePosition();
         let vDatas: BABYLON.VertexData[] = []
         this.subMeshInfos = [];
-        this.generateMeshVertexData(vDatas, this.subMeshInfos);
+        await this.generateMeshVertexData(vDatas, this.subMeshInfos);
         let data = Brick.MergeVertexDatas(this.subMeshInfos, ...vDatas);
         if (!this.mesh) {
             this.mesh = new BrickMesh(this);
@@ -132,7 +132,7 @@ class Brick {
         if (this.mesh) {
             this.mesh.renderOutline = true;
             this.mesh.outlineColor = new BABYLON.Color3(0, 1, 1);
-            this.mesh.outlineWidth = 0.05;
+            this.mesh.outlineWidth = 0.01;
         }
     }
 
@@ -142,14 +142,14 @@ class Brick {
         }
     }
 
-    private generateMeshVertexData(vDatas?: BABYLON.VertexData[], subMeshInfos?: { faceId: number, brick: Brick }[], depth: number = 0): void {
+    private async generateMeshVertexData(vDatas?: BABYLON.VertexData[], subMeshInfos?: { faceId: number, brick: Brick }[], depth: number = 0): Promise<void> {
         if (!vDatas) {
             vDatas = [];
         }
         if (!subMeshInfos) {
             subMeshInfos = [];
         }
-        let template = BrickTemplateManager.Instance.getTemplate(this.templateIndex);
+        let template = await BrickTemplateManager.Instance.getTemplate(this.templateIndex);
         let vData = Mummu.CloneVertexData(template.vertexData);
         let colors = [];
         let color = Brick.depthColors[depth];
@@ -165,7 +165,7 @@ class Brick {
 
         if (this.children) {
             for (let i = 0; i < this.children.length; i++) {
-                this.children[i].generateMeshVertexData(vDatas, subMeshInfos, depth + 1);
+                await this.children[i].generateMeshVertexData(vDatas, subMeshInfos, depth + 1);
             }
         }
     }
