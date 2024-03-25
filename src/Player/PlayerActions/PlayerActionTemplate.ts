@@ -228,8 +228,7 @@ class PlayerActionTemplate {
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
                         if (root.mesh) {
-                            let rootPosition = root.position;
-                            let dp = hit.pickedPoint.subtract(rootPosition);
+                            let dp = root.posWorldToLocal(hit.pickedPoint);
                             dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                             dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                             dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
@@ -285,10 +284,11 @@ class PlayerActionTemplate {
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
                         let aimedBrick = root.getBrickForFaceId(hit.faceId);
-                        let dp = hit.pickedPoint.subtract(aimedBrick.absolutePosition).subtract(root.position);
+                        let dp = aimedBrick.posWorldToLocal(hit.pickedPoint);
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
+                        console.log(dp);
                         let brick = new Brick(brickId, 0, aimedBrick);
                         brick.position.copyFrom(dp);
                         brick.updateMesh();

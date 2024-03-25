@@ -36,9 +36,12 @@ class Brick {
 
     public position: BABYLON.Vector3 = BABYLON.Vector3.Zero();
     public rotationQuaternion: BABYLON.Quaternion = BABYLON.Quaternion.Identity();
+
     public absolutePosition: BABYLON.Vector3 = BABYLON.Vector3.Zero();
     public absoluteRotationQuaternion: BABYLON.Quaternion = BABYLON.Quaternion.Identity();
+
     public absoluteMatrix: BABYLON.Matrix = BABYLON.Matrix.Identity();
+
     public updatePositionRotation(): void {
         if (this.isRoot) {
             BABYLON.Matrix.IdentityToRef(this.absoluteMatrix);
@@ -64,8 +67,27 @@ class Brick {
     public get parent(): Brick {
         return this._parent;
     }
-    public setParent(b: Brick): void {
+    public setParent(b: Brick, keepWorldPosRot?: boolean): void {
         if (this._parent != b) {
+            this.updatePositionRotation();
+            let worldPos: BABYLON.Vector3;
+            let worldRot: BABYLON.Quaternion;
+            if (keepWorldPosRot) {
+                if (this.isRoot) {
+                    console.log("isroot");
+                    worldPos = this.position.clone();
+                    worldRot = this.rotationQuaternion.clone();
+                }
+                else {
+                    console.log("isnotroot");
+                    let rootM = BABYLON.Matrix.Compose(BABYLON.Vector3.One(), this.root.rotationQuaternion, this.root.position);
+                    worldPos = BABYLON.Vector3.TransformCoordinates(this.absolutePosition, rootM);
+                    worldRot = this.root.rotationQuaternion.multiply(this.rotationQuaternion);
+                }
+                Mummu.DrawDebugPoint(worldPos, 60, BABYLON.Color3.Green(), 1);
+                console.log("world pos " + worldPos.toString());
+            }
+
             if (this._parent) {
                 let index = this._parent.children.indexOf(this);
                 if (index > - 1) {
@@ -78,6 +100,19 @@ class Brick {
                     this._parent.children = [];
                 }
                 this._parent.children.push(this);
+            }
+            
+            if (keepWorldPosRot) {
+                if (this.isRoot) {
+                    this.position.copyFrom(worldPos);
+                    this.rotationQuaternion.copyFrom(worldRot);
+                }
+                else {
+                    let rootMInv = BABYLON.Matrix.Compose(BABYLON.Vector3.One(), this.root.rotationQuaternion, this.root.position).invert();
+                    BABYLON.Vector3.TransformCoordinatesToRef(worldPos, rootMInv, this.position);
+                    let rootInvRotationQuaternion = this.root.rotationQuaternion.invert();
+                    rootInvRotationQuaternion.multiplyToRef(worldRot, this.rotationQuaternion);
+                }
             }
         }
     }
@@ -131,6 +166,13 @@ class Brick {
             this.setParent(undefined);
             root.updateMesh();
         }
+    }
+
+    public posWorldToLocal(pos: BABYLON.Vector3): BABYLON.Vector3 {
+        this.updatePositionRotation();
+        let rootM = BABYLON.Matrix.Compose(BABYLON.Vector3.One(), this.root.rotationQuaternion, this.root.position);
+        let worldMInv = rootM.multiply(this.absoluteMatrix).invert();
+        return BABYLON.Vector3.TransformCoordinates(pos, worldMInv);
     }
 
     public async updateMesh(): Promise<void> {

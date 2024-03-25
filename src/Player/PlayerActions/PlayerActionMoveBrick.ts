@@ -77,12 +77,7 @@ class PlayerActionMoveBrick {
                         if (duration > 0.3) {
                             let root = hit.pickedMesh.brick.root;
                             let aimedBrick = root.getBrickForFaceId(hit.faceId);
-                            let dp = hit.pickedPoint.subtract(aimedBrick.absolutePosition).subtract(root.position);
-                            dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
-                            dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
-                            dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                            brick.position.copyFrom(dp);
-                            brick.setParent(aimedBrick);
+                            brick.setParent(aimedBrick, true);
                             brick.updateMesh();
                         }
                         else {

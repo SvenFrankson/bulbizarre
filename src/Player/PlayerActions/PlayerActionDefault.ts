@@ -74,8 +74,7 @@ class PlayerActionDefault {
                 let prevParent = aimedBrick.parent;
                 if (prevParent) {
                     let p = aimedBrick.absolutePosition;
-                    aimedBrick.setParent(undefined);
-                    aimedBrick.position.copyFrom(p).addInPlace(prevParent.root.position);
+                    aimedBrick.setParent(undefined, true);
                     prevParent.updateMesh();
                     aimedBrick.updateMesh();
                 }
