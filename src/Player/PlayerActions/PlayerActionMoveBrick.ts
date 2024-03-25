@@ -28,11 +28,11 @@ class PlayerActionMoveBrick {
                     }
                 )
                 if (hit && hit.pickedPoint) {
-                    let n =  hit.getNormal(true).scaleInPlace(0.1);
+                    let n =  hit.getNormal(true).scaleInPlace(0.05);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
                         let rootPosition = root.position;
-                        let dp = hit.pickedPoint.subtract(rootPosition);
+                        let dp = hit.pickedPoint.add(n).subtract(rootPosition);
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
@@ -72,18 +72,18 @@ class PlayerActionMoveBrick {
                     }
                 )
                 if (hit && hit.pickedPoint) {
-                    let n =  hit.getNormal(true).scaleInPlace(0.1);
+                    let n =  hit.getNormal(true).scaleInPlace(0.05);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         if (duration > 0.3) {
                             let root = hit.pickedMesh.brick.root;
                             let aimedBrick = root.getBrickForFaceId(hit.faceId);
-                            brick.setParent(aimedBrick, true);
+                            brick.setParent(aimedBrick);
                             brick.updateMesh();
                         }
                         else {
                             let root = hit.pickedMesh.brick.root;
                             let rootPosition = root.position;
-                            let dp = hit.pickedPoint.subtract(rootPosition);
+                            let dp = hit.pickedPoint.add(n).subtract(rootPosition);
                             dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                             dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                             dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
@@ -117,12 +117,11 @@ class PlayerActionMoveBrick {
         }
 
         brickAction.onEquip = () => {
-            console.log("Map DELETE BRICK");
             player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick)
             player.game.inputManager.addMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick)
         }
+
         brickAction.onUnequip = () => {
-            console.log("Unmap DELETE BRICK");
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick)
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick)
         }

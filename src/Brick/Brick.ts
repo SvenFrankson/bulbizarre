@@ -11,7 +11,7 @@ class BrickMesh extends BABYLON.Mesh {
     }
 }
 
-class Brick {
+class Brick extends BABYLON.TransformNode {
 
     public static depthColors = [
         new BABYLON.Color4(1, 1, 1, 1),
@@ -31,128 +31,37 @@ class Brick {
     ]
 
     public get isRoot(): boolean {
-        return this._parent === undefined;
-    }
-
-    public position: BABYLON.Vector3 = BABYLON.Vector3.Zero();
-    public rotationQuaternion: BABYLON.Quaternion = BABYLON.Quaternion.Identity();
-
-    public absolutePosition: BABYLON.Vector3 = BABYLON.Vector3.Zero();
-    public absoluteRotationQuaternion: BABYLON.Quaternion = BABYLON.Quaternion.Identity();
-
-    public absoluteMatrix: BABYLON.Matrix = BABYLON.Matrix.Identity();
-
-    public updatePositionRotation(): void {
-        if (this.isRoot) {
-            BABYLON.Matrix.IdentityToRef(this.absoluteMatrix);
-        }
-        else {
-            BABYLON.Matrix.ComposeToRef(BABYLON.Vector3.One(), this.rotationQuaternion, this.position, this.absoluteMatrix);
-        }
-
-        if (this.parent) {
-            this.parent.absoluteMatrix.multiplyToRef(this.absoluteMatrix, this.absoluteMatrix);
-        }
-        this.absoluteMatrix.decompose(BABYLON.Vector3.One(), this.absoluteRotationQuaternion, this.absolutePosition);
-
-        if (this.children) {
-            this.children.forEach(child => {
-                child.updatePositionRotation();
-            })
-        }
-    }
-    public direction: number;
-
-    private _parent: Brick;
-    public get parent(): Brick {
-        return this._parent;
-    }
-    public setParent(b: Brick, keepWorldPosRot?: boolean): void {
-        if (this._parent != b) {
-            this.updatePositionRotation();
-            let worldPos: BABYLON.Vector3;
-            let worldRot: BABYLON.Quaternion;
-            if (keepWorldPosRot) {
-                if (this.isRoot) {
-                    console.log("isroot");
-                    worldPos = this.position.clone();
-                    worldRot = this.rotationQuaternion.clone();
-                }
-                else {
-                    console.log("isnotroot");
-                    let rootM = BABYLON.Matrix.Compose(BABYLON.Vector3.One(), this.root.rotationQuaternion, this.root.position);
-                    worldPos = BABYLON.Vector3.TransformCoordinates(this.absolutePosition, rootM);
-                    worldRot = this.root.rotationQuaternion.multiply(this.rotationQuaternion);
-                }
-                Mummu.DrawDebugPoint(worldPos, 60, BABYLON.Color3.Green(), 1);
-                console.log("world pos " + worldPos.toString());
-            }
-
-            if (this._parent) {
-                let index = this._parent.children.indexOf(this);
-                if (index > - 1) {
-                    this._parent.children.splice(index, 1);
-                }
-            }
-            this._parent = b;
-            if (this._parent) {
-                if (!this._parent.children) {
-                    this._parent.children = [];
-                }
-                this._parent.children.push(this);
-            }
-            
-            if (keepWorldPosRot) {
-                if (this.isRoot) {
-                    this.position.copyFrom(worldPos);
-                    this.rotationQuaternion.copyFrom(worldRot);
-                }
-                else {
-                    let rootMInv = BABYLON.Matrix.Compose(BABYLON.Vector3.One(), this.root.rotationQuaternion, this.root.position).invert();
-                    BABYLON.Vector3.TransformCoordinatesToRef(worldPos, rootMInv, this.position);
-                    let rootInvRotationQuaternion = this.root.rotationQuaternion.invert();
-                    rootInvRotationQuaternion.multiplyToRef(worldRot, this.rotationQuaternion);
-                }
-            }
-        }
-    }
-    public children: Brick[];
-    public get childrenCount(): number {
-        if (this.children) {
-            return this.children.length;
-        }
-        return 0;
+        return this.parent === undefined;
     }
 
     public mesh: BrickMesh;
     public get root(): Brick {
-        if (this._parent) {
-            return this._parent.root;
+        if (this.parent instanceof Brick) {
+            return this.parent.root;
         }
         return this;
     }
     public index: number;
-    public get name(): string {
+    public get brickName(): string {
         return BRICK_LIST[this.index];
     }
 
-    constructor(index: number, colorIndex: number, parent?: Brick);
-    constructor(name: string, colorIndex: number, parent?: Brick);
-    constructor(brickId: number | string, colorIndex: number, parent?: Brick);
-    constructor(arg1: any, public colorIndex: number, parent?: Brick) {
-        if (typeof(arg1) === "number") {
-            this.index = arg1;
+    public static BrickIdToIndex(brickID: number | string): number {
+        if (typeof(brickID) === "number") {
+            return brickID;
         }
         else {
-            this.index = BRICK_LIST.indexOf(arg1);
+            return BRICK_LIST.indexOf(brickID);
         }
-        if (parent) {
-            this._parent = parent;
-            if (!parent.children) {
-                parent.children = [];
-            }
-            parent.children.push(this);
-        }
+    }
+
+    constructor(index: number, colorIndex: number);
+    constructor(brickName: string, colorIndex: number);
+    constructor(brickId: number | string, colorIndex: number);
+    constructor(arg1: any, public colorIndex: number) {
+        super("brick");
+        this.rotationQuaternion = BABYLON.Quaternion.Identity();
+        this.index = Brick.BrickIdToIndex(arg1);
     }
 
     public dispose(): void {
@@ -169,10 +78,8 @@ class Brick {
     }
 
     public posWorldToLocal(pos: BABYLON.Vector3): BABYLON.Vector3 {
-        this.updatePositionRotation();
-        let rootM = BABYLON.Matrix.Compose(BABYLON.Vector3.One(), this.root.rotationQuaternion, this.root.position);
-        let worldMInv = rootM.multiply(this.absoluteMatrix).invert();
-        return BABYLON.Vector3.TransformCoordinates(pos, worldMInv);
+        let matrix = this.getWorldMatrix().invert();
+        return BABYLON.Vector3.TransformCoordinates(pos, matrix);
     }
 
     public async updateMesh(): Promise<void> {
@@ -185,11 +92,13 @@ class Brick {
             this.root.updateMesh();
             return;
         }
-        this.updatePositionRotation();
+        this.computeWorldMatrix(true);
         let vDatas: BABYLON.VertexData[] = []
         this.subMeshInfos = [];
         await this.generateMeshVertexData(vDatas, this.subMeshInfos);
         let data = Brick.MergeVertexDatas(this.subMeshInfos, ...vDatas);
+        Mummu.TranslateVertexDataInPlace(data, this.absolutePosition.scale(-1));
+        Mummu.RotateVertexDataInPlace(data, this.absoluteRotationQuaternion.invert());
         if (!this.mesh) {
             this.mesh = new BrickMesh(this);
             this.mesh.position = this.position;
@@ -214,6 +123,7 @@ class Brick {
     }
 
     private async generateMeshVertexData(vDatas: BABYLON.VertexData[], subMeshInfos: { faceId: number, brick: Brick }[], depth: number = 0): Promise<void> {
+        this.computeWorldMatrix(true);
         let template = await BrickTemplateManager.Instance.getTemplate(this.index);
         let vData = Mummu.CloneVertexData(template.vertexData);
         let colors = [];
@@ -222,16 +132,16 @@ class Brick {
             colors.push(color.r, color.g, color.b, color.a);
         }
         vData.colors = colors;
-        if (this != this.root) {
-            Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
-            Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
-        }
+        Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
+        Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
         vDatas.push(vData);
         subMeshInfos.push({ faceId: 0, brick: this });
 
-        if (this.children) {
-            for (let i = 0; i < this.children.length; i++) {
-                await this.children[i].generateMeshVertexData(vDatas, subMeshInfos, depth + 1);
+        let children = this.getChildTransformNodes(true);
+        for (let i = 0; i < children.length; i++) {
+            let child = children[i];
+            if (child instanceof Brick) {
+                await child.generateMeshVertexData(vDatas, subMeshInfos, depth + 1);
             }
         }
     }

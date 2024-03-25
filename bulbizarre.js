@@ -1915,112 +1915,32 @@ class BrickMesh extends BABYLON.Mesh {
         this.brick = brick;
     }
 }
-class Brick {
-    constructor(arg1, colorIndex, parent) {
+class Brick extends BABYLON.TransformNode {
+    constructor(arg1, colorIndex) {
+        super("brick");
         this.colorIndex = colorIndex;
-        this.position = BABYLON.Vector3.Zero();
         this.rotationQuaternion = BABYLON.Quaternion.Identity();
-        this.absolutePosition = BABYLON.Vector3.Zero();
-        this.absoluteRotationQuaternion = BABYLON.Quaternion.Identity();
-        this.absoluteMatrix = BABYLON.Matrix.Identity();
-        if (typeof (arg1) === "number") {
-            this.index = arg1;
-        }
-        else {
-            this.index = BRICK_LIST.indexOf(arg1);
-        }
-        if (parent) {
-            this._parent = parent;
-            if (!parent.children) {
-                parent.children = [];
-            }
-            parent.children.push(this);
-        }
+        this.index = Brick.BrickIdToIndex(arg1);
     }
     get isRoot() {
-        return this._parent === undefined;
-    }
-    updatePositionRotation() {
-        if (this.isRoot) {
-            BABYLON.Matrix.IdentityToRef(this.absoluteMatrix);
-        }
-        else {
-            BABYLON.Matrix.ComposeToRef(BABYLON.Vector3.One(), this.rotationQuaternion, this.position, this.absoluteMatrix);
-        }
-        if (this.parent) {
-            this.parent.absoluteMatrix.multiplyToRef(this.absoluteMatrix, this.absoluteMatrix);
-        }
-        this.absoluteMatrix.decompose(BABYLON.Vector3.One(), this.absoluteRotationQuaternion, this.absolutePosition);
-        if (this.children) {
-            this.children.forEach(child => {
-                child.updatePositionRotation();
-            });
-        }
-    }
-    get parent() {
-        return this._parent;
-    }
-    setParent(b, keepWorldPosRot) {
-        if (this._parent != b) {
-            this.updatePositionRotation();
-            let worldPos;
-            let worldRot;
-            if (keepWorldPosRot) {
-                if (this.isRoot) {
-                    console.log("isroot");
-                    worldPos = this.position.clone();
-                    worldRot = this.rotationQuaternion.clone();
-                }
-                else {
-                    console.log("isnotroot");
-                    let rootM = BABYLON.Matrix.Compose(BABYLON.Vector3.One(), this.root.rotationQuaternion, this.root.position);
-                    worldPos = BABYLON.Vector3.TransformCoordinates(this.absolutePosition, rootM);
-                    worldRot = this.root.rotationQuaternion.multiply(this.rotationQuaternion);
-                }
-                Mummu.DrawDebugPoint(worldPos, 60, BABYLON.Color3.Green(), 1);
-                console.log("world pos " + worldPos.toString());
-            }
-            if (this._parent) {
-                let index = this._parent.children.indexOf(this);
-                if (index > -1) {
-                    this._parent.children.splice(index, 1);
-                }
-            }
-            this._parent = b;
-            if (this._parent) {
-                if (!this._parent.children) {
-                    this._parent.children = [];
-                }
-                this._parent.children.push(this);
-            }
-            if (keepWorldPosRot) {
-                if (this.isRoot) {
-                    this.position.copyFrom(worldPos);
-                    this.rotationQuaternion.copyFrom(worldRot);
-                }
-                else {
-                    let rootMInv = BABYLON.Matrix.Compose(BABYLON.Vector3.One(), this.root.rotationQuaternion, this.root.position).invert();
-                    BABYLON.Vector3.TransformCoordinatesToRef(worldPos, rootMInv, this.position);
-                    let rootInvRotationQuaternion = this.root.rotationQuaternion.invert();
-                    rootInvRotationQuaternion.multiplyToRef(worldRot, this.rotationQuaternion);
-                }
-            }
-        }
-    }
-    get childrenCount() {
-        if (this.children) {
-            return this.children.length;
-        }
-        return 0;
+        return this.parent === undefined;
     }
     get root() {
-        if (this._parent) {
-            return this._parent.root;
+        if (this.parent instanceof Brick) {
+            return this.parent.root;
         }
         return this;
     }
-    get name() {
+    get brickName() {
         return BRICK_LIST[this.index];
+    }
+    static BrickIdToIndex(brickID) {
+        if (typeof (brickID) === "number") {
+            return brickID;
+        }
+        else {
+            return BRICK_LIST.indexOf(brickID);
+        }
     }
     dispose() {
         if (this.isRoot) {
@@ -2035,10 +1955,8 @@ class Brick {
         }
     }
     posWorldToLocal(pos) {
-        this.updatePositionRotation();
-        let rootM = BABYLON.Matrix.Compose(BABYLON.Vector3.One(), this.root.rotationQuaternion, this.root.position);
-        let worldMInv = rootM.multiply(this.absoluteMatrix).invert();
-        return BABYLON.Vector3.TransformCoordinates(pos, worldMInv);
+        let matrix = this.getWorldMatrix().invert();
+        return BABYLON.Vector3.TransformCoordinates(pos, matrix);
     }
     async updateMesh() {
         if (this != this.root) {
@@ -2050,11 +1968,13 @@ class Brick {
             this.root.updateMesh();
             return;
         }
-        this.updatePositionRotation();
+        this.computeWorldMatrix(true);
         let vDatas = [];
         this.subMeshInfos = [];
         await this.generateMeshVertexData(vDatas, this.subMeshInfos);
         let data = Brick.MergeVertexDatas(this.subMeshInfos, ...vDatas);
+        Mummu.TranslateVertexDataInPlace(data, this.absolutePosition.scale(-1));
+        Mummu.RotateVertexDataInPlace(data, this.absoluteRotationQuaternion.invert());
         if (!this.mesh) {
             this.mesh = new BrickMesh(this);
             this.mesh.position = this.position;
@@ -2075,6 +1995,7 @@ class Brick {
         }
     }
     async generateMeshVertexData(vDatas, subMeshInfos, depth = 0) {
+        this.computeWorldMatrix(true);
         let template = await BrickTemplateManager.Instance.getTemplate(this.index);
         let vData = Mummu.CloneVertexData(template.vertexData);
         let colors = [];
@@ -2083,15 +2004,15 @@ class Brick {
             colors.push(color.r, color.g, color.b, color.a);
         }
         vData.colors = colors;
-        if (this != this.root) {
-            Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
-            Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
-        }
+        Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
+        Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
         vDatas.push(vData);
         subMeshInfos.push({ faceId: 0, brick: this });
-        if (this.children) {
-            for (let i = 0; i < this.children.length; i++) {
-                await this.children[i].generateMeshVertexData(vDatas, subMeshInfos, depth + 1);
+        let children = this.getChildTransformNodes(true);
+        for (let i = 0; i < children.length; i++) {
+            let child = children[i];
+            if (child instanceof Brick) {
+                await child.generateMeshVertexData(vDatas, subMeshInfos, depth + 1);
             }
         }
     }
@@ -3232,11 +3153,10 @@ class PlayerActionDefault {
         brickAction.onRightPointerUp = () => {
             if (aimedBrick) {
                 let prevParent = aimedBrick.parent;
-                if (prevParent) {
-                    let p = aimedBrick.absolutePosition;
-                    aimedBrick.setParent(undefined, true);
-                    prevParent.updateMesh();
+                if (prevParent instanceof Brick) {
+                    aimedBrick.setParent(undefined);
                     aimedBrick.updateMesh();
+                    prevParent.updateMesh();
                 }
             }
         };
@@ -3269,11 +3189,11 @@ class PlayerActionMoveBrick {
                     return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined || (mesh instanceof BrickMesh && mesh.brick != brick);
                 });
                 if (hit && hit.pickedPoint) {
-                    let n = hit.getNormal(true).scaleInPlace(0.1);
+                    let n = hit.getNormal(true).scaleInPlace(0.05);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
                         let rootPosition = root.position;
-                        let dp = hit.pickedPoint.subtract(rootPosition);
+                        let dp = hit.pickedPoint.add(n).subtract(rootPosition);
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
@@ -3308,18 +3228,18 @@ class PlayerActionMoveBrick {
                     return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined || (mesh instanceof BrickMesh && mesh.brick != brick);
                 });
                 if (hit && hit.pickedPoint) {
-                    let n = hit.getNormal(true).scaleInPlace(0.1);
+                    let n = hit.getNormal(true).scaleInPlace(0.05);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         if (duration > 0.3) {
                             let root = hit.pickedMesh.brick.root;
                             let aimedBrick = root.getBrickForFaceId(hit.faceId);
-                            brick.setParent(aimedBrick, true);
+                            brick.setParent(aimedBrick);
                             brick.updateMesh();
                         }
                         else {
                             let root = hit.pickedMesh.brick.root;
                             let rootPosition = root.position;
-                            let dp = hit.pickedPoint.subtract(rootPosition);
+                            let dp = hit.pickedPoint.add(n).subtract(rootPosition);
                             dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                             dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                             dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
@@ -3350,12 +3270,10 @@ class PlayerActionMoveBrick {
             }
         };
         brickAction.onEquip = () => {
-            console.log("Map DELETE BRICK");
             player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
             player.game.inputManager.addMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick);
         };
         brickAction.onUnequip = () => {
-            console.log("Unmap DELETE BRICK");
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick);
         };
@@ -3531,12 +3449,8 @@ class PlayerActionTemplate {
         let brickAction = new PlayerAction("brick", player);
         brickAction.backgroundColor = "#000000";
         let previewMesh;
-        let previewBox;
         brickAction.iconUrl = "/datas/images/brick-icon.png";
-        let lastSize;
-        let lastI;
-        let lastJ;
-        let lastK;
+        let rotationQuaternion = BABYLON.Quaternion.Identity();
         brickAction.onUpdate = () => {
             let terrain = player.game.terrain;
             if (player.game.router.inPlayMode) {
@@ -3554,21 +3468,17 @@ class PlayerActionTemplate {
                     return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined || mesh instanceof BrickMesh;
                 });
                 if (hit && hit.pickedPoint) {
-                    // Redraw block preview
-                    if (!previewMesh) {
-                        previewMesh = Mummu.CreateLineBox("preview", { width: 1 * terrain.blockSizeIJ_m, height: 1 / 3 * terrain.blockSizeK_m, depth: 1 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
-                    }
-                    let n = hit.getNormal(true).scaleInPlace(0.1);
+                    let n = hit.getNormal(true).scaleInPlace(0.05);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
                         if (root.mesh) {
-                            let dp = root.posWorldToLocal(hit.pickedPoint);
+                            let dp = hit.pickedPoint.add(n).subtract(root.position);
                             dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                             dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                             dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                            previewMesh.position.copyFrom(dp);
-                            previewMesh.position.y += terrain.blockSizeK_m / 3 * 0.5;
-                            previewMesh.parent = root.mesh;
+                            previewMesh.position.copyFrom(dp).addInPlace(root.position);
+                            previewMesh.parent = undefined;
+                            previewMesh.isVisible = true;
                             return;
                         }
                     }
@@ -3577,18 +3487,14 @@ class PlayerActionTemplate {
                         if (chunckIJK) {
                             previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5 / 3) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m);
                             previewMesh.parent = chunckIJK.chunck.mesh;
+                            previewMesh.isVisible = true;
                             return;
                         }
                     }
                 }
             }
             if (previewMesh) {
-                previewMesh.dispose();
-                previewMesh = undefined;
-            }
-            if (previewBox) {
-                previewBox.dispose();
-                previewBox = undefined;
+                previewMesh.isVisible = false;
             }
         };
         brickAction.onPointerDown = () => {
@@ -3608,17 +3514,20 @@ class PlayerActionTemplate {
                     return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined || mesh instanceof BrickMesh;
                 });
                 if (hit && hit.pickedPoint) {
-                    let n = hit.getNormal(true).scaleInPlace(0.1);
+                    let n = hit.getNormal(true).scaleInPlace(0.05);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
                         let aimedBrick = root.getBrickForFaceId(hit.faceId);
-                        let dp = aimedBrick.posWorldToLocal(hit.pickedPoint);
+                        let rootPosition = root.position;
+                        let dp = hit.pickedPoint.add(n).subtract(rootPosition);
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        console.log(dp);
-                        let brick = new Brick(brickId, 0, aimedBrick);
-                        brick.position.copyFrom(dp);
+                        let brick = new Brick(brickId, 0);
+                        brick.position.copyFrom(dp).addInPlace(rootPosition);
+                        brick.rotationQuaternion = rotationQuaternion.clone();
+                        brick.computeWorldMatrix(true);
+                        brick.setParent(aimedBrick);
                         brick.updateMesh();
                     }
                     else {
@@ -3626,25 +3535,34 @@ class PlayerActionTemplate {
                         if (chunckIJK) {
                             let brick = new Brick(brickId, 0);
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
+                            brick.rotationQuaternion = rotationQuaternion.clone();
                             brick.updateMesh();
                         }
                     }
                 }
             }
         };
+        let rotateBrick = () => {
+            let quat = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, Math.PI / 2);
+            quat.multiplyToRef(rotationQuaternion, rotationQuaternion);
+        };
+        brickAction.onEquip = () => {
+            previewMesh = new BABYLON.Mesh("brick-preview-mesh");
+            let previewMat = new BABYLON.StandardMaterial("brick-preview-material");
+            previewMat.alpha = 0.5;
+            previewMat.specularColor.copyFromFloats(1, 1, 1);
+            previewMesh.material = previewMat;
+            previewMesh.rotationQuaternion = rotationQuaternion;
+            BrickTemplateManager.Instance.getTemplate(Brick.BrickIdToIndex(brickId)).then(template => {
+                template.vertexData.applyToMesh(previewMesh);
+            });
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
+        };
         brickAction.onUnequip = () => {
             if (previewMesh) {
                 previewMesh.dispose();
-                previewMesh = undefined;
             }
-            if (previewBox) {
-                previewBox.dispose();
-                previewBox = undefined;
-            }
-            lastSize = undefined;
-            lastI = undefined;
-            lastJ = undefined;
-            lastK = undefined;
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
         };
         return brickAction;
     }

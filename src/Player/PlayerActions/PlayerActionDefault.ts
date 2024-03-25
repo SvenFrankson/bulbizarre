@@ -72,11 +72,10 @@ class PlayerActionDefault {
         brickAction.onRightPointerUp = () => {
             if (aimedBrick) {
                 let prevParent = aimedBrick.parent;
-                if (prevParent) {
-                    let p = aimedBrick.absolutePosition;
-                    aimedBrick.setParent(undefined, true);
-                    prevParent.updateMesh();
+                if (prevParent instanceof Brick) {
+                    aimedBrick.setParent(undefined);
                     aimedBrick.updateMesh();
+                    prevParent.updateMesh();
                 }
             }
         }

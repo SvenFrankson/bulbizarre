@@ -190,13 +190,9 @@ class PlayerActionTemplate {
         let brickAction = new PlayerAction("brick", player);
         brickAction.backgroundColor = "#000000";
         let previewMesh: BABYLON.Mesh;
-        let previewBox: BABYLON.Mesh;
         brickAction.iconUrl = "/datas/images/brick-icon.png";
 
-        let lastSize: number;
-        let lastI: number;
-        let lastJ: number;
-        let lastK: number;
+        let rotationQuaternion = BABYLON.Quaternion.Identity();
 
         brickAction.onUpdate = () => {
             let terrain = player.game.terrain;
@@ -219,22 +215,17 @@ class PlayerActionTemplate {
                     }
                 )
                 if (hit && hit.pickedPoint) {
-                    // Redraw block preview
-                    if (!previewMesh) {
-                        previewMesh = Mummu.CreateLineBox("preview", { width: 1 * terrain.blockSizeIJ_m, height: 1 / 3 * terrain.blockSizeK_m, depth: 1 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
-                    }
-
-                    let n =  hit.getNormal(true).scaleInPlace(0.1);
+                    let n =  hit.getNormal(true).scaleInPlace(0.05);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
                         if (root.mesh) {
-                            let dp = root.posWorldToLocal(hit.pickedPoint);
+                            let dp = hit.pickedPoint.add(n).subtract(root.position);
                             dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                             dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                             dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                            previewMesh.position.copyFrom(dp);
-                            previewMesh.position.y += terrain.blockSizeK_m / 3 * 0.5;
-                            previewMesh.parent = root.mesh;
+                            previewMesh.position.copyFrom(dp).addInPlace(root.position);
+                            previewMesh.parent = undefined;
+                            previewMesh.isVisible = true;
                             return;
                         }
                     }
@@ -243,6 +234,7 @@ class PlayerActionTemplate {
                         if (chunckIJK) {
                             previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5 / 3) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m);
                             previewMesh.parent = chunckIJK.chunck.mesh;
+                            previewMesh.isVisible = true;
                             return;
                         }
                     }
@@ -250,12 +242,7 @@ class PlayerActionTemplate {
             }
             
             if (previewMesh) {
-                previewMesh.dispose();
-                previewMesh = undefined;
-            }
-            if (previewBox) {
-                previewBox.dispose();
-                previewBox = undefined;
+                previewMesh.isVisible = false;
             }
         }
 
@@ -280,17 +267,20 @@ class PlayerActionTemplate {
                     }
                 )
                 if (hit && hit.pickedPoint) {
-                    let n =  hit.getNormal(true).scaleInPlace(0.1);
+                    let n =  hit.getNormal(true).scaleInPlace(0.05);
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let root = hit.pickedMesh.brick.root;
                         let aimedBrick = root.getBrickForFaceId(hit.faceId);
-                        let dp = aimedBrick.posWorldToLocal(hit.pickedPoint);
+                        let rootPosition = root.position;
+                        let dp = hit.pickedPoint.add(n).subtract(rootPosition);
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        console.log(dp);
-                        let brick = new Brick(brickId, 0, aimedBrick);
-                        brick.position.copyFrom(dp);
+                        let brick = new Brick(brickId, 0);
+                        brick.position.copyFrom(dp).addInPlace(rootPosition);
+                        brick.rotationQuaternion = rotationQuaternion.clone();
+                        brick.computeWorldMatrix(true);
+                        brick.setParent(aimedBrick);
                         brick.updateMesh();
                     }
                     else {
@@ -298,6 +288,7 @@ class PlayerActionTemplate {
                         if (chunckIJK) {
                             let brick = new Brick(brickId, 0);
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
+                            brick.rotationQuaternion = rotationQuaternion.clone();
                             brick.updateMesh();
                         }
                     }
@@ -305,19 +296,31 @@ class PlayerActionTemplate {
             }
         }
 
+        let rotateBrick = () => {
+            let quat = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, Math.PI / 2);
+            quat.multiplyToRef(rotationQuaternion, rotationQuaternion);
+        }
+
+        brickAction.onEquip = () => {
+            previewMesh = new BABYLON.Mesh("brick-preview-mesh");
+            let previewMat = new BABYLON.StandardMaterial("brick-preview-material");
+            previewMat.alpha = 0.5;
+            previewMat.specularColor.copyFromFloats(1, 1, 1);
+            previewMesh.material = previewMat;
+            previewMesh.rotationQuaternion = rotationQuaternion;
+            BrickTemplateManager.Instance.getTemplate(Brick.BrickIdToIndex(brickId)).then(template => {
+                template.vertexData.applyToMesh(previewMesh);
+            });
+
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
+        }
+
         brickAction.onUnequip = () => {
             if (previewMesh) {
                 previewMesh.dispose();
-                previewMesh = undefined;
             }
-            if (previewBox) {
-                previewBox.dispose();
-                previewBox = undefined;
-            }
-            lastSize = undefined;
-            lastI = undefined;
-            lastJ = undefined;
-            lastK = undefined;
+            
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
         }
         
         return brickAction;
