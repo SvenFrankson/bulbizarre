@@ -362,166 +362,6 @@ class GameConfiguration extends Nabu.Configuration {
         }
     }
 }
-/*
-enum InventorySection {
-    Action,
-    Cube,
-    Block,
-    Brick,
-    TmpObject,
-    DriderBait
-}
-
-class InventoryItem {
-
-    public section: InventorySection;
-    public subSection: string;
-    public count: number = 1;
-    public name: string;
-    public size: number = 1;
-    public playerAction: PlayerAction;
-    public iconUrl: string;
-    public timeUse: number = 0;
-
-    public static async Block(player: Player, blockType: Kulla.BlockType): Promise<InventoryItem> {
-        return new Promise<InventoryItem>(async resolve => {
-            let it = new InventoryItem();
-            it.section = InventorySection.Block;
-            it.name = Kulla.BlockTypeNames[blockType];
-            it.size = 27;
-            it.playerAction = await PlayerActionTemplate.CreateBlockAction(player, blockType);
-            it.playerAction.item = it;
-            it.iconUrl = "datas/images/block-icon-" + Kulla.BlockTypeNames[blockType] + "-miniature.png";
-            resolve(it);
-        });
-    }
-
-    public static async TmpObject(player: Player, tmpObjectName: string): Promise<InventoryItem> {
-        return new Promise<InventoryItem>(async resolve => {
-            let it = new InventoryItem();
-            it.section = InventorySection.TmpObject;
-            it.name = tmpObjectName;
-            it.size = 1;
-            it.playerAction = await PlayerActionTemplate.AddTmpObjectAction(player, tmpObjectName);
-            it.playerAction.item = it;
-            it.iconUrl = "/datas/images/qmark.png";
-            resolve(it);
-        });
-    }
-}
-
-enum BrickSortingOrder {
-    Recent,
-    TypeAsc,
-    TypeDesc,
-    SizeAsc,
-    SizeDesc,
-    ColorAsc,
-    ColorDesc
-}
-
-interface IInventoryData {
-    items: { r: string, c: number }[];
-}
-
-class Inventory {
-
-    public currentSection: InventorySection;
-    public items: InventoryItem[] = [];
-
-    private _brickSorting: BrickSortingOrder = BrickSortingOrder.TypeAsc;
-
-    public draggedItem: InventoryItem;
-    public hintedSlotIndex: Nabu.UniqueList<number> = new Nabu.UniqueList<number>();
-
-    constructor(
-        public player: Player
-    ) {
-        player.inventory = this;
-    }
-
-    public async initialize(): Promise<void> {
-        
-        let savedInventoryString = window.localStorage.getItem("player-inventory");
-        if (savedInventoryString) {
-            let savedInventory = JSON.parse(savedInventoryString);
-            await this.deserializeInPlace(savedInventory);
-        }
-        else {
-            this.addItem(await InventoryItem.Block(this.player, Kulla.BlockType.None));
-        }
-
-        this.update();
-    }
-
-    public addItem(item: InventoryItem): void {
-        let same = this.items.find(it => { return it.name === item.name; });
-        if (same) {
-            same.count++;
-        }
-        else {
-            this.items.push(item);
-        }
-        let data = this.serialize();
-        window.localStorage.setItem("player-inventory", JSON.stringify(data));
-    }
-
-    public getCurrentSectionItems(): InventoryItem[] {
-        let sectionItems: InventoryItem[] = [];
-        for (let i = 0; i < this.items.length; i++) {
-            if (this.items[i].section === this.currentSection) {
-                sectionItems.push(this.items[i]);
-            }
-        }
-
-        return sectionItems;
-    }
-
-    public getItemByName(name: string): InventoryItem {
-        return this.items.find(it => { return it.name === name; });
-    }
-
-    public getItemByPlayerActionName(playerActionName: string): InventoryItem {
-        return this.items.find(it => { return it.playerAction.name === playerActionName; });
-    }
-
-    public update(): void {
-
-    }
-
-    public serialize(): IInventoryData {
-        let data: IInventoryData = {
-            items: []
-        };
-        for (let i = 0; i < this.items.length; i++) {
-            let item = this.items[i];
-            data.items.push({
-                r: item.name,
-                c: item.count
-            });
-        }
-        return data;
-    }
-
-    public async deserializeInPlace(input: IInventoryData) {
-        this.items = [];
-        for (let i = 0; i < input.items.length; i++) {
-            let data = input.items[i];
-            let blockType = Kulla.BlockTypeNames.indexOf(data.r);
-            if (blockType != -1) {
-                let item = await InventoryItem.Block(this.player, blockType);
-                item.count = data.c;
-                this.items.push(item);
-            }
-            else {
-                let item = await InventoryItem.TmpObject(this.player, data.r);
-                item.count = data.c;
-                this.items.push(item);
-            }
-        }
-    }
-}
-*/ 
 /// <reference path="../lib/babylon.d.ts"/>
 /// <reference path="../lib/nabu/nabu.d.ts"/>
 /// <reference path="../lib/mummu/mummu.d.ts"/>
@@ -665,15 +505,16 @@ class Game {
             this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("MyBrick", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("MyBrick", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("YourBrick", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("plate_1x1", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("plate_1x1", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("plate_2x1", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("brick_2x1", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("brick_2x1", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("brick_4x1", InventoryCategory.Brick));
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Rock), 4);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_1x1", this.player), 5);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("brick_2x1", this.player), 6);
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -2641,7 +2482,7 @@ class PlayerControler {
                 if (this.player.currentAction) {
                     this.player.currentAction.onPointerDown(this.player.currentChuncks);
                 }
-                else {
+                else if (this.player.defaultAction.onPointerDown) {
                     this.player.defaultAction.onPointerDown(this.player.currentChuncks);
                 }
             }
@@ -2678,10 +2519,10 @@ class PlayerControler {
         });
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY, () => {
             if (this.playerInventoryView.shown) {
-                this.playerInventoryView.hide();
+                this.playerInventoryView.hide(0.2);
             }
             else {
-                this.playerInventoryView.show();
+                this.playerInventoryView.show(0.2);
             }
         });
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_PREV_CAT, () => {
@@ -2788,6 +2629,9 @@ class PlayerInventoryItem {
             if (block >= Kulla.BlockType.None && block < Kulla.BlockType.Unknown) {
                 return PlayerActionTemplate.CreateBlockAction(player, block);
             }
+        }
+        else if (this.category === InventoryCategory.Brick) {
+            return PlayerActionTemplate.CreateBrickAction(this.name, player);
         }
     }
 }

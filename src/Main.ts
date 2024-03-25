@@ -194,16 +194,17 @@ class Game {
             this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("MyBrick", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("MyBrick", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("YourBrick", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("plate_1x1", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("plate_1x1", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("plate_2x1", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("brick_2x1", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("brick_2x1", InventoryCategory.Brick));
+            this.player.inventory.addItem(new PlayerInventoryItem("brick_4x1", InventoryCategory.Brick));
 
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Rock), 4);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_1x1", this.player), 5);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("brick_2x1", this.player), 6);
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {

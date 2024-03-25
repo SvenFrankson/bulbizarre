@@ -44,7 +44,7 @@ class PlayerControler {
                 if (this.player.currentAction) {
                     this.player.currentAction.onPointerDown(this.player.currentChuncks);
                 }
-                else {
+                else if (this.player.defaultAction.onPointerDown) {
                     this.player.defaultAction.onPointerDown(this.player.currentChuncks);
                 }
             }
@@ -86,10 +86,10 @@ class PlayerControler {
 
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY, () => {
             if (this.playerInventoryView.shown) {
-                this.playerInventoryView.hide();
+                this.playerInventoryView.hide(0.2);
             }
             else {
-                this.playerInventoryView.show();
+                this.playerInventoryView.show(0.2);
             }
         })
 

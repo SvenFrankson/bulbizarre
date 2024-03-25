@@ -24,6 +24,9 @@ class PlayerInventoryItem {
                 return PlayerActionTemplate.CreateBlockAction(player, block);
             }
         }
+        else if (this.category === InventoryCategory.Brick) {
+            return PlayerActionTemplate.CreateBrickAction(this.name, player);
+        }
     }
 }
 
