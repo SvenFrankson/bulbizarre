@@ -211,6 +211,11 @@ class Game {
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
             this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Rock), 4);
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_6x2", this.player), 5);
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_14x2", this.player), 6);
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_4x4", this.player), 7);
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate-corner-cut_3x3", this.player), 8);
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate-corner-cut_6x6", this.player), 9);
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {
@@ -341,7 +346,7 @@ class Game {
             this.terrain.initialize();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
 
-            this.playerInventoryView.show(0.2);
+            //this.playerInventoryView.show(0.2);
         }
 
         let mat = new TerrainMaterial("terrain", this.scene);
@@ -403,6 +408,8 @@ class Game {
             this.terrain.dispose();
         }
     
+        this.light.direction = (new BABYLON.Vector3(3, 2, - 1)).normalize();
+
         this.uiCamera.parent = this.orthoCamera;
         this.freeCamera.detachControl();
         this.scene.activeCameras = [this.orthoCamera];
@@ -434,8 +441,12 @@ class Game {
         return new Promise<void>(resolve => {
             requestAnimationFrame(async () => {
                 let previewMesh = new BABYLON.Mesh("brick-preview-mesh");
-                let template = await BrickTemplateManager.Instance.getTemplate(Brick.BrickIdToIndex(brickName));
-                template.vertexData.applyToMesh(previewMesh);
+                let previewMat = new BABYLON.StandardMaterial("brick-preview-material");
+                previewMat.specularColor.copyFromFloats(0, 0, 0);
+                previewMesh.material = previewMat;
+
+                let brickTemplate = await BrickTemplateManager.Instance.getTemplate(Brick.BrickIdToIndex(brickName));
+                brickTemplate.vertexData.applyToMesh(previewMesh);
 
                 previewMesh.refreshBoundingInfo();
 
@@ -444,20 +455,14 @@ class Game {
                 let h = bbox.maximumWorld.y - bbox.minimumWorld.y;
                 let d = bbox.maximumWorld.z - bbox.minimumWorld.z;
 
-                let previewBox = Mummu.CreateLineBox("brick-preview-box", { width: w, height: h, depth: d });
-                previewBox.position.copyFrom(bbox.maximumWorld).addInPlace(bbox.minimumWorld).scaleInPlace(0.5);
-
-                this.orthoCamera.setTarget(previewBox.position);
+                this.orthoCamera.setTarget(bbox.maximumWorld.add(bbox.minimumWorld).scaleInPlace(0.5));
                 this.orthoCamera.radius = 20;
                 this.orthoCamera.alpha = - Math.PI / 6;
                 this.orthoCamera.beta = Math.PI / 3;
 
                 let hAngle = Math.PI * 0.5 + this.orthoCamera.alpha;
                 let vAngle = Math.PI * 0.5 - this.orthoCamera.beta;
-                console.log("sin " + Math.sin(hAngle) + " cos " + Math.cos(hAngle));
                 let halfCamMinW = d * 0.5 * Math.sin(hAngle) + w * 0.5 * Math.cos(hAngle) + 0.1;
-                console.log("d " + d);
-                console.log("halfCamMinW " + halfCamMinW);
                 let halfCamMinH = h * 0.5 * Math.cos(vAngle) + d * 0.5 * Math.cos(hAngle) * Math.sin(vAngle) + w * 0.5 * Math.sin(hAngle) * Math.sin(vAngle) + 0.1;
 
                 if (halfCamMinW >= halfCamMinH) {
@@ -477,7 +482,6 @@ class Game {
                     await Mummu.MakeScreenshot({ miniatureName: brickName, size: 256 });
                     if (!debugNoDelete) {
                         previewMesh.dispose();
-                        previewBox.dispose();
                     }
                     resolve();
                 }, 300);

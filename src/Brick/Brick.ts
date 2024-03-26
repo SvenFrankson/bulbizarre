@@ -55,6 +55,15 @@ class Brick extends BABYLON.TransformNode {
         }
     }
 
+    public static BrickIdToName(brickID: number | string): string {
+        if (typeof(brickID) === "string") {
+            return brickID;
+        }
+        else {
+            return BRICK_LIST[brickID];
+        }
+    }
+
     constructor(index: number, colorIndex: number);
     constructor(brickName: string, colorIndex: number);
     constructor(brickId: number | string, colorIndex: number);

@@ -72,7 +72,15 @@ class PlayerActionView {
         if (slotIndex >= 0 && slotIndex <= 9) {
             let tile = this.getTile(slotIndex);
             if (tile) {
-                tile.style.backgroundColor = action.backgroundColor;
+                if (action.iconUrl) {
+                    tile.style.background = "url(" + action.iconUrl + ")";
+                    tile.style.backgroundSize = "contain";
+                    tile.style.backgroundRepeat = "no-repeat";
+                    tile.style.backgroundPosition = "center";
+                }
+                else {
+                    tile.style.backgroundColor = action.backgroundColor;
+                }
             }
         }
     }

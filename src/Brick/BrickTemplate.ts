@@ -38,22 +38,31 @@ class BrickTemplate {
         
     }
 
-    public async load(): Promise<void> {
+    public async load(lod: number = 0): Promise<void> {
         //this.vertexData = (await this.brickTemplateManager.vertexDataLoader.get("./datas/meshes/plate_1x1.babylon"))[0];
         if (this.name.startsWith("brick_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 3, w);
+            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 3, w, lod);
+        }
+        else if (this.name.startsWith("plate-corner-cut_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let w = parseInt(this.name.split("_")[1].split("x")[1]);
+            let cut = 1;
+            if (l >= 4) {
+                cut = 2;
+            }
+            this.vertexData = await BrickVertexDataGenerator.GetStuddedCutBoxVertexData(cut, l, 1, w, lod);
         }
         else if (this.name.startsWith("wall_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 12, w);
+            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 12, w, lod);
         }
         else if (this.name.startsWith("plate_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 1, w);
+            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 1, w, lod);
         }
         else {
             this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(1, 1, 1);

@@ -61,7 +61,7 @@ class PlayerActionTemplate {
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh: BABYLON.Mesh;
         let previewBox: BABYLON.Mesh;
-        action.iconUrl = "/datas/images/block-icon-" + Kulla.BlockTypeNames[blockType] + "-miniature.png";
+        action.iconUrl = undefined;
 
         let lastSize: number;
         let lastI: number;
@@ -190,7 +190,7 @@ class PlayerActionTemplate {
         let brickAction = new PlayerAction("brick", player);
         brickAction.backgroundColor = "#000000";
         let previewMesh: BABYLON.Mesh;
-        brickAction.iconUrl = "/datas/images/brick-icon.png";
+        brickAction.iconUrl = "/datas/icons/bricks/" + Brick.BrickIdToName(brickId) + ".png";
 
         let rotationQuaternion = BABYLON.Quaternion.Identity();
 
