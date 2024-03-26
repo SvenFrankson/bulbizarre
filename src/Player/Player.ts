@@ -132,7 +132,7 @@ class Player extends BABYLON.Mesh {
             this.position.addInPlace(this.velocity.scale(dt));
         }
         else {
-            if (this.position.y < 100) {
+            if (this.position.y < 80) {
                 this.position.y += 0.1;
             }
             if (this.position.y < 0) {

@@ -260,7 +260,21 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
             line.classList.add("line");
             this._containers[inventoryItem.category].appendChild(line);
             this._lines[inventoryItem.category].push(line);
-    
+
+            let icon = document.createElement("img");
+            icon.classList.add("inventory-icon");
+            icon.setAttribute("src", inventoryItem.icon);
+            icon.style.display = "inline-block";
+            icon.style.verticalAlign = "top";
+            icon.style.marginLeft = "1%";
+            icon.style.marginRight = "1%";
+            icon.style.marginTop = "0";
+            icon.style.marginBottom = "0";
+            icon.style.height = "85%";
+            icon.style.outline = "1px solid white";
+            icon.style.borderRadius = "4px";
+            line.appendChild(icon);
+
             let label = document.createElement("div");
             label.classList.add("label");
             label.innerHTML = inventoryItem.name;
@@ -269,7 +283,7 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
             label.style.marginRight = "1%";
             label.style.paddingLeft = "1.5%";
             label.style.paddingRight = "1.5%";
-            label.style.width = "55%";
+            label.style.width = "45%";
             line.appendChild(label);
     
             let countBlock = document.createElement("div");

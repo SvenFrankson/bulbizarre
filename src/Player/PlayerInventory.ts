@@ -15,6 +15,10 @@ class PlayerInventoryItem {
     constructor(name: string, category: InventoryCategory) {
         this.name = name;
         this.category = category;
+        this.icon = "/datas/icons/empty.png";
+        if (this.category === InventoryCategory.Brick) {
+            this.icon = "/datas/icons/bricks/" + name + ".png";
+        }
     }
 
     public getPlayerAction(player: Player): PlayerAction {

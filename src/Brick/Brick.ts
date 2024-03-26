@@ -31,10 +31,11 @@ class Brick extends BABYLON.TransformNode {
     ]
 
     public get isRoot(): boolean {
-        return this.parent === undefined;
+        return !(this.parent instanceof Brick);
     }
 
     public mesh: BrickMesh;
+    public chunck: Kulla.Chunck;
     public get root(): Brick {
         if (this.parent instanceof Brick) {
             return this.parent.root;
@@ -64,6 +65,8 @@ class Brick extends BABYLON.TransformNode {
         }
     }
 
+    public uuid: number;
+
     constructor(index: number, colorIndex: number);
     constructor(brickName: string, colorIndex: number);
     constructor(brickId: number | string, colorIndex: number);
@@ -78,11 +81,13 @@ class Brick extends BABYLON.TransformNode {
             if (this.mesh) {
                 this.mesh.dispose();
             }
+            Brick.RemoveBrickUUID(this.uuid);
         }
         else {
             let root = this.root;
             this.setParent(undefined);
             root.updateMesh();
+            root.saveToLocalStorage();
         }
     }
 
@@ -199,4 +204,114 @@ class Brick extends BABYLON.TransformNode {
 
         return mergedData;
     }
+
+    public serialize(): IBrickData {
+        let data: IBrickData = {
+            id: this.index,
+            x: this.position.x,
+            y: this.position.y,
+            z: this.position.z,
+            qx: this.rotationQuaternion.x,
+            qy: this.rotationQuaternion.y,
+            qz: this.rotationQuaternion.z,
+            qw: this.rotationQuaternion.w,
+        }
+
+        if (this.isRoot) {
+            if (!isFinite(this.uuid)) {
+                this.uuid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+            }
+            data.uuid = this.uuid;
+        }
+
+        let children = this.getChildTransformNodes(true);
+        if (children.length > 0) {
+            data.c = [];
+        }
+        for (let i = 0; i < children.length; i++) {
+            let child = children[i];
+            if (child instanceof Brick) {
+                data.c[i] = child.serialize();
+            }
+        }
+
+        return data;
+    }
+
+    public deserialize(data: IBrickData): void {
+        this.index = data.id;
+        if (isFinite(data.uuid)) {
+            this.uuid = data.uuid;
+        }
+        this.position.copyFromFloats(data.x, data.y, data.z);
+        this.rotationQuaternion.copyFromFloats(data.qx, data.qy, data.qz, data.qw);
+
+        if (data.c) {
+            for (let i = 0; i < data.c.length; i++) {
+                let child = new Brick(0, 0);
+                child.parent = this;
+                child.deserialize(data.c[i]);
+            }
+        }
+    }
+
+    public saveToLocalStorage(): void {
+        if (!this.isRoot) {
+            console.log(this.root);
+            this.root.saveToLocalStorage();
+            return;
+        }
+
+        let data = this.serialize();
+        window.localStorage.setItem("brick_" + this.uuid, JSON.stringify(data));
+    }
+
+    public static AddBrickUUID(uuid: number) {
+        let index = ALLBRICKS.indexOf(uuid);
+        if (index === - 1) {
+            ALLBRICKS.push(uuid);
+        }
+        console.log(ALLBRICKS);;
+        window.localStorage.setItem("all_bricks", JSON.stringify(ALLBRICKS));
+    }
+
+    public static RemoveBrickUUID(uuid: number) {
+        let index = ALLBRICKS.indexOf(uuid);
+        if (index > - 1) {
+            ALLBRICKS.splice(index, 1);
+        }
+        window.localStorage.setItem("all_bricks", JSON.stringify(ALLBRICKS));
+        window.localStorage.removeItem("brick_" + uuid);
+    }
+
+    public static LoadAllBricks() {
+        let ALLBRICKSString = window.localStorage.getItem("all_bricks");
+        if (ALLBRICKSString) {
+            ALLBRICKS = JSON.parse(ALLBRICKSString);
+        }
+        for (let i = 0; i < ALLBRICKS.length; i++) {
+            let brick = new Brick(0, 0);
+            let dataString = window.localStorage.getItem("brick_" + ALLBRICKS[i]);
+            if (dataString) {
+                let data = JSON.parse(dataString);
+                brick.deserialize(data);
+                brick.updateMesh();
+            }
+        }
+    }
+}
+
+var ALLBRICKS: number[] = [];
+
+interface IBrickData {
+    uuid?: number;
+    id: number;
+    x: number;
+    y: number;
+    z: number;
+    qx: number;
+    qy: number;
+    qz: number;
+    qw: number;
+    c?: IBrickData[];
 }

@@ -77,8 +77,11 @@ class PlayerActionMoveBrick {
                         if (duration > 0.3) {
                             let root = hit.pickedMesh.brick.root;
                             let aimedBrick = root.getBrickForFaceId(hit.faceId);
+                            Brick.RemoveBrickUUID(brick.uuid);
                             brick.setParent(aimedBrick);
                             brick.updateMesh();
+                            brick.chunck = undefined;
+                            aimedBrick.root.saveToLocalStorage();
                         }
                         else {
                             let root = hit.pickedMesh.brick.root;
@@ -89,12 +92,16 @@ class PlayerActionMoveBrick {
                             dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
                             brick.root.position.copyFrom(dp);
                             brick.root.position.addInPlace(rootPosition);
+                            brick.chunck = root.chunck;
+                            brick.saveToLocalStorage();
                         }
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                         if (chunckIJK) {
                             brick.root.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
+                            brick.root.chunck = chunckIJK.chunck;
+                            brick.saveToLocalStorage();
                         }
                     }
                 }

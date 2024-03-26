@@ -230,6 +230,7 @@ class PlayerActionTemplate {
                         brick.computeWorldMatrix(true);
                         brick.setParent(aimedBrick);
                         brick.updateMesh();
+                        brick.saveToLocalStorage();
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
@@ -238,6 +239,9 @@ class PlayerActionTemplate {
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
                             brick.rotationQuaternion = rotationQuaternion.clone();
                             brick.updateMesh();
+                            brick.chunck = chunckIJK.chunck;
+                            brick.saveToLocalStorage();
+                            Brick.AddBrickUUID(brick.uuid);
                         }
                     }
                 }

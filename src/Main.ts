@@ -199,6 +199,8 @@ class Game {
             }
 
             this.player.playerActionManager.loadFromLocalStorage();
+
+            Brick.LoadAllBricks();
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {

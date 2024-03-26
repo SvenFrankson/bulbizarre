@@ -506,6 +506,7 @@ class Game {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_LIST[i], InventoryCategory.Brick));
             }
             this.player.playerActionManager.loadFromLocalStorage();
+            Brick.LoadAllBricks();
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -1826,7 +1827,7 @@ class Brick extends BABYLON.TransformNode {
         this.index = Brick.BrickIdToIndex(arg1);
     }
     get isRoot() {
-        return this.parent === undefined;
+        return !(this.parent instanceof Brick);
     }
     get root() {
         if (this.parent instanceof Brick) {
@@ -1858,11 +1859,13 @@ class Brick extends BABYLON.TransformNode {
             if (this.mesh) {
                 this.mesh.dispose();
             }
+            Brick.RemoveBrickUUID(this.uuid);
         }
         else {
             let root = this.root;
             this.setParent(undefined);
             root.updateMesh();
+            root.saveToLocalStorage();
         }
     }
     posWorldToLocal(pos) {
@@ -1965,6 +1968,91 @@ class Brick extends BABYLON.TransformNode {
         }
         return mergedData;
     }
+    serialize() {
+        let data = {
+            id: this.index,
+            x: this.position.x,
+            y: this.position.y,
+            z: this.position.z,
+            qx: this.rotationQuaternion.x,
+            qy: this.rotationQuaternion.y,
+            qz: this.rotationQuaternion.z,
+            qw: this.rotationQuaternion.w,
+        };
+        if (this.isRoot) {
+            if (!isFinite(this.uuid)) {
+                this.uuid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+            }
+            data.uuid = this.uuid;
+        }
+        let children = this.getChildTransformNodes(true);
+        if (children.length > 0) {
+            data.c = [];
+        }
+        for (let i = 0; i < children.length; i++) {
+            let child = children[i];
+            if (child instanceof Brick) {
+                data.c[i] = child.serialize();
+            }
+        }
+        return data;
+    }
+    deserialize(data) {
+        this.index = data.id;
+        if (isFinite(data.uuid)) {
+            this.uuid = data.uuid;
+        }
+        this.position.copyFromFloats(data.x, data.y, data.z);
+        this.rotationQuaternion.copyFromFloats(data.qx, data.qy, data.qz, data.qw);
+        if (data.c) {
+            for (let i = 0; i < data.c.length; i++) {
+                let child = new Brick(0, 0);
+                child.parent = this;
+                child.deserialize(data.c[i]);
+            }
+        }
+    }
+    saveToLocalStorage() {
+        if (!this.isRoot) {
+            console.log(this.root);
+            this.root.saveToLocalStorage();
+            return;
+        }
+        let data = this.serialize();
+        window.localStorage.setItem("brick_" + this.uuid, JSON.stringify(data));
+    }
+    static AddBrickUUID(uuid) {
+        let index = ALLBRICKS.indexOf(uuid);
+        if (index === -1) {
+            ALLBRICKS.push(uuid);
+        }
+        console.log(ALLBRICKS);
+        ;
+        window.localStorage.setItem("all_bricks", JSON.stringify(ALLBRICKS));
+    }
+    static RemoveBrickUUID(uuid) {
+        let index = ALLBRICKS.indexOf(uuid);
+        if (index > -1) {
+            ALLBRICKS.splice(index, 1);
+        }
+        window.localStorage.setItem("all_bricks", JSON.stringify(ALLBRICKS));
+        window.localStorage.removeItem("brick_" + uuid);
+    }
+    static LoadAllBricks() {
+        let ALLBRICKSString = window.localStorage.getItem("all_bricks");
+        if (ALLBRICKSString) {
+            ALLBRICKS = JSON.parse(ALLBRICKSString);
+        }
+        for (let i = 0; i < ALLBRICKS.length; i++) {
+            let brick = new Brick(0, 0);
+            let dataString = window.localStorage.getItem("brick_" + ALLBRICKS[i]);
+            if (dataString) {
+                let data = JSON.parse(dataString);
+                brick.deserialize(data);
+                brick.updateMesh();
+            }
+        }
+    }
 }
 Brick.depthColors = [
     new BABYLON.Color4(1, 1, 1, 1),
@@ -1982,6 +2070,7 @@ Brick.depthColors = [
     new BABYLON.Color4(1, 0.5, 1, 1),
     new BABYLON.Color4(0.2, 0.2, 0.2, 1)
 ];
+var ALLBRICKS = [];
 var BRICK_LIST = [
     "plate_6x2",
     "plate_14x2",
@@ -2305,7 +2394,7 @@ class Player extends BABYLON.Mesh {
             this.position.addInPlace(this.velocity.scale(dt));
         }
         else {
-            if (this.position.y < 100) {
+            if (this.position.y < 80) {
                 this.position.y += 0.1;
             }
             if (this.position.y < 0) {
@@ -2799,6 +2888,10 @@ class PlayerInventoryItem {
         this.count = 1;
         this.name = name;
         this.category = category;
+        this.icon = "/datas/icons/empty.png";
+        if (this.category === InventoryCategory.Brick) {
+            this.icon = "/datas/icons/bricks/" + name + ".png";
+        }
     }
     getPlayerAction(player) {
         if (this.category === InventoryCategory.Block) {
@@ -3059,6 +3152,19 @@ class PlayerInventoryView extends HTMLElement {
             line.classList.add("line");
             this._containers[inventoryItem.category].appendChild(line);
             this._lines[inventoryItem.category].push(line);
+            let icon = document.createElement("img");
+            icon.classList.add("inventory-icon");
+            icon.setAttribute("src", inventoryItem.icon);
+            icon.style.display = "inline-block";
+            icon.style.verticalAlign = "top";
+            icon.style.marginLeft = "1%";
+            icon.style.marginRight = "1%";
+            icon.style.marginTop = "0";
+            icon.style.marginBottom = "0";
+            icon.style.height = "85%";
+            icon.style.outline = "1px solid white";
+            icon.style.borderRadius = "4px";
+            line.appendChild(icon);
             let label = document.createElement("div");
             label.classList.add("label");
             label.innerHTML = inventoryItem.name;
@@ -3067,7 +3173,7 @@ class PlayerInventoryView extends HTMLElement {
             label.style.marginRight = "1%";
             label.style.paddingLeft = "1.5%";
             label.style.paddingRight = "1.5%";
-            label.style.width = "55%";
+            label.style.width = "45%";
             line.appendChild(label);
             let countBlock = document.createElement("div");
             countBlock.classList.add("count-block");
@@ -3271,8 +3377,11 @@ class PlayerActionMoveBrick {
                         if (duration > 0.3) {
                             let root = hit.pickedMesh.brick.root;
                             let aimedBrick = root.getBrickForFaceId(hit.faceId);
+                            Brick.RemoveBrickUUID(brick.uuid);
                             brick.setParent(aimedBrick);
                             brick.updateMesh();
+                            brick.chunck = undefined;
+                            aimedBrick.root.saveToLocalStorage();
                         }
                         else {
                             let root = hit.pickedMesh.brick.root;
@@ -3283,12 +3392,16 @@ class PlayerActionMoveBrick {
                             dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
                             brick.root.position.copyFrom(dp);
                             brick.root.position.addInPlace(rootPosition);
+                            brick.chunck = root.chunck;
+                            brick.saveToLocalStorage();
                         }
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                         if (chunckIJK) {
                             brick.root.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
+                            brick.root.chunck = chunckIJK.chunck;
+                            brick.saveToLocalStorage();
                         }
                     }
                 }
@@ -3516,6 +3629,7 @@ class PlayerActionTemplate {
                         brick.computeWorldMatrix(true);
                         brick.setParent(aimedBrick);
                         brick.updateMesh();
+                        brick.saveToLocalStorage();
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
@@ -3524,6 +3638,9 @@ class PlayerActionTemplate {
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
                             brick.rotationQuaternion = rotationQuaternion.clone();
                             brick.updateMesh();
+                            brick.chunck = chunckIJK.chunck;
+                            brick.saveToLocalStorage();
+                            Brick.AddBrickUUID(brick.uuid);
                         }
                     }
                 }
