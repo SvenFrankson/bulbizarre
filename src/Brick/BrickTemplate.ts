@@ -45,6 +45,11 @@ class BrickTemplate {
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
             this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 3, w);
         }
+        else if (this.name.startsWith("wall_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let w = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 12, w);
+        }
         else if (this.name.startsWith("plate_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);

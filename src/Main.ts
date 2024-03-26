@@ -30,6 +30,7 @@ class Game {
     //public camera: BABYLON.FreeCamera;
     public freeCamera: BABYLON.FreeCamera;
     public arcCamera: BABYLON.ArcRotateCamera;
+    public orthoCamera: BABYLON.ArcRotateCamera;
     public uiCamera: BABYLON.FreeCamera;
     
     public light: BABYLON.HemisphericLight;
@@ -101,6 +102,11 @@ class Game {
         this.arcCamera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 20, new BABYLON.Vector3(0, 10, 0));
         this.arcCamera.speed = 0.2;
         this.arcCamera.minZ = 0.1;
+
+        this.orthoCamera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 20, new BABYLON.Vector3(0, 10, 0));
+        this.orthoCamera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+        this.orthoCamera.speed = 0.2;
+        this.orthoCamera.minZ = 0.1;
 
         this.uiCamera = new BABYLON.FreeCamera("background-camera", BABYLON.Vector3.Zero());
         this.uiCamera.parent = this.freeCamera;
@@ -334,6 +340,8 @@ class Game {
             });
             this.terrain.initialize();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+
+            this.playerInventoryView.show(0.2);
         }
 
         let mat = new TerrainMaterial("terrain", this.scene);
@@ -389,6 +397,94 @@ class Game {
 
         this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
     }
+
+    public generateBrickMiniatures(): void {
+        if (this.terrain) {
+            this.terrain.dispose();
+        }
+    
+        this.uiCamera.parent = this.orthoCamera;
+        this.freeCamera.detachControl();
+        this.scene.activeCameras = [this.orthoCamera];
+        this.orthoCamera.attachControl();
+        
+        this.canvas.style.top = "calc((100vh - min(100vh, 100vw)) * 0.5)";
+        this.canvas.style.left = "calc((100vw - min(100vh, 100vw)) * 0.5)";
+        this.canvas.style.width = "min(100vh, 100vw)";
+        this.canvas.style.height = "min(100vh, 100vw)";
+
+        requestAnimationFrame(() => {
+            this.engine.resize();
+            this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
+    
+            this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
+    
+            let doMinis = async () => {
+                for (let i = 0; i < BRICK_LIST.length; i++) {
+                    await this.makeScreenshot(BRICK_LIST[i], i === BRICK_LIST.length - 1);
+                }
+            }
+            doMinis();
+        })
+    }
+    
+    public async makeScreenshot(brickName: string, debugNoDelete: boolean = false): Promise<void> {
+        this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
+        
+        return new Promise<void>(resolve => {
+            requestAnimationFrame(async () => {
+                let previewMesh = new BABYLON.Mesh("brick-preview-mesh");
+                let template = await BrickTemplateManager.Instance.getTemplate(Brick.BrickIdToIndex(brickName));
+                template.vertexData.applyToMesh(previewMesh);
+
+                previewMesh.refreshBoundingInfo();
+
+                let bbox = previewMesh.getBoundingInfo().boundingBox;
+                let w = bbox.maximumWorld.x - bbox.minimumWorld.x;
+                let h = bbox.maximumWorld.y - bbox.minimumWorld.y;
+                let d = bbox.maximumWorld.z - bbox.minimumWorld.z;
+
+                let previewBox = Mummu.CreateLineBox("brick-preview-box", { width: w, height: h, depth: d });
+                previewBox.position.copyFrom(bbox.maximumWorld).addInPlace(bbox.minimumWorld).scaleInPlace(0.5);
+
+                this.orthoCamera.setTarget(previewBox.position);
+                this.orthoCamera.radius = 20;
+                this.orthoCamera.alpha = - Math.PI / 6;
+                this.orthoCamera.beta = Math.PI / 3;
+
+                let hAngle = Math.PI * 0.5 + this.orthoCamera.alpha;
+                let vAngle = Math.PI * 0.5 - this.orthoCamera.beta;
+                console.log("sin " + Math.sin(hAngle) + " cos " + Math.cos(hAngle));
+                let halfCamMinW = d * 0.5 * Math.sin(hAngle) + w * 0.5 * Math.cos(hAngle) + 0.1;
+                console.log("d " + d);
+                console.log("halfCamMinW " + halfCamMinW);
+                let halfCamMinH = h * 0.5 * Math.cos(vAngle) + d * 0.5 * Math.cos(hAngle) * Math.sin(vAngle) + w * 0.5 * Math.sin(hAngle) * Math.sin(vAngle) + 0.1;
+
+                if (halfCamMinW >= halfCamMinH) {
+                    this.orthoCamera.orthoTop = halfCamMinW;
+                    this.orthoCamera.orthoBottom = - halfCamMinW;
+                    this.orthoCamera.orthoLeft = - halfCamMinW;
+                    this.orthoCamera.orthoRight = halfCamMinW;
+                }
+                else {
+                    this.orthoCamera.orthoTop = halfCamMinH;
+                    this.orthoCamera.orthoBottom = - halfCamMinH;
+                    this.orthoCamera.orthoLeft = - halfCamMinH;
+                    this.orthoCamera.orthoRight = halfCamMinH;
+                }
+
+                setTimeout(async () => {
+                    await Mummu.MakeScreenshot({ miniatureName: brickName, size: 256 });
+                    if (!debugNoDelete) {
+                        previewMesh.dispose();
+                        previewBox.dispose();
+                    }
+                    resolve();
+                }, 300);
+            });
+        });
+    }
+
 }
 
 window.addEventListener("DOMContentLoaded", () => {

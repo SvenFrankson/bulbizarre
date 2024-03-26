@@ -41,6 +41,10 @@ class GameRouter extends Nabu.Router {
             this.game.generateTerrainSmall();
             this.game.propEditor.initialize();
         }
+        else if (page.startsWith("#miniatures")) {
+            this.hideAll();
+            this.game.generateBrickMiniatures();
+        }
         else if (page.startsWith("#options")) {
             this.show(this.optionPage);
         }

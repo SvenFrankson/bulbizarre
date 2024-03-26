@@ -426,6 +426,10 @@ class Game {
         this.arcCamera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 20, new BABYLON.Vector3(0, 10, 0));
         this.arcCamera.speed = 0.2;
         this.arcCamera.minZ = 0.1;
+        this.orthoCamera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 20, new BABYLON.Vector3(0, 10, 0));
+        this.orthoCamera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+        this.orthoCamera.speed = 0.2;
+        this.orthoCamera.minZ = 0.1;
         this.uiCamera = new BABYLON.FreeCamera("background-camera", BABYLON.Vector3.Zero());
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
@@ -627,6 +631,7 @@ class Game {
             });
             this.terrain.initialize();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+            this.playerInventoryView.show(0.2);
         }
         let mat = new TerrainMaterial("terrain", this.scene);
         this.terrain.materials = [mat];
@@ -670,6 +675,78 @@ class Game {
         this.configuration.getElement("renderDist").forceInit();
         this.configuration.getElement("showRenderDistDebug").forceInit();
         this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+    }
+    generateBrickMiniatures() {
+        if (this.terrain) {
+            this.terrain.dispose();
+        }
+        this.uiCamera.parent = this.orthoCamera;
+        this.freeCamera.detachControl();
+        this.scene.activeCameras = [this.orthoCamera];
+        this.orthoCamera.attachControl();
+        this.canvas.style.top = "calc((100vh - min(100vh, 100vw)) * 0.5)";
+        this.canvas.style.left = "calc((100vw - min(100vh, 100vw)) * 0.5)";
+        this.canvas.style.width = "min(100vh, 100vw)";
+        this.canvas.style.height = "min(100vh, 100vw)";
+        requestAnimationFrame(() => {
+            this.engine.resize();
+            this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
+            this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
+            let doMinis = async () => {
+                for (let i = 0; i < BRICK_LIST.length; i++) {
+                    await this.makeScreenshot(BRICK_LIST[i], i === BRICK_LIST.length - 1);
+                }
+            };
+            doMinis();
+        });
+    }
+    async makeScreenshot(brickName, debugNoDelete = false) {
+        this.scene.clearColor = BABYLON.Color4.FromHexString("#272B2EFF");
+        return new Promise(resolve => {
+            requestAnimationFrame(async () => {
+                let previewMesh = new BABYLON.Mesh("brick-preview-mesh");
+                let template = await BrickTemplateManager.Instance.getTemplate(Brick.BrickIdToIndex(brickName));
+                template.vertexData.applyToMesh(previewMesh);
+                previewMesh.refreshBoundingInfo();
+                let bbox = previewMesh.getBoundingInfo().boundingBox;
+                let w = bbox.maximumWorld.x - bbox.minimumWorld.x;
+                let h = bbox.maximumWorld.y - bbox.minimumWorld.y;
+                let d = bbox.maximumWorld.z - bbox.minimumWorld.z;
+                let previewBox = Mummu.CreateLineBox("brick-preview-box", { width: w, height: h, depth: d });
+                previewBox.position.copyFrom(bbox.maximumWorld).addInPlace(bbox.minimumWorld).scaleInPlace(0.5);
+                this.orthoCamera.setTarget(previewBox.position);
+                this.orthoCamera.radius = 20;
+                this.orthoCamera.alpha = -Math.PI / 6;
+                this.orthoCamera.beta = Math.PI / 3;
+                let hAngle = Math.PI * 0.5 + this.orthoCamera.alpha;
+                let vAngle = Math.PI * 0.5 - this.orthoCamera.beta;
+                console.log("sin " + Math.sin(hAngle) + " cos " + Math.cos(hAngle));
+                let halfCamMinW = d * 0.5 * Math.sin(hAngle) + w * 0.5 * Math.cos(hAngle) + 0.1;
+                console.log("d " + d);
+                console.log("halfCamMinW " + halfCamMinW);
+                let halfCamMinH = h * 0.5 * Math.cos(vAngle) + d * 0.5 * Math.cos(hAngle) * Math.sin(vAngle) + w * 0.5 * Math.sin(hAngle) * Math.sin(vAngle) + 0.1;
+                if (halfCamMinW >= halfCamMinH) {
+                    this.orthoCamera.orthoTop = halfCamMinW;
+                    this.orthoCamera.orthoBottom = -halfCamMinW;
+                    this.orthoCamera.orthoLeft = -halfCamMinW;
+                    this.orthoCamera.orthoRight = halfCamMinW;
+                }
+                else {
+                    this.orthoCamera.orthoTop = halfCamMinH;
+                    this.orthoCamera.orthoBottom = -halfCamMinH;
+                    this.orthoCamera.orthoLeft = -halfCamMinH;
+                    this.orthoCamera.orthoRight = halfCamMinH;
+                }
+                setTimeout(async () => {
+                    await Mummu.MakeScreenshot({ miniatureName: brickName, size: 256 });
+                    if (!debugNoDelete) {
+                        previewMesh.dispose();
+                        previewBox.dispose();
+                    }
+                    resolve();
+                }, 300);
+            });
+        });
     }
 }
 window.addEventListener("DOMContentLoaded", () => {
@@ -1917,10 +1994,15 @@ var BRICK_LIST = [
     "plate_2x1",
     "plate_3x1",
     "plate_4x1",
+    "plate_4x4",
     "brick_1x1",
     "brick_2x1",
     "brick_3x1",
     "brick_4x1",
+    "brick_4x4",
+    "wall_1x1",
+    "wall_2x1",
+    "wall_4x1",
 ];
 class BrickTemplateManager {
     constructor(vertexDataLoader) {
@@ -1959,6 +2041,11 @@ class BrickTemplate {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
             this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 3, w);
+        }
+        else if (this.name.startsWith("wall_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let w = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 12, w);
         }
         else if (this.name.startsWith("plate_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
@@ -2890,7 +2977,7 @@ class PlayerInventoryView extends HTMLElement {
             label.style.marginRight = "1%";
             label.style.paddingLeft = "1.5%";
             label.style.paddingRight = "1.5%";
-            label.style.width = "45%";
+            label.style.width = "55%";
             line.appendChild(label);
             let countBlock = document.createElement("div");
             countBlock.classList.add("count-block");
@@ -2902,6 +2989,23 @@ class PlayerInventoryView extends HTMLElement {
             countBlock.style.paddingRight = "1.5%";
             countBlock.style.width = "15%";
             line.appendChild(countBlock);
+            let equipButton = document.createElement("button");
+            equipButton.classList.add("equip-button");
+            equipButton.innerHTML = "EQUIP";
+            equipButton.style.display = "inline-block";
+            equipButton.style.marginLeft = "1%";
+            equipButton.style.marginRight = "1%";
+            equipButton.style.paddingLeft = "1.5%";
+            equipButton.style.paddingRight = "1.5%";
+            equipButton.style.width = "15%";
+            line.appendChild(equipButton);
+            equipButton.onclick = () => {
+                let action = inventoryItem.getPlayerAction(this.inventory.player);
+                this.inventory.player.playerActionManager.linkAction(action, this.inventory.player.playerActionManager.currentActionIndex);
+                if (this.inventory.player.playerActionManager.alwaysEquip) {
+                    this.inventory.player.playerActionManager.equipAction();
+                }
+            };
         }
         this.setPointer(0, InventoryCategory.Block);
         this.setPointer(0, InventoryCategory.Brick);
@@ -3443,6 +3547,10 @@ class GameRouter extends Nabu.Router {
             this.show(this.propEditor);
             this.game.generateTerrainSmall();
             this.game.propEditor.initialize();
+        }
+        else if (page.startsWith("#miniatures")) {
+            this.hideAll();
+            this.game.generateBrickMiniatures();
         }
         else if (page.startsWith("#options")) {
             this.show(this.optionPage);

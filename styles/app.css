@@ -319,3 +319,13 @@ inventory-page .line.highlit {
     background-color: rgba(255, 255, 255, 20%);
     outline: 1px solid white;
 }
+
+inventory-page .line .equip-button {
+    vertical-align: top;
+    font-size: min(2svh, 2vw);
+    margin: 0;
+    color: white;
+    background-color: #272b2e;
+    border: 2px solid white;
+    border-radius: min(2svh, 2vw);
+}

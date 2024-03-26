@@ -269,7 +269,7 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
             label.style.marginRight = "1%";
             label.style.paddingLeft = "1.5%";
             label.style.paddingRight = "1.5%";
-            label.style.width = "45%";
+            label.style.width = "55%";
             line.appendChild(label);
     
             let countBlock = document.createElement("div");
@@ -282,6 +282,25 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
             countBlock.style.paddingRight = "1.5%";
             countBlock.style.width = "15%";
             line.appendChild(countBlock);
+    
+            let equipButton = document.createElement("button");
+            equipButton.classList.add("equip-button");
+            equipButton.innerHTML = "EQUIP";
+            equipButton.style.display = "inline-block";
+            equipButton.style.marginLeft = "1%";
+            equipButton.style.marginRight = "1%";
+            equipButton.style.paddingLeft = "1.5%";
+            equipButton.style.paddingRight = "1.5%";
+            equipButton.style.width = "15%";
+            line.appendChild(equipButton);
+
+            equipButton.onclick = () => {
+                let action = inventoryItem.getPlayerAction(this.inventory.player);
+                this.inventory.player.playerActionManager.linkAction(action, this.inventory.player.playerActionManager.currentActionIndex);
+                if (this.inventory.player.playerActionManager.alwaysEquip) {
+                    this.inventory.player.playerActionManager.equipAction();
+                }
+            }
         }
 
         this.setPointer(0, InventoryCategory.Block);
