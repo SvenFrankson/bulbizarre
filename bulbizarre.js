@@ -498,32 +498,14 @@ class Game {
             this.inputManager.initialize();
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
+            this.player.inventory.addItem(new PlayerInventoryItem("None", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("plate_1x1", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("plate_1x1", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("plate_2x1", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("brick_2x1", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("brick_2x1", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("brick_4x1", InventoryCategory.Brick));
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Rock), 4);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_6x2", this.player), 5);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_14x2", this.player), 6);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_4x4", this.player), 7);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate-corner-cut_3x3", this.player), 8);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate-corner-cut_6x6", this.player), 9);
+            for (let i = 0; i < BRICK_LIST.length; i++) {
+                this.player.inventory.addItem(new PlayerInventoryItem(BRICK_LIST[i], InventoryCategory.Brick));
+            }
+            this.player.playerActionManager.loadFromLocalStorage();
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -2392,22 +2374,14 @@ class PlayerActionManager {
         if (slotIndex >= 0 && slotIndex <= 9) {
             this.linkedActions[slotIndex] = action;
             this.playerActionView.onActionLinked(action, slotIndex);
-            /*
-            if (Config.saveConfiguration.useLocalStorage) {
-                window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
-            }
-            */
+            this.saveToLocalStorage();
         }
     }
     unlinkAction(slotIndex) {
         if (slotIndex >= 0 && slotIndex <= 9) {
             this.linkedActions[slotIndex] = undefined;
             this.playerActionView.onActionUnlinked(slotIndex);
-            /*
-            if (Config.saveConfiguration.useLocalStorage) {
-                window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
-            }
-            */
+            this.saveToLocalStorage();
         }
     }
     setActionIndex(slotIndex) {
@@ -2442,11 +2416,25 @@ class PlayerActionManager {
             this.playerActionView.onActionEquiped(-1);
         }
     }
+    saveToLocalStorage() {
+        let data = this.serialize();
+        window.localStorage.setItem("player-action-manager", JSON.stringify(data));
+    }
+    loadFromLocalStorage() {
+        let dataString = window.localStorage.getItem("player-action-manager");
+        if (dataString) {
+            let data = JSON.parse(dataString);
+            this.deserializeInPlace(data);
+        }
+    }
     serialize() {
         let linkedActionsNames = [];
         for (let i = 0; i < this.linkedActions.length; i++) {
             if (this.linkedActions[i]) {
-                linkedActionsNames[i] = this.linkedActions[i].item.name;
+                linkedActionsNames[i] = this.linkedActions[i].name;
+            }
+            else {
+                linkedActionsNames[i] = undefined;
             }
         }
         return {
@@ -2457,6 +2445,18 @@ class PlayerActionManager {
         if (data && data.linkedItemNames) {
             for (let i = 0; i < data.linkedItemNames.length; i++) {
                 let linkedItemName = data.linkedItemNames[i];
+                if (linkedItemName) {
+                    if (linkedItemName.startsWith("block_")) {
+                        let blockName = linkedItemName.replace("block_", "");
+                        let blockType = Kulla.BlockTypeNames.indexOf(blockName);
+                        if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
+                            this.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, blockType), i);
+                        }
+                    }
+                    else if (linkedItemName) {
+                        this.linkAction(PlayerActionTemplate.CreateBrickAction(this.player, linkedItemName), i);
+                    }
+                }
             }
         }
     }
@@ -2808,7 +2808,7 @@ class PlayerInventoryItem {
             }
         }
         else if (this.category === InventoryCategory.Brick) {
-            return PlayerActionTemplate.CreateBrickAction(this.name, player);
+            return PlayerActionTemplate.CreateBrickAction(player, this.name);
         }
     }
 }
@@ -3321,59 +3321,8 @@ class PlayerActionMoveBrick {
 var ACTIVE_DEBUG_PLAYER_ACTION = true;
 var ADD_BRICK_ANIMATION_DURATION = 1000;
 class PlayerActionTemplate {
-    static async AddTmpObjectAction(player, tmpObjectName) {
-        return undefined;
-        /*
-        let action = new PlayerAction(tmpObjectName, player);
-        action.iconUrl = "/datas/images/qmark.png";
-
-        let previewTmpObject: TmpObject;
-
-        action.onUpdate = () => {
-            if (!player.inputManager.inventoryOpened) {
-                let hit = player.inputManager.getPickInfo(player.meshes);
-                if (hit && hit.pickedPoint) {
-                    if (!previewTmpObject) {
-                        previewTmpObject = new TmpObject(tmpObjectName, player.main);
-                        previewTmpObject.planet = player.planet;
-                        previewTmpObject.instantiate();
-                    }
-                    previewTmpObject.setPosition(hit.pickedPoint);
-                    previewTmpObject.setTarget(player.position);
-                    return;
-                }
-            }
-            if (previewTmpObject) {
-                previewTmpObject.dispose();
-                previewTmpObject = undefined;
-            }
-        }
-
-        action.onClick = () => {
-            if (!player.inputManager.inventoryOpened) {
-                let hit = player.inputManager.getPickInfo(player.meshes);
-                if (hit && hit.pickedPoint) {
-                    let tmpObject = new TmpObject(tmpObjectName, player.main);
-                    tmpObject.planet = player.planet;
-                    tmpObject.instantiate();
-                    tmpObject.setPosition(hit.pickedPoint);
-                    tmpObject.setTarget(player.position);
-                }
-            }
-        }
-
-        action.onUnequip = () => {
-            if (previewTmpObject) {
-                previewTmpObject.dispose();
-                previewTmpObject = undefined;
-            }
-        }
-
-        return action;
-        */
-    }
     static CreateBlockAction(player, blockType) {
-        let action = new PlayerAction(Kulla.BlockTypeNames[blockType], player);
+        let action = new PlayerAction("block_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh;
         let previewBox;
@@ -3483,8 +3432,8 @@ class PlayerActionTemplate {
         };
         return action;
     }
-    static CreateBrickAction(brickId, player) {
-        let brickAction = new PlayerAction("brick", player);
+    static CreateBrickAction(player, brickId) {
+        let brickAction = new PlayerAction(Brick.BrickIdToName(brickId), player);
         brickAction.backgroundColor = "#000000";
         let previewMesh;
         brickAction.iconUrl = "/datas/icons/bricks/" + Brick.BrickIdToName(brickId) + ".png";

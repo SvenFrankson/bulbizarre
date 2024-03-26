@@ -25,7 +25,7 @@ class PlayerInventoryItem {
             }
         }
         else if (this.category === InventoryCategory.Brick) {
-            return PlayerActionTemplate.CreateBrickAction(this.name, player);
+            return PlayerActionTemplate.CreateBrickAction(player, this.name);
         }
     }
 }

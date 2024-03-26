@@ -1,3 +1,7 @@
+interface IPlayerActionManagerData {
+    linkedItemNames: string[];
+}
+
 class PlayerActionManager {
 
     public alwaysEquip: boolean = true;
@@ -58,11 +62,7 @@ class PlayerActionManager {
         if (slotIndex >= 0 && slotIndex <= 9) {
             this.linkedActions[slotIndex] = action;
             this.playerActionView.onActionLinked(action, slotIndex);
-            /*
-            if (Config.saveConfiguration.useLocalStorage) {
-                window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
-            }
-            */
+            this.saveToLocalStorage();
         }
     }
 
@@ -70,11 +70,7 @@ class PlayerActionManager {
         if (slotIndex >= 0 && slotIndex <= 9) {
             this.linkedActions[slotIndex] = undefined;
             this.playerActionView.onActionUnlinked(slotIndex);
-            /*
-            if (Config.saveConfiguration.useLocalStorage) {
-                window.localStorage.setItem("player-action-manager", JSON.stringify(this.serialize()));
-            }
-            */
+            this.saveToLocalStorage();
         }
     }
 
@@ -114,13 +110,30 @@ class PlayerActionManager {
         }
     }
 
+    public saveToLocalStorage(): void {
+        let data = this.serialize();
+        window.localStorage.setItem("player-action-manager", JSON.stringify(data));
+    }
+
+    public loadFromLocalStorage(): void {
+        let dataString = window.localStorage.getItem("player-action-manager");
+        if (dataString) {
+            let data = JSON.parse(dataString) as IPlayerActionManagerData;
+            this.deserializeInPlace(data);
+        }
+    }
+
     public serialize(): IPlayerActionManagerData {
         let linkedActionsNames: string[] = [];
         for (let i = 0; i < this.linkedActions.length; i++) {
             if (this.linkedActions[i]) {
-                linkedActionsNames[i] = this.linkedActions[i].item.name;
+                linkedActionsNames[i] = this.linkedActions[i].name;
+            }
+            else {
+                linkedActionsNames[i] = undefined;
             }
         }
+
         return {
             linkedItemNames: linkedActionsNames
         }
@@ -130,6 +143,18 @@ class PlayerActionManager {
         if (data && data.linkedItemNames) {
             for (let i = 0; i < data.linkedItemNames.length; i++) {
                 let linkedItemName = data.linkedItemNames[i];
+                if (linkedItemName) {
+                    if (linkedItemName.startsWith("block_")) {
+                        let blockName = linkedItemName.replace("block_", "");
+                        let blockType = Kulla.BlockTypeNames.indexOf(blockName);
+                        if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
+                            this.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, blockType), i);
+                        }
+                    }
+                    else if (linkedItemName) {
+                        this.linkAction(PlayerActionTemplate.CreateBrickAction(this.player, linkedItemName), i);
+                    }
+                }
             }
         }
     }

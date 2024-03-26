@@ -1,7 +1,3 @@
-interface IPlayerActionManagerData {
-    linkedItemNames: string[];
-}
-
 class PlayerAction {
     public iconUrl: string;
     public backgroundColor: string = "#ffffff";

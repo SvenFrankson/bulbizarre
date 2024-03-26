@@ -4,60 +4,8 @@ var ADD_BRICK_ANIMATION_DURATION = 1000;
 
 class PlayerActionTemplate {
 
-    public static async AddTmpObjectAction(player: Player, tmpObjectName: string): Promise<PlayerAction> {
-        return undefined;
-        /*
-        let action = new PlayerAction(tmpObjectName, player);
-        action.iconUrl = "/datas/images/qmark.png";
-
-        let previewTmpObject: TmpObject;
-
-        action.onUpdate = () => {
-            if (!player.inputManager.inventoryOpened) {
-                let hit = player.inputManager.getPickInfo(player.meshes);
-                if (hit && hit.pickedPoint) {
-                    if (!previewTmpObject) {
-                        previewTmpObject = new TmpObject(tmpObjectName, player.main);
-                        previewTmpObject.planet = player.planet;
-                        previewTmpObject.instantiate();
-                    }
-                    previewTmpObject.setPosition(hit.pickedPoint);
-                    previewTmpObject.setTarget(player.position);
-                    return;
-                }
-            }
-            if (previewTmpObject) {
-                previewTmpObject.dispose();
-                previewTmpObject = undefined;
-            }
-        }
-
-        action.onClick = () => {
-            if (!player.inputManager.inventoryOpened) {
-                let hit = player.inputManager.getPickInfo(player.meshes);
-                if (hit && hit.pickedPoint) {
-                    let tmpObject = new TmpObject(tmpObjectName, player.main);
-                    tmpObject.planet = player.planet;
-                    tmpObject.instantiate();
-                    tmpObject.setPosition(hit.pickedPoint);
-                    tmpObject.setTarget(player.position);
-                }
-            }
-        }
-
-        action.onUnequip = () => {
-            if (previewTmpObject) {
-                previewTmpObject.dispose();
-                previewTmpObject = undefined;
-            }
-        }
-
-        return action;
-        */
-    }
-
     public static CreateBlockAction(player: Player, blockType: Kulla.BlockType): PlayerAction {
-        let action = new PlayerAction(Kulla.BlockTypeNames[blockType], player);
+        let action = new PlayerAction("block_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh: BABYLON.Mesh;
         let previewBox: BABYLON.Mesh;
@@ -186,8 +134,8 @@ class PlayerActionTemplate {
         return action;
     }
 
-    public static CreateBrickAction(brickId: number | string, player: Player): PlayerAction {
-        let brickAction = new PlayerAction("brick", player);
+    public static CreateBrickAction(player: Player, brickId: number | string): PlayerAction {
+        let brickAction = new PlayerAction(Brick.BrickIdToName(brickId), player);
         brickAction.backgroundColor = "#000000";
         let previewMesh: BABYLON.Mesh;
         brickAction.iconUrl = "/datas/icons/bricks/" + Brick.BrickIdToName(brickId) + ".png";

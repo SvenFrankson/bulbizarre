@@ -189,33 +189,16 @@ class Game {
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
 
+            this.player.inventory.addItem(new PlayerInventoryItem("None", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("plate_1x1", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("plate_1x1", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("plate_2x1", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("brick_2x1", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("brick_2x1", InventoryCategory.Brick));
-            this.player.inventory.addItem(new PlayerInventoryItem("brick_4x1", InventoryCategory.Brick));
 
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.None), 1);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Grass), 2);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Dirt), 3);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, Kulla.BlockType.Rock), 4);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_6x2", this.player), 5);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_14x2", this.player), 6);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate_4x4", this.player), 7);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate-corner-cut_3x3", this.player), 8);
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateBrickAction("plate-corner-cut_6x6", this.player), 9);
+            for (let i = 0; i < BRICK_LIST.length; i++) {
+                this.player.inventory.addItem(new PlayerInventoryItem(BRICK_LIST[i], InventoryCategory.Brick));
+            }
+
+            this.player.playerActionManager.loadFromLocalStorage();
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {
