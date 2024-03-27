@@ -11,8 +11,29 @@ class PlayerActionView {
         return this._tiles[slotIndex];
     }
 
+    public player: Player;
+
     constructor() {
         
+    }
+
+    public initialize(player: Player): void {
+        this.player = player;
+        for (let i = 0; i <= 9; i++) {
+            let slotIndex = i;
+            let tile = this.getTile(i);
+            tile.onclick = () => {
+                if (this.player.playerActionManager) {
+                    if (slotIndex === this.player.playerActionManager.currentActionIndex) {
+                        this.player.playerActionManager.toggleEquipAction();
+                    }
+                    else {
+                        this.player.playerActionManager.setActionIndex(slotIndex);
+                        this.player.playerActionManager.equipAction();
+                    }
+                }
+            }
+        }
     }
 
     public highlight(slotIndex: number): void {

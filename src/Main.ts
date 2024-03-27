@@ -190,6 +190,7 @@ class Game {
             let playerControler = new PlayerControler(this.player);
             this.player.playerActionManager = new PlayerActionManager(this.player, this);
             this.player.playerActionManager.initialize();
+            this.playerActionView.initialize(this.player);
             this.inputManager.initialize();
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
@@ -219,6 +220,9 @@ class Game {
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
+                }
+                else if (event.code === "Backquote") {
+                    debugger;
                 }
             })
         });

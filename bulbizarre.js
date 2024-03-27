@@ -498,6 +498,7 @@ class Game {
             let playerControler = new PlayerControler(this.player);
             this.player.playerActionManager = new PlayerActionManager(this.player, this);
             this.player.playerActionManager.initialize();
+            this.playerActionView.initialize(this.player);
             this.inputManager.initialize();
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
@@ -521,6 +522,9 @@ class Game {
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
+                }
+                else if (event.code === "Backquote") {
+                    debugger;
                 }
             });
         });
@@ -2644,6 +2648,24 @@ class PlayerActionView {
             this._tiles[slotIndex] = document.querySelector("#action-" + slotIndex.toFixed(0));
         }
         return this._tiles[slotIndex];
+    }
+    initialize(player) {
+        this.player = player;
+        for (let i = 0; i <= 9; i++) {
+            let slotIndex = i;
+            let tile = this.getTile(i);
+            tile.onclick = () => {
+                if (this.player.playerActionManager) {
+                    if (slotIndex === this.player.playerActionManager.currentActionIndex) {
+                        this.player.playerActionManager.toggleEquipAction();
+                    }
+                    else {
+                        this.player.playerActionManager.setActionIndex(slotIndex);
+                        this.player.playerActionManager.equipAction();
+                    }
+                }
+            };
+        }
     }
     highlight(slotIndex) {
         if (slotIndex >= 0 && slotIndex <= 9) {
