@@ -1,4 +1,20 @@
+enum PlayMode {
+    Menu,
+    Inventory,
+    Playing
+}
+
 class PlayerControler {
+
+    public get playMode(): PlayMode {
+        if (this.player.game.playerInventoryView.shown) {
+            return PlayMode.Inventory;
+        }
+        if (this.player.game.router.inPlayMode) {
+            return PlayMode.Playing;
+        }
+        return PlayMode.Menu;
+    }
 
     public get inputManager(): Nabu.InputManager {
         return this.player.game.inputManager;
@@ -40,7 +56,7 @@ class PlayerControler {
 
     public initialize(): void {
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
-            if (!this.playerInventoryView.shown) {
+            if (this.playMode === PlayMode.Playing) {
                 if (this.player.currentAction) {
                     this.player.currentAction.onPointerDown(this.player.currentChuncks);
                 }
@@ -65,7 +81,7 @@ class PlayerControler {
         }
 
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_EQUIP, () => {
-            if (!this.playerInventoryView.shown) {
+            if (this.playMode === PlayMode.Playing) {
                 if (this.player.playerActionManager) {
                     this.player.playerActionManager.toggleEquipAction();
                 }
@@ -94,19 +110,19 @@ class PlayerControler {
         })
 
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_PREV_CAT, () => {
-            if (this.playerInventoryView.shown) {
+            if (this.playMode === PlayMode.Inventory) {
                 this.playerInventoryView.setCurrentCategory(this.playerInventoryView.prevCategory);
             }
         })
 
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_NEXT_CAT, () => {
-            if (this.playerInventoryView.shown) {
+            if (this.playMode === PlayMode.Inventory) {
                 this.playerInventoryView.setCurrentCategory(this.playerInventoryView.nextCategory);
             }
         })
 
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_EQUIP_ITEM, () => {
-            if (this.playerInventoryView.shown) {
+            if (this.playMode === PlayMode.Inventory) {
                 let item = this.playerInventoryView.getCurrentItem();
                 if (item) {
                     let action = item.getPlayerAction(this.player);
@@ -122,74 +138,71 @@ class PlayerControler {
     private _pointerDownTime: number;
     private _pointerDown = (event: PointerEvent) => {
         this._pointerDownTime = performance.now();
-        if (!this.player.game.router.inPlayMode) {
-            return;
-        }
         this._pointerIsDown = true;
-        if (this.player.currentAction) {
-            if (event.button === 0) {
-                if (this.player.currentAction.onPointerDown) {
-                    this.player.currentAction.onPointerDown(this.player.currentChuncks);
+        if (this.playMode === PlayMode.Playing) {
+            if (this.player.currentAction) {
+                if (event.button === 0) {
+                    if (this.player.currentAction.onPointerDown) {
+                        this.player.currentAction.onPointerDown(this.player.currentChuncks);
+                    }
+                }
+                else if (event.button === 2) {
+                    if (this.player.currentAction.onRightPointerDown) {
+                        this.player.currentAction.onRightPointerDown(this.player.currentChuncks);
+                    }
                 }
             }
-            else if (event.button === 2) {
-                if (this.player.currentAction.onRightPointerDown) {
-                    this.player.currentAction.onRightPointerDown(this.player.currentChuncks);
+            else {
+                if (event.button === 0) {
+                    if (this.player.defaultAction.onPointerDown) {
+                        this.player.defaultAction.onPointerDown(this.player.currentChuncks);
+                    }
                 }
-            }
-        }
-        else {
-            if (event.button === 0) {
-                if (this.player.defaultAction.onPointerDown) {
-                    this.player.defaultAction.onPointerDown(this.player.currentChuncks);
-                }
-            }
-            else if (event.button === 2) {
-                if (this.player.defaultAction.onRightPointerDown) {
-                    this.player.defaultAction.onRightPointerDown(this.player.currentChuncks);
+                else if (event.button === 2) {
+                    if (this.player.defaultAction.onRightPointerDown) {
+                        this.player.defaultAction.onRightPointerDown(this.player.currentChuncks);
+                    }
                 }
             }
         }
     }
 
     private _pointerMove = (event: PointerEvent) => {
-        if (!this.player.game.router.inPlayMode) {
-            return;
-        }
-        if (this._pointerIsDown || this.inputManager.isPointerLocked) {
-            this.gamepadInControl = false;
-            this.player.inputDeltaX += event.movementX;
-            this.player.inputDeltaY += event.movementY;
+        if (this.playMode === PlayMode.Playing) {
+            if (this._pointerIsDown || this.inputManager.isPointerLocked) {
+                this.gamepadInControl = false;
+                this.player.inputDeltaX += event.movementX;
+                this.player.inputDeltaY += event.movementY;
+            }
         }
     }
 
     private _pointerUp = (event: PointerEvent) => {
-        if (!this.player.game.router.inPlayMode) {
-            return;
-        }
         this._pointerIsDown = false;
         let duration = (performance.now() - this._pointerDownTime) / 1000;
-        if (this.player.currentAction) {
-            if (event.button === 0) {
-                if (this.player.currentAction.onPointerUp) {
-                    this.player.currentAction.onPointerUp(duration, this.player.currentChuncks);
+        if (this.playMode === PlayMode.Playing) {
+            if (this.player.currentAction) {
+                if (event.button === 0) {
+                    if (this.player.currentAction.onPointerUp) {
+                        this.player.currentAction.onPointerUp(duration, this.player.currentChuncks);
+                    }
+                }
+                else if (event.button === 2) {
+                    if (this.player.currentAction.onRightPointerUp) {
+                        this.player.currentAction.onRightPointerUp(duration, this.player.currentChuncks);
+                    }
                 }
             }
-            else if (event.button === 2) {
-                if (this.player.currentAction.onRightPointerUp) {
-                    this.player.currentAction.onRightPointerUp(duration, this.player.currentChuncks);
+            else {
+                if (event.button === 0) {
+                    if (this.player.defaultAction.onPointerUp) {
+                        this.player.defaultAction.onPointerUp(duration, this.player.currentChuncks);
+                    }
                 }
-            }
-        }
-        else {
-            if (event.button === 0) {
-                if (this.player.defaultAction.onPointerUp) {
-                    this.player.defaultAction.onPointerUp(duration, this.player.currentChuncks);
-                }
-            }
-            else if (event.button === 2) {
-                if (this.player.defaultAction.onRightPointerUp) {
-                    this.player.defaultAction.onRightPointerUp(duration, this.player.currentChuncks);
+                else if (event.button === 2) {
+                    if (this.player.defaultAction.onRightPointerUp) {
+                        this.player.defaultAction.onRightPointerUp(duration, this.player.currentChuncks);
+                    }
                 }
             }
         }
@@ -199,11 +212,11 @@ class PlayerControler {
         this.player.inputX = 0;
         this.player.inputZ = 0;
 
-        if (this.playerInventoryView.shown) {
+        if (this.playMode === PlayMode.Inventory) {
             this.playerInventoryView.update(dt);
             this.gamepadInControl = false;
         }
-        else if (this.player.game.router.inPlayMode) {
+        else if (this.playMode === PlayMode.Playing) {
             if (this.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
                 this.player.inputZ += 1;
                 this.gamepadInControl = false;

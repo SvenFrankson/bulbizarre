@@ -9,7 +9,7 @@ class PlayerActionMoveBrick {
 
         brickAction.onUpdate = () => {
             let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x: number;
                 let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -53,7 +53,7 @@ class PlayerActionMoveBrick {
 
         brickAction.onPointerUp = (duration: number) => {
             let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x: number;
                 let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {

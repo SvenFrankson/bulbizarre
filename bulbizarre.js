@@ -2745,6 +2745,12 @@ class PlayerAction {
         this.r = 0;
     }
 }
+var PlayMode;
+(function (PlayMode) {
+    PlayMode[PlayMode["Menu"] = 0] = "Menu";
+    PlayMode[PlayMode["Inventory"] = 1] = "Inventory";
+    PlayMode[PlayMode["Playing"] = 2] = "Playing";
+})(PlayMode || (PlayMode = {}));
 class PlayerControler {
     constructor(player) {
         this.player = player;
@@ -2752,72 +2758,69 @@ class PlayerControler {
         this.gamepadInControl = false;
         this._pointerDown = (event) => {
             this._pointerDownTime = performance.now();
-            if (!this.player.game.router.inPlayMode) {
-                return;
-            }
             this._pointerIsDown = true;
-            if (this.player.currentAction) {
-                if (event.button === 0) {
-                    if (this.player.currentAction.onPointerDown) {
-                        this.player.currentAction.onPointerDown(this.player.currentChuncks);
+            if (this.playMode === PlayMode.Playing) {
+                if (this.player.currentAction) {
+                    if (event.button === 0) {
+                        if (this.player.currentAction.onPointerDown) {
+                            this.player.currentAction.onPointerDown(this.player.currentChuncks);
+                        }
+                    }
+                    else if (event.button === 2) {
+                        if (this.player.currentAction.onRightPointerDown) {
+                            this.player.currentAction.onRightPointerDown(this.player.currentChuncks);
+                        }
                     }
                 }
-                else if (event.button === 2) {
-                    if (this.player.currentAction.onRightPointerDown) {
-                        this.player.currentAction.onRightPointerDown(this.player.currentChuncks);
+                else {
+                    if (event.button === 0) {
+                        if (this.player.defaultAction.onPointerDown) {
+                            this.player.defaultAction.onPointerDown(this.player.currentChuncks);
+                        }
                     }
-                }
-            }
-            else {
-                if (event.button === 0) {
-                    if (this.player.defaultAction.onPointerDown) {
-                        this.player.defaultAction.onPointerDown(this.player.currentChuncks);
-                    }
-                }
-                else if (event.button === 2) {
-                    if (this.player.defaultAction.onRightPointerDown) {
-                        this.player.defaultAction.onRightPointerDown(this.player.currentChuncks);
+                    else if (event.button === 2) {
+                        if (this.player.defaultAction.onRightPointerDown) {
+                            this.player.defaultAction.onRightPointerDown(this.player.currentChuncks);
+                        }
                     }
                 }
             }
         };
         this._pointerMove = (event) => {
-            if (!this.player.game.router.inPlayMode) {
-                return;
-            }
-            if (this._pointerIsDown || this.inputManager.isPointerLocked) {
-                this.gamepadInControl = false;
-                this.player.inputDeltaX += event.movementX;
-                this.player.inputDeltaY += event.movementY;
+            if (this.playMode === PlayMode.Playing) {
+                if (this._pointerIsDown || this.inputManager.isPointerLocked) {
+                    this.gamepadInControl = false;
+                    this.player.inputDeltaX += event.movementX;
+                    this.player.inputDeltaY += event.movementY;
+                }
             }
         };
         this._pointerUp = (event) => {
-            if (!this.player.game.router.inPlayMode) {
-                return;
-            }
             this._pointerIsDown = false;
             let duration = (performance.now() - this._pointerDownTime) / 1000;
-            if (this.player.currentAction) {
-                if (event.button === 0) {
-                    if (this.player.currentAction.onPointerUp) {
-                        this.player.currentAction.onPointerUp(duration, this.player.currentChuncks);
+            if (this.playMode === PlayMode.Playing) {
+                if (this.player.currentAction) {
+                    if (event.button === 0) {
+                        if (this.player.currentAction.onPointerUp) {
+                            this.player.currentAction.onPointerUp(duration, this.player.currentChuncks);
+                        }
+                    }
+                    else if (event.button === 2) {
+                        if (this.player.currentAction.onRightPointerUp) {
+                            this.player.currentAction.onRightPointerUp(duration, this.player.currentChuncks);
+                        }
                     }
                 }
-                else if (event.button === 2) {
-                    if (this.player.currentAction.onRightPointerUp) {
-                        this.player.currentAction.onRightPointerUp(duration, this.player.currentChuncks);
+                else {
+                    if (event.button === 0) {
+                        if (this.player.defaultAction.onPointerUp) {
+                            this.player.defaultAction.onPointerUp(duration, this.player.currentChuncks);
+                        }
                     }
-                }
-            }
-            else {
-                if (event.button === 0) {
-                    if (this.player.defaultAction.onPointerUp) {
-                        this.player.defaultAction.onPointerUp(duration, this.player.currentChuncks);
-                    }
-                }
-                else if (event.button === 2) {
-                    if (this.player.defaultAction.onRightPointerUp) {
-                        this.player.defaultAction.onRightPointerUp(duration, this.player.currentChuncks);
+                    else if (event.button === 2) {
+                        if (this.player.defaultAction.onRightPointerUp) {
+                            this.player.defaultAction.onRightPointerUp(duration, this.player.currentChuncks);
+                        }
                     }
                 }
             }
@@ -2838,6 +2841,15 @@ class PlayerControler {
         this.aim.style.position = "fixed";
         this.aim.style.pointerEvents = "none";
     }
+    get playMode() {
+        if (this.player.game.playerInventoryView.shown) {
+            return PlayMode.Inventory;
+        }
+        if (this.player.game.router.inPlayMode) {
+            return PlayMode.Playing;
+        }
+        return PlayMode.Menu;
+    }
     get inputManager() {
         return this.player.game.inputManager;
     }
@@ -2849,7 +2861,7 @@ class PlayerControler {
     }
     initialize() {
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION, () => {
-            if (!this.playerInventoryView.shown) {
+            if (this.playMode === PlayMode.Playing) {
                 if (this.player.currentAction) {
                     this.player.currentAction.onPointerDown(this.player.currentChuncks);
                 }
@@ -2872,7 +2884,7 @@ class PlayerControler {
             });
         }
         this.inputManager.addMappedKeyDownListener(KeyInput.PLAYER_ACTION_EQUIP, () => {
-            if (!this.playerInventoryView.shown) {
+            if (this.playMode === PlayMode.Playing) {
                 if (this.player.playerActionManager) {
                     this.player.playerActionManager.toggleEquipAction();
                 }
@@ -2897,17 +2909,17 @@ class PlayerControler {
             }
         });
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_PREV_CAT, () => {
-            if (this.playerInventoryView.shown) {
+            if (this.playMode === PlayMode.Inventory) {
                 this.playerInventoryView.setCurrentCategory(this.playerInventoryView.prevCategory);
             }
         });
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_NEXT_CAT, () => {
-            if (this.playerInventoryView.shown) {
+            if (this.playMode === PlayMode.Inventory) {
                 this.playerInventoryView.setCurrentCategory(this.playerInventoryView.nextCategory);
             }
         });
         this.inputManager.addMappedKeyDownListener(KeyInput.INVENTORY_EQUIP_ITEM, () => {
-            if (this.playerInventoryView.shown) {
+            if (this.playMode === PlayMode.Inventory) {
                 let item = this.playerInventoryView.getCurrentItem();
                 if (item) {
                     let action = item.getPlayerAction(this.player);
@@ -2922,11 +2934,11 @@ class PlayerControler {
     update(dt) {
         this.player.inputX = 0;
         this.player.inputZ = 0;
-        if (this.playerInventoryView.shown) {
+        if (this.playMode === PlayMode.Inventory) {
             this.playerInventoryView.update(dt);
             this.gamepadInControl = false;
         }
-        else if (this.player.game.router.inPlayMode) {
+        else if (this.playMode === PlayMode.Playing) {
             if (this.inputManager.isKeyInputDown(KeyInput.MOVE_FORWARD)) {
                 this.player.inputZ += 1;
                 this.gamepadInControl = false;
@@ -3378,7 +3390,7 @@ class PlayerActionDefault {
             }
         };
         brickAction.onUpdate = () => {
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x;
                 let y;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -3410,8 +3422,10 @@ class PlayerActionDefault {
             setAimedBrick(undefined);
         };
         brickAction.onPointerUp = () => {
-            if (aimedBrickRoot) {
-                player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+            if (player.controler.playMode === PlayMode.Playing) {
+                if (aimedBrickRoot) {
+                    player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+                }
             }
         };
         brickAction.onRightPointerUp = () => {
@@ -3438,7 +3452,7 @@ class PlayerActionMoveBrick {
         let initPos = brick.root.position.clone();
         brickAction.onUpdate = () => {
             let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x;
                 let y;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -3477,7 +3491,7 @@ class PlayerActionMoveBrick {
         };
         brickAction.onPointerUp = (duration) => {
             let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x;
                 let y;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -3565,7 +3579,7 @@ class PlayerActionTemplate {
         let lastK;
         action.onUpdate = () => {
             let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x;
                 let y;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -3621,7 +3635,7 @@ class PlayerActionTemplate {
             }
         };
         action.onPointerDown = () => {
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x;
                 let y;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -3672,7 +3686,7 @@ class PlayerActionTemplate {
         let rotationQuaternion = BABYLON.Quaternion.Identity();
         brickAction.onUpdate = () => {
             let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x;
                 let y;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -3718,7 +3732,7 @@ class PlayerActionTemplate {
         };
         brickAction.onPointerDown = () => {
             let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x;
                 let y;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -3795,7 +3809,7 @@ class PlayerActionTemplate {
         brickAction.onUpdate = () => {
         };
         brickAction.onPointerDown = () => {
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x;
                 let y;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {

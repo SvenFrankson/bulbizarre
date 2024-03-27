@@ -26,7 +26,7 @@ class PlayerActionDefault {
         }
 
         brickAction.onUpdate = () => {
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x: number;
                 let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -64,8 +64,10 @@ class PlayerActionDefault {
         }
 
         brickAction.onPointerUp = () => {
-            if (aimedBrickRoot) {
-                player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+            if (player.controler.playMode === PlayMode.Playing) {
+                if (aimedBrickRoot) {
+                    player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+                }
             }
         }
 

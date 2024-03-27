@@ -19,7 +19,7 @@ class PlayerActionTemplate {
 
         action.onUpdate = () => {
             let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x: number;
                 let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -84,7 +84,7 @@ class PlayerActionTemplate {
         }
 
         action.onPointerDown = () => {
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x: number;
                 let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -144,7 +144,7 @@ class PlayerActionTemplate {
 
         brickAction.onUpdate = () => {
             let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x: number;
                 let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -196,7 +196,7 @@ class PlayerActionTemplate {
 
         brickAction.onPointerDown = () => {
             let terrain = player.game.terrain;
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x: number;
                 let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
@@ -289,7 +289,7 @@ class PlayerActionTemplate {
         }
 
         brickAction.onPointerDown = () => {
-            if (player.game.router.inPlayMode) {
+            if (player.controler.playMode === PlayMode.Playing) {
                 let x: number;
                 let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
