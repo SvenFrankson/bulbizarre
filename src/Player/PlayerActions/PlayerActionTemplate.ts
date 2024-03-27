@@ -278,4 +278,55 @@ class PlayerActionTemplate {
         
         return brickAction;
     }
+
+    public static CreatePaintAction(player: Player, paintIndex: number): PlayerAction {
+        let brickAction = new PlayerAction("paint_" + BRICK_COLORS[paintIndex].name, player);
+        brickAction.backgroundColor = BRICK_COLORS[paintIndex].hex;
+        brickAction.iconUrl = undefined;
+
+        brickAction.onUpdate = () => {
+            
+        }
+
+        brickAction.onPointerDown = () => {
+            if (player.game.router.inPlayMode) {
+                let x: number;
+                let y: number;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(
+                    x,
+                    y,
+                    (mesh) => {
+                        return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined || mesh instanceof BrickMesh;
+                    }
+                )
+                if (hit && hit.pickedPoint) {
+                    if (hit.pickedMesh instanceof BrickMesh) {
+                        let root = hit.pickedMesh.brick.root;
+                        let aimedBrick = root.getBrickForFaceId(hit.faceId);
+                        aimedBrick.colorIndex = paintIndex;
+                        aimedBrick.updateMesh();
+                        aimedBrick.brickManager.saveToLocalStorage();
+                    }
+                }
+            }
+        }
+
+        brickAction.onEquip = () => {
+            
+        }
+
+        brickAction.onUnequip = () => {
+            
+        }
+        
+        return brickAction;
+    }
 }

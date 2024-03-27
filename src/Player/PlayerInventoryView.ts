@@ -17,6 +17,7 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
     private _categoryAllBtn: HTMLDivElement;
     private _categoryBlocksBtn: HTMLDivElement;
     private _categoryBricksBtn: HTMLDivElement;
+    private _categoryPaintsBtn: HTMLDivElement;
     private _categoryIngredientsBtn: HTMLDivElement;
     private _categoryBtns: HTMLDivElement[];
 
@@ -145,6 +146,14 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
             this.setCurrentCategory(InventoryCategory.Brick);
         }
         
+        this._categoryPaintsBtn = document.createElement("div");
+        this._categoryPaintsBtn.innerHTML = "PAINTS";
+        categoriesContainer.appendChild(this._categoryPaintsBtn);
+        this._makeCategoryBtnStyle(this._categoryPaintsBtn);
+        this._categoryPaintsBtn.onclick = () => {
+            this.setCurrentCategory(InventoryCategory.Paint);
+        }
+        
         this._categoryIngredientsBtn = document.createElement("div");
         this._categoryIngredientsBtn.innerHTML = "INGREDIENTS";
         categoriesContainer.appendChild(this._categoryIngredientsBtn);
@@ -156,6 +165,7 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
         this._categoryBtns = [
             this._categoryBlocksBtn,
             this._categoryBricksBtn,
+            this._categoryPaintsBtn,
             this._categoryIngredientsBtn,
         ]
 

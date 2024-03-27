@@ -79,6 +79,7 @@ class PlayerActionView {
                     tile.style.backgroundPosition = "center";
                 }
                 else {
+                    tile.style.background = undefined;
                     tile.style.backgroundColor = action.backgroundColor;
                 }
             }

@@ -492,7 +492,9 @@ class Game {
             //debugTerrainPerf.show();
             this.player = new Player(this);
             this.playerInventoryView.setInventory(this.player.inventory);
-            this.player.position.copyFrom(this.freeCamera.position);
+            if (isFinite(this.freeCamera.position.x)) {
+                this.player.position.copyFrom(this.freeCamera.position);
+            }
             let playerControler = new PlayerControler(this.player);
             this.player.playerActionManager = new PlayerActionManager(this.player, this);
             this.player.playerActionManager.initialize();
@@ -505,6 +507,9 @@ class Game {
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
             for (let i = 0; i < BRICK_LIST.length; i++) {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_LIST[i], InventoryCategory.Brick));
+            }
+            for (let i = 0; i < BRICK_COLORS.length; i++) {
+                this.player.inventory.addItem(new PlayerInventoryItem(BRICK_COLORS[i].name, InventoryCategory.Paint));
             }
             this.player.playerActionManager.loadFromLocalStorage();
             this.brickManager.loadFromLocalStorage();
@@ -683,7 +688,7 @@ class Game {
             this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
             let bricks = [
-                "tile-triangle_2x2"
+                "plate-corner-cut_2x2"
             ];
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
@@ -1880,6 +1885,7 @@ class Brick extends BABYLON.TransformNode {
             if (this.mesh) {
                 this.mesh.dispose();
             }
+            this.brickManager.saveToLocalStorage();
         }
         else {
             let root = this.root;
@@ -1932,9 +1938,9 @@ class Brick extends BABYLON.TransformNode {
         let template = await BrickTemplateManager.Instance.getTemplate(this.index);
         let vData = Mummu.CloneVertexData(template.vertexData);
         let colors = [];
-        let color = Brick.depthColors[depth];
+        let color = BABYLON.Color3.FromHexString(BRICK_COLORS[this.colorIndex].hex);
         for (let i = 0; i < vData.positions.length / 3; i++) {
-            colors.push(color.r, color.g, color.b, color.a);
+            colors.push(color.r, color.g, color.b, 1);
         }
         vData.colors = colors;
         Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
@@ -1990,6 +1996,7 @@ class Brick extends BABYLON.TransformNode {
     serialize() {
         let data = {
             id: this.index,
+            col: this.colorIndex,
             x: this.position.x,
             y: this.position.y,
             z: this.position.z,
@@ -2012,6 +2019,7 @@ class Brick extends BABYLON.TransformNode {
     }
     deserialize(data) {
         this.index = data.id;
+        this.colorIndex = isFinite(data.col) ? data.col : 0;
         this.position.copyFromFloats(data.x, data.y, data.z);
         this.rotationQuaternion.copyFromFloats(data.qx, data.qy, data.qz, data.qw);
         if (data.c) {
@@ -2047,7 +2055,14 @@ var BRICK_LIST = [
     "plate-corner-cut_3x3",
     "plate-corner-cut_6x6",
     "tile-round-quarter_1x1",
-    "tile-triangle_2x2"
+    "tile-triangle_2x2",
+    "plate-corner-cut_2x2",
+];
+var BRICK_COLORS = [
+    { name: "White", hex: "#FFFFFF" },
+    { name: "Black", hex: "#05131D" },
+    { name: "Reddish Brown", hex: "#582A12" },
+    { name: "Sand Green", hex: "#A0BCAC" },
 ];
 class BrickManager {
     constructor(game) {
@@ -2604,6 +2619,11 @@ class PlayerActionManager {
                             this.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, blockType), i);
                         }
                     }
+                    else if (linkedItemName.startsWith("paint_")) {
+                        let paintName = linkedItemName.replace("paint_", "");
+                        let paintIndex = BRICK_COLORS.findIndex(c => { return c.name === paintName; });
+                        this.linkAction(PlayerActionTemplate.CreatePaintAction(this.player, paintIndex), i);
+                    }
                     else if (linkedItemName) {
                         this.linkAction(PlayerActionTemplate.CreateBrickAction(this.player, linkedItemName), i);
                     }
@@ -2680,6 +2700,7 @@ class PlayerActionView {
                     tile.style.backgroundPosition = "center";
                 }
                 else {
+                    tile.style.background = undefined;
                     tile.style.backgroundColor = action.backgroundColor;
                 }
             }
@@ -2942,8 +2963,9 @@ var InventoryCategory;
 (function (InventoryCategory) {
     InventoryCategory[InventoryCategory["Block"] = 0] = "Block";
     InventoryCategory[InventoryCategory["Brick"] = 1] = "Brick";
-    InventoryCategory[InventoryCategory["Ingredient"] = 2] = "Ingredient";
-    InventoryCategory[InventoryCategory["End"] = 3] = "End";
+    InventoryCategory[InventoryCategory["Paint"] = 2] = "Paint";
+    InventoryCategory[InventoryCategory["Ingredient"] = 3] = "Ingredient";
+    InventoryCategory[InventoryCategory["End"] = 4] = "End";
 })(InventoryCategory || (InventoryCategory = {}));
 class PlayerInventoryItem {
     constructor(name, category) {
@@ -2964,6 +2986,12 @@ class PlayerInventoryItem {
         }
         else if (this.category === InventoryCategory.Brick) {
             return PlayerActionTemplate.CreateBrickAction(player, this.name);
+        }
+        else if (this.category === InventoryCategory.Paint) {
+            let colorIndex = BRICK_COLORS.findIndex(c => { return c.name === this.name; });
+            if (colorIndex >= 0) {
+                return PlayerActionTemplate.CreatePaintAction(player, colorIndex);
+            }
         }
     }
 }
@@ -3111,6 +3139,13 @@ class PlayerInventoryView extends HTMLElement {
         this._categoryBricksBtn.onclick = () => {
             this.setCurrentCategory(InventoryCategory.Brick);
         };
+        this._categoryPaintsBtn = document.createElement("div");
+        this._categoryPaintsBtn.innerHTML = "PAINTS";
+        categoriesContainer.appendChild(this._categoryPaintsBtn);
+        this._makeCategoryBtnStyle(this._categoryPaintsBtn);
+        this._categoryPaintsBtn.onclick = () => {
+            this.setCurrentCategory(InventoryCategory.Paint);
+        };
         this._categoryIngredientsBtn = document.createElement("div");
         this._categoryIngredientsBtn.innerHTML = "INGREDIENTS";
         categoriesContainer.appendChild(this._categoryIngredientsBtn);
@@ -3121,6 +3156,7 @@ class PlayerInventoryView extends HTMLElement {
         this._categoryBtns = [
             this._categoryBlocksBtn,
             this._categoryBricksBtn,
+            this._categoryPaintsBtn,
             this._categoryIngredientsBtn,
         ];
         this._containerFrame = document.createElement("div");
@@ -3727,6 +3763,44 @@ class PlayerActionTemplate {
                 previewMesh.dispose();
             }
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
+        };
+        return brickAction;
+    }
+    static CreatePaintAction(player, paintIndex) {
+        let brickAction = new PlayerAction("paint_" + BRICK_COLORS[paintIndex].name, player);
+        brickAction.backgroundColor = BRICK_COLORS[paintIndex].hex;
+        brickAction.iconUrl = undefined;
+        brickAction.onUpdate = () => {
+        };
+        brickAction.onPointerDown = () => {
+            if (player.game.router.inPlayMode) {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined || mesh instanceof BrickMesh;
+                });
+                if (hit && hit.pickedPoint) {
+                    if (hit.pickedMesh instanceof BrickMesh) {
+                        let root = hit.pickedMesh.brick.root;
+                        let aimedBrick = root.getBrickForFaceId(hit.faceId);
+                        aimedBrick.colorIndex = paintIndex;
+                        aimedBrick.updateMesh();
+                        aimedBrick.brickManager.saveToLocalStorage();
+                    }
+                }
+            }
+        };
+        brickAction.onEquip = () => {
+        };
+        brickAction.onUnequip = () => {
         };
         return brickAction;
     }

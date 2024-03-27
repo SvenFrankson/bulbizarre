@@ -151,6 +151,11 @@ class PlayerActionManager {
                             this.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, blockType), i);
                         }
                     }
+                    else if (linkedItemName.startsWith("paint_")) {
+                        let paintName = linkedItemName.replace("paint_", "");
+                        let paintIndex = BRICK_COLORS.findIndex(c => { return c.name === paintName; });
+                        this.linkAction(PlayerActionTemplate.CreatePaintAction(this.player, paintIndex), i);
+                    }
                     else if (linkedItemName) {
                         this.linkAction(PlayerActionTemplate.CreateBrickAction(this.player, linkedItemName), i);
                     }

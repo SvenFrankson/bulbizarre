@@ -96,6 +96,7 @@ class Brick extends BABYLON.TransformNode {
             if (this.mesh) {
                 this.mesh.dispose();
             }
+            this.brickManager.saveToLocalStorage();
         }
         else {
             let root = this.root;
@@ -154,9 +155,9 @@ class Brick extends BABYLON.TransformNode {
         let template = await BrickTemplateManager.Instance.getTemplate(this.index);
         let vData = Mummu.CloneVertexData(template.vertexData);
         let colors = [];
-        let color = Brick.depthColors[depth];
+        let color = BABYLON.Color3.FromHexString(BRICK_COLORS[this.colorIndex].hex);
         for (let i = 0; i < vData.positions.length / 3; i++) {
-            colors.push(color.r, color.g, color.b, color.a);
+            colors.push(color.r, color.g, color.b, 1);
         }
         vData.colors = colors;
         Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
@@ -221,6 +222,7 @@ class Brick extends BABYLON.TransformNode {
     public serialize(): IBrickData {
         let data: IBrickData = {
             id: this.index,
+            col: this.colorIndex,
             x: this.position.x,
             y: this.position.y,
             z: this.position.z,
@@ -246,6 +248,7 @@ class Brick extends BABYLON.TransformNode {
 
     public deserialize(data: IBrickData): void {
         this.index = data.id;
+        this.colorIndex = isFinite(data.col) ? data.col : 0;
         this.position.copyFromFloats(data.x, data.y, data.z);
         this.rotationQuaternion.copyFromFloats(data.qx, data.qy, data.qz, data.qw);
 
@@ -262,6 +265,7 @@ var ALLBRICKS: number[] = [];
 
 interface IBrickData {
     id: number;
+    col: number;
     x: number;
     y: number;
     z: number;

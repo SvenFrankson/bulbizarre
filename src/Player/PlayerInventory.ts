@@ -1,6 +1,7 @@
 enum InventoryCategory {
     Block,
     Brick,
+    Paint,
     Ingredient,
     End
 }
@@ -30,6 +31,12 @@ class PlayerInventoryItem {
         }
         else if (this.category === InventoryCategory.Brick) {
             return PlayerActionTemplate.CreateBrickAction(player, this.name);
+        }
+        else if (this.category === InventoryCategory.Paint) {
+            let colorIndex = BRICK_COLORS.findIndex(c => { return c.name === this.name; });
+            if (colorIndex >= 0) {
+                return PlayerActionTemplate.CreatePaintAction(player, colorIndex);
+            }
         }
     }
 }

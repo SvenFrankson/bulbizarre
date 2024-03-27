@@ -184,7 +184,9 @@ class Game {
 
             this.player = new Player(this);
             this.playerInventoryView.setInventory(this.player.inventory);
-            this.player.position.copyFrom(this.freeCamera.position);
+            if (isFinite(this.freeCamera.position.x)) {
+                this.player.position.copyFrom(this.freeCamera.position);
+            }
             let playerControler = new PlayerControler(this.player);
             this.player.playerActionManager = new PlayerActionManager(this.player, this);
             this.player.playerActionManager.initialize();
@@ -199,6 +201,10 @@ class Game {
 
             for (let i = 0; i < BRICK_LIST.length; i++) {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_LIST[i], InventoryCategory.Brick));
+            }
+
+            for (let i = 0; i < BRICK_COLORS.length; i++) {
+                this.player.inventory.addItem(new PlayerInventoryItem(BRICK_COLORS[i].name, InventoryCategory.Paint));
             }
 
             this.player.playerActionManager.loadFromLocalStorage();
@@ -415,7 +421,7 @@ class Game {
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
     
             let bricks = [
-                "tile-triangle_2x2"
+                "plate-corner-cut_2x2"
             ]
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
