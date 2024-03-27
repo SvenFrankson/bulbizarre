@@ -65,29 +65,42 @@ class Brick extends BABYLON.TransformNode {
         }
     }
 
-    public uuid: number;
+    public setParent(node: BABYLON.Node, preserveScalingSign?: boolean, updatePivot?: boolean): BABYLON.TransformNode {
+        if (node instanceof Brick) {
+            this.brickManager.unregisterBrick(this);
+        }
+        else {
+            this.brickManager.registerBrick(this);
+        }
+        return super.setParent(node, preserveScalingSign, updatePivot);
+    }
 
-    constructor(index: number, colorIndex: number);
-    constructor(brickName: string, colorIndex: number);
-    constructor(brickId: number | string, colorIndex: number);
-    constructor(arg1: any, public colorIndex: number) {
+    constructor(brickManager: BrickManager, index: number, colorIndex: number, parent?: Brick);
+    constructor(brickManager: BrickManager, brickName: string, colorIndex: number, parent?: Brick);
+    constructor(brickManager: BrickManager, brickId: number | string, colorIndex: number, parent?: Brick);
+    constructor(public brickManager: BrickManager, arg1: any, public colorIndex: number, parent?: Brick) {
         super("brick");
         this.rotationQuaternion = BABYLON.Quaternion.Identity();
         this.index = Brick.BrickIdToIndex(arg1);
+        if (parent) {
+            this.parent = parent;
+        }
+        else {
+            this.brickManager.registerBrick(this);
+        }
     }
 
     public dispose(): void {
         if (this.isRoot) {
+            this.brickManager.unregisterBrick(this);
             if (this.mesh) {
                 this.mesh.dispose();
             }
-            Brick.RemoveBrickUUID(this.uuid);
         }
         else {
             let root = this.root;
             this.setParent(undefined);
             root.updateMesh();
-            root.saveToLocalStorage();
         }
     }
 
@@ -217,13 +230,6 @@ class Brick extends BABYLON.TransformNode {
             qw: this.rotationQuaternion.w,
         }
 
-        if (this.isRoot) {
-            if (!isFinite(this.uuid)) {
-                this.uuid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-            }
-            data.uuid = this.uuid;
-        }
-
         let children = this.getChildTransformNodes(true);
         if (children.length > 0) {
             data.c = [];
@@ -240,62 +246,13 @@ class Brick extends BABYLON.TransformNode {
 
     public deserialize(data: IBrickData): void {
         this.index = data.id;
-        if (isFinite(data.uuid)) {
-            this.uuid = data.uuid;
-        }
         this.position.copyFromFloats(data.x, data.y, data.z);
         this.rotationQuaternion.copyFromFloats(data.qx, data.qy, data.qz, data.qw);
 
         if (data.c) {
             for (let i = 0; i < data.c.length; i++) {
-                let child = new Brick(0, 0);
-                child.parent = this;
+                let child = new Brick(this.brickManager, 0, 0, this);
                 child.deserialize(data.c[i]);
-            }
-        }
-    }
-
-    public saveToLocalStorage(): void {
-        if (!this.isRoot) {
-            console.log(this.root);
-            this.root.saveToLocalStorage();
-            return;
-        }
-
-        let data = this.serialize();
-        window.localStorage.setItem("brick_" + this.uuid, JSON.stringify(data));
-    }
-
-    public static AddBrickUUID(uuid: number) {
-        let index = ALLBRICKS.indexOf(uuid);
-        if (index === - 1) {
-            ALLBRICKS.push(uuid);
-        }
-        console.log(ALLBRICKS);;
-        window.localStorage.setItem("all_bricks", JSON.stringify(ALLBRICKS));
-    }
-
-    public static RemoveBrickUUID(uuid: number) {
-        let index = ALLBRICKS.indexOf(uuid);
-        if (index > - 1) {
-            ALLBRICKS.splice(index, 1);
-        }
-        window.localStorage.setItem("all_bricks", JSON.stringify(ALLBRICKS));
-        window.localStorage.removeItem("brick_" + uuid);
-    }
-
-    public static LoadAllBricks() {
-        let ALLBRICKSString = window.localStorage.getItem("all_bricks");
-        if (ALLBRICKSString) {
-            ALLBRICKS = JSON.parse(ALLBRICKSString);
-        }
-        for (let i = 0; i < ALLBRICKS.length; i++) {
-            let brick = new Brick(0, 0);
-            let dataString = window.localStorage.getItem("brick_" + ALLBRICKS[i]);
-            if (dataString) {
-                let data = JSON.parse(dataString);
-                brick.deserialize(data);
-                brick.updateMesh();
             }
         }
     }
@@ -304,7 +261,6 @@ class Brick extends BABYLON.TransformNode {
 var ALLBRICKS: number[] = [];
 
 interface IBrickData {
-    uuid?: number;
     id: number;
     x: number;
     y: number;

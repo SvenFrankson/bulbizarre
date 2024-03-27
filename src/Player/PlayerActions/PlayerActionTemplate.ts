@@ -224,24 +224,25 @@ class PlayerActionTemplate {
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        let brick = new Brick(brickId, 0);
+                        let brick = new Brick(player.game.brickManager, brickId, 0);
                         brick.position.copyFrom(dp).addInPlace(rootPosition);
                         brick.rotationQuaternion = rotationQuaternion.clone();
                         brick.computeWorldMatrix(true);
                         brick.setParent(aimedBrick);
                         brick.updateMesh();
-                        brick.saveToLocalStorage();
+
+                        brick.brickManager.saveToLocalStorage();
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                         if (chunckIJK) {
-                            let brick = new Brick(brickId, 0);
+                            let brick = new Brick(player.game.brickManager, brickId, 0);
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
                             brick.rotationQuaternion = rotationQuaternion.clone();
                             brick.updateMesh();
                             brick.chunck = chunckIJK.chunck;
-                            brick.saveToLocalStorage();
-                            Brick.AddBrickUUID(brick.uuid);
+                            
+                            brick.brickManager.saveToLocalStorage();
                         }
                     }
                 }

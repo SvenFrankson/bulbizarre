@@ -450,6 +450,7 @@ class Game {
         this.playerActionView = new PlayerActionView();
         this.playerInventoryView = document.getElementsByTagName("inventory-page")[0];
         this.propEditor = new PropEditor(this);
+        this.brickManager = new BrickManager(this);
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.router.initialize();
             this.router.optionPage.setConfiguration(this.configuration);
@@ -506,7 +507,7 @@ class Game {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_LIST[i], InventoryCategory.Brick));
             }
             this.player.playerActionManager.loadFromLocalStorage();
-            Brick.LoadAllBricks();
+            this.brickManager.loadFromLocalStorage();
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -1820,11 +1821,18 @@ class BrickMesh extends BABYLON.Mesh {
     }
 }
 class Brick extends BABYLON.TransformNode {
-    constructor(arg1, colorIndex) {
+    constructor(brickManager, arg1, colorIndex, parent) {
         super("brick");
+        this.brickManager = brickManager;
         this.colorIndex = colorIndex;
         this.rotationQuaternion = BABYLON.Quaternion.Identity();
         this.index = Brick.BrickIdToIndex(arg1);
+        if (parent) {
+            this.parent = parent;
+        }
+        else {
+            this.brickManager.registerBrick(this);
+        }
     }
     get isRoot() {
         return !(this.parent instanceof Brick);
@@ -1854,18 +1862,26 @@ class Brick extends BABYLON.TransformNode {
             return BRICK_LIST[brickID];
         }
     }
+    setParent(node, preserveScalingSign, updatePivot) {
+        if (node instanceof Brick) {
+            this.brickManager.unregisterBrick(this);
+        }
+        else {
+            this.brickManager.registerBrick(this);
+        }
+        return super.setParent(node, preserveScalingSign, updatePivot);
+    }
     dispose() {
         if (this.isRoot) {
+            this.brickManager.unregisterBrick(this);
             if (this.mesh) {
                 this.mesh.dispose();
             }
-            Brick.RemoveBrickUUID(this.uuid);
         }
         else {
             let root = this.root;
             this.setParent(undefined);
             root.updateMesh();
-            root.saveToLocalStorage();
         }
     }
     posWorldToLocal(pos) {
@@ -1979,12 +1995,6 @@ class Brick extends BABYLON.TransformNode {
             qz: this.rotationQuaternion.z,
             qw: this.rotationQuaternion.w,
         };
-        if (this.isRoot) {
-            if (!isFinite(this.uuid)) {
-                this.uuid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-            }
-            data.uuid = this.uuid;
-        }
         let children = this.getChildTransformNodes(true);
         if (children.length > 0) {
             data.c = [];
@@ -1999,57 +2009,12 @@ class Brick extends BABYLON.TransformNode {
     }
     deserialize(data) {
         this.index = data.id;
-        if (isFinite(data.uuid)) {
-            this.uuid = data.uuid;
-        }
         this.position.copyFromFloats(data.x, data.y, data.z);
         this.rotationQuaternion.copyFromFloats(data.qx, data.qy, data.qz, data.qw);
         if (data.c) {
             for (let i = 0; i < data.c.length; i++) {
-                let child = new Brick(0, 0);
-                child.parent = this;
+                let child = new Brick(this.brickManager, 0, 0, this);
                 child.deserialize(data.c[i]);
-            }
-        }
-    }
-    saveToLocalStorage() {
-        if (!this.isRoot) {
-            console.log(this.root);
-            this.root.saveToLocalStorage();
-            return;
-        }
-        let data = this.serialize();
-        window.localStorage.setItem("brick_" + this.uuid, JSON.stringify(data));
-    }
-    static AddBrickUUID(uuid) {
-        let index = ALLBRICKS.indexOf(uuid);
-        if (index === -1) {
-            ALLBRICKS.push(uuid);
-        }
-        console.log(ALLBRICKS);
-        ;
-        window.localStorage.setItem("all_bricks", JSON.stringify(ALLBRICKS));
-    }
-    static RemoveBrickUUID(uuid) {
-        let index = ALLBRICKS.indexOf(uuid);
-        if (index > -1) {
-            ALLBRICKS.splice(index, 1);
-        }
-        window.localStorage.setItem("all_bricks", JSON.stringify(ALLBRICKS));
-        window.localStorage.removeItem("brick_" + uuid);
-    }
-    static LoadAllBricks() {
-        let ALLBRICKSString = window.localStorage.getItem("all_bricks");
-        if (ALLBRICKSString) {
-            ALLBRICKS = JSON.parse(ALLBRICKSString);
-        }
-        for (let i = 0; i < ALLBRICKS.length; i++) {
-            let brick = new Brick(0, 0);
-            let dataString = window.localStorage.getItem("brick_" + ALLBRICKS[i]);
-            if (dataString) {
-                let data = JSON.parse(dataString);
-                brick.deserialize(data);
-                brick.updateMesh();
             }
         }
     }
@@ -2078,6 +2043,52 @@ var BRICK_LIST = [
     "plate-corner-cut_3x3",
     "plate-corner-cut_6x6",
 ];
+class BrickManager {
+    constructor(game) {
+        this.game = game;
+        this.bricks = new Nabu.UniqueList();
+    }
+    registerBrick(brick) {
+        this.bricks.push(brick);
+        console.log("BrickManager holds " + this.bricks.length + " bricks");
+    }
+    unregisterBrick(brick) {
+        this.bricks.remove(brick);
+        console.log("BrickManager holds " + this.bricks.length + " bricks");
+    }
+    serialize() {
+        let data = {
+            bricks: []
+        };
+        for (let i = 0; i < this.bricks.length; i++) {
+            data.bricks[i] = this.bricks.get(i).serialize();
+        }
+        return data;
+    }
+    deserialize(data) {
+        while (this.bricks.length > 0) {
+            this.bricks.get(0).dispose();
+        }
+        for (let i = 0; i < data.bricks.length; i++) {
+            let brick = new Brick(this, 0, 0);
+            brick.deserialize(data.bricks[i]);
+            brick.updateMesh();
+        }
+    }
+    saveToLocalStorage() {
+        let data = this.serialize();
+        window.localStorage.setItem("brick-manager", JSON.stringify(data));
+    }
+    loadFromLocalStorage() {
+        let dataString = window.localStorage.getItem("brick-manager");
+        if (dataString) {
+            let data = JSON.parse(dataString);
+            if (data) {
+                this.deserialize(data);
+            }
+        }
+    }
+}
 class BrickTemplateManager {
     constructor(vertexDataLoader) {
         this.vertexDataLoader = vertexDataLoader;
@@ -3377,11 +3388,10 @@ class PlayerActionMoveBrick {
                         if (duration > 0.3) {
                             let root = hit.pickedMesh.brick.root;
                             let aimedBrick = root.getBrickForFaceId(hit.faceId);
-                            Brick.RemoveBrickUUID(brick.uuid);
                             brick.setParent(aimedBrick);
                             brick.updateMesh();
                             brick.chunck = undefined;
-                            aimedBrick.root.saveToLocalStorage();
+                            brick.brickManager.saveToLocalStorage();
                         }
                         else {
                             let root = hit.pickedMesh.brick.root;
@@ -3393,7 +3403,7 @@ class PlayerActionMoveBrick {
                             brick.root.position.copyFrom(dp);
                             brick.root.position.addInPlace(rootPosition);
                             brick.chunck = root.chunck;
-                            brick.saveToLocalStorage();
+                            brick.brickManager.saveToLocalStorage();
                         }
                     }
                     else {
@@ -3401,7 +3411,7 @@ class PlayerActionMoveBrick {
                         if (chunckIJK) {
                             brick.root.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
                             brick.root.chunck = chunckIJK.chunck;
-                            brick.saveToLocalStorage();
+                            brick.brickManager.saveToLocalStorage();
                         }
                     }
                 }
@@ -3623,24 +3633,23 @@ class PlayerActionTemplate {
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        let brick = new Brick(brickId, 0);
+                        let brick = new Brick(player.game.brickManager, brickId, 0);
                         brick.position.copyFrom(dp).addInPlace(rootPosition);
                         brick.rotationQuaternion = rotationQuaternion.clone();
                         brick.computeWorldMatrix(true);
                         brick.setParent(aimedBrick);
                         brick.updateMesh();
-                        brick.saveToLocalStorage();
+                        brick.brickManager.saveToLocalStorage();
                     }
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                         if (chunckIJK) {
-                            let brick = new Brick(brickId, 0);
+                            let brick = new Brick(player.game.brickManager, brickId, 0);
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
                             brick.rotationQuaternion = rotationQuaternion.clone();
                             brick.updateMesh();
                             brick.chunck = chunckIJK.chunck;
-                            brick.saveToLocalStorage();
-                            Brick.AddBrickUUID(brick.uuid);
+                            brick.brickManager.saveToLocalStorage();
                         }
                     }
                 }

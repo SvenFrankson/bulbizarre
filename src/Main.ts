@@ -40,6 +40,7 @@ class Game {
 
     public terrain: Kulla.Terrain;
     public terrainEditor: Kulla.TerrainEditor;
+    public brickManager: BrickManager;
     public propEditor: PropEditor;
     public player: Player;
     public playerActionView: PlayerActionView;
@@ -134,6 +135,8 @@ class Game {
 
         this.propEditor = new PropEditor(this);
 
+        this.brickManager = new BrickManager(this);
+
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
             this.router.initialize();
             this.router.optionPage.setConfiguration(this.configuration);
@@ -200,7 +203,7 @@ class Game {
 
             this.player.playerActionManager.loadFromLocalStorage();
 
-            Brick.LoadAllBricks();
+            this.brickManager.loadFromLocalStorage();
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {
