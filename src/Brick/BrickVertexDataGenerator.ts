@@ -34,7 +34,7 @@ class BrickVertexDataGenerator {
         return BrickVertexDataGenerator._StudVertexData[lod];
     }
 
-    public static GetBoxVertexData(length: number, height: number, width: number): BABYLON.VertexData {
+    public static GetBoxVertexData(length: number, height: number, width: number, lod: number = 1): BABYLON.VertexData {
         let xMin = -BRICK_S * 0.5;
         let yMin = 0;
         let zMin = -BRICK_S * 0.5;
@@ -79,7 +79,9 @@ class BrickVertexDataGenerator {
             p4: new BABYLON.Vector3(xMax, yMin, zMax),
         });
 
-        return Mummu.MergeVertexDatas(back, right, front, left, top, bottom);
+        let data = Mummu.MergeVertexDatas(back, right, front, left, top, bottom);
+        BrickVertexDataGenerator.AddMarginInPlace(data);
+        return data;
     }
 
     public static GetStuddedBoxVertexData(length: number, height: number, width: number, lod: number = 1): BABYLON.VertexData {
@@ -139,6 +141,8 @@ class BrickVertexDataGenerator {
         BABYLON.VertexData.ComputeNormals(cutBoxRawData.positions, cutBoxRawData.indices, normals);
         cutBoxRawData.normals = normals;
         cutBoxRawData.colors = undefined;
+
+        BrickVertexDataGenerator.AddMarginInPlace(cutBoxRawData);
         
         let studDatas: BABYLON.VertexData[] = [];
         let yMax = height * BRICK_H;
@@ -154,5 +158,39 @@ class BrickVertexDataGenerator {
         }
 
         return Mummu.MergeVertexDatas(cutBoxRawData, ...studDatas);
+    }
+
+    public static AddMarginInPlace(vertexData: BABYLON.VertexData, margin: number = 0.002, cx: number = 0, cy: number = BRICK_H * 0.5, cz: number = 0): void {
+        let positions = vertexData.positions;
+        for (let i = 0; i < positions.length / 3; i++) {
+            let x = positions[3 * i];
+            let y = positions[3 * i + 1];
+            let z = positions[3 * i + 2];
+
+            if (x > cx) {
+                x -= margin;
+            }
+            else {
+                x += margin;
+            }
+
+            if (y > cy) {
+                y -= margin;
+            }
+            else {
+                y += margin;
+            }
+            
+            if (z > cz) {
+                z -= margin;
+            }
+            else {
+                z += margin;
+            }
+
+            positions[3 * i] = x;
+            positions[3 * i + 1] = y;
+            positions[3 * i + 2] = z;
+        }
     }
 }

@@ -682,9 +682,12 @@ class Game {
             this.engine.resize();
             this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
+            let bricks = [
+                "tile-triangle_2x2"
+            ];
             let doMinis = async () => {
-                for (let i = 0; i < BRICK_LIST.length; i++) {
-                    await this.makeScreenshot(BRICK_LIST[i], i === BRICK_LIST.length - 1);
+                for (let i = 0; i < bricks.length; i++) {
+                    await this.makeScreenshot(bricks[i], i === bricks.length - 1);
                 }
             };
             doMinis();
@@ -2037,11 +2040,14 @@ Brick.depthColors = [
 ];
 var ALLBRICKS = [];
 var BRICK_LIST = [
+    "tile_6x1",
     "plate_6x2",
     "plate_14x2",
     "plate_4x4",
     "plate-corner-cut_3x3",
     "plate-corner-cut_6x6",
+    "tile-round-quarter_1x1",
+    "tile-triangle_2x2"
 ];
 class BrickManager {
     constructor(game) {
@@ -2146,6 +2152,19 @@ class BrickTemplate {
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
             this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 1, w, lod);
         }
+        else if (this.name.startsWith("tile_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let w = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(l, 1, w, lod);
+        }
+        else if (this.name === "tile-round-quarter_1x1") {
+            this.vertexData = (await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-round-quarter_1x1.babylon"))[0];
+            BrickVertexDataGenerator.AddMarginInPlace(this.vertexData);
+        }
+        else if (this.name === "tile-triangle_2x2") {
+            this.vertexData = (await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-triangle_2x2.babylon"))[0];
+            BrickVertexDataGenerator.AddMarginInPlace(this.vertexData);
+        }
         else {
             this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(1, 1, 1);
         }
@@ -2185,7 +2204,7 @@ class BrickVertexDataGenerator {
         }
         return BrickVertexDataGenerator._StudVertexData[lod];
     }
-    static GetBoxVertexData(length, height, width) {
+    static GetBoxVertexData(length, height, width, lod = 1) {
         let xMin = -BRICK_S * 0.5;
         let yMin = 0;
         let zMin = -BRICK_S * 0.5;
@@ -2228,7 +2247,9 @@ class BrickVertexDataGenerator {
             p3: new BABYLON.Vector3(xMin, yMin, zMax),
             p4: new BABYLON.Vector3(xMax, yMin, zMax),
         });
-        return Mummu.MergeVertexDatas(back, right, front, left, top, bottom);
+        let data = Mummu.MergeVertexDatas(back, right, front, left, top, bottom);
+        BrickVertexDataGenerator.AddMarginInPlace(data);
+        return data;
     }
     static GetStuddedBoxVertexData(length, height, width, lod = 1) {
         let boxData = BrickVertexDataGenerator.GetBoxVertexData(length, height, width);
@@ -2280,6 +2301,7 @@ class BrickVertexDataGenerator {
         BABYLON.VertexData.ComputeNormals(cutBoxRawData.positions, cutBoxRawData.indices, normals);
         cutBoxRawData.normals = normals;
         cutBoxRawData.colors = undefined;
+        BrickVertexDataGenerator.AddMarginInPlace(cutBoxRawData);
         let studDatas = [];
         let yMax = height * BRICK_H;
         let lim = Math.max(length, width) + cut - 1;
@@ -2293,6 +2315,35 @@ class BrickVertexDataGenerator {
             }
         }
         return Mummu.MergeVertexDatas(cutBoxRawData, ...studDatas);
+    }
+    static AddMarginInPlace(vertexData, margin = 0.002, cx = 0, cy = BRICK_H * 0.5, cz = 0) {
+        let positions = vertexData.positions;
+        for (let i = 0; i < positions.length / 3; i++) {
+            let x = positions[3 * i];
+            let y = positions[3 * i + 1];
+            let z = positions[3 * i + 2];
+            if (x > cx) {
+                x -= margin;
+            }
+            else {
+                x += margin;
+            }
+            if (y > cy) {
+                y -= margin;
+            }
+            else {
+                y += margin;
+            }
+            if (z > cz) {
+                z -= margin;
+            }
+            else {
+                z += margin;
+            }
+            positions[3 * i] = x;
+            positions[3 * i + 1] = y;
+            positions[3 * i + 2] = z;
+        }
     }
 }
 BrickVertexDataGenerator._StudVertexData = [];
