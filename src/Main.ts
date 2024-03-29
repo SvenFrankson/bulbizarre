@@ -253,6 +253,9 @@ class Game {
 
     public update(): void {
         let dt = this.scene.deltaTime / 1000;
+        if (!(dt > 0 && dt < 0.5)) {
+            dt = 0.015;
+        }
         if (this.player && this.terrain) {
             this.player.update(dt);
         }
@@ -264,8 +267,10 @@ class Game {
         if (this.DEBUG_MODE) {
             let camPos = this.freeCamera.globalPosition;
             let camRot = this.freeCamera.rotation;
-            window.localStorage.setItem("camera-position", JSON.stringify({ x: camPos.x, y: camPos.y, z: camPos.z }));
-            window.localStorage.setItem("camera-rotation", JSON.stringify({ x: camRot.x, y: camRot.y, z: camRot.z }));
+            if (isFinite(camPos.x) && isFinite(camPos.y) && isFinite(camPos.z)) {
+                window.localStorage.setItem("camera-position", JSON.stringify({ x: camPos.x, y: camPos.y, z: camPos.z }));
+                window.localStorage.setItem("camera-rotation", JSON.stringify({ x: camRot.x, y: camRot.y, z: camRot.z }));
+            }
         }
     }
 
@@ -425,7 +430,9 @@ class Game {
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
     
             let bricks = [
-                "plate-corner-cut_2x2"
+                "window-frame_2x2",
+                "window-frame_3x2",
+                "window-frame_4x3"
             ]
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {

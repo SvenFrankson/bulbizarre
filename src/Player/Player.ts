@@ -129,14 +129,18 @@ class Player extends BABYLON.Mesh {
                 this.velocity.y -= this.mass * 9.2 * dt;
             }
     
+            if (!Mummu.IsFinite(this.velocity)) {
+                this.velocity.copyFromFloats(0, 0, 0);
+            }
             this.position.addInPlace(this.velocity.scale(dt));
         }
         else {
+            console.log(this.position);
             if (this.position.y < 80) {
                 this.position.y += 0.1;
             }
-            if (this.position.y < 0) {
-                this.position.y = 100;
+            if (this.position.y > 255) {
+                this.position.y -= 0.1;
             }
         }
     }

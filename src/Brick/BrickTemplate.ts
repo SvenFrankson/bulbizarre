@@ -69,6 +69,12 @@ class BrickTemplate {
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
             this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(l, 1, w, lod);
         }
+        else if (this.name.startsWith("window-frame_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let h = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = await BrickVertexDataGenerator.GetWindowFrameVertexData(l, h, lod);
+            BrickVertexDataGenerator.AddMarginInPlace(this.vertexData);
+        }
         else if (this.name === "tile-round-quarter_1x1") {
             this.vertexData = (await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-round-quarter_1x1.babylon"))[0];
             BrickVertexDataGenerator.AddMarginInPlace(this.vertexData);
