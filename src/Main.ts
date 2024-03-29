@@ -45,6 +45,7 @@ class Game {
     public player: Player;
     public playerActionView: PlayerActionView;
     public playerInventoryView: PlayerInventoryView;
+    public brickMenuView: BrickMenuView;
 
     public router: GameRouter;
 
@@ -132,6 +133,7 @@ class Game {
         this.router = new GameRouter(this);
         this.playerActionView = new PlayerActionView();
         this.playerInventoryView = document.getElementsByTagName("inventory-page")[0] as PlayerInventoryView;
+        this.brickMenuView = document.getElementsByTagName("brick-menu")[0] as BrickMenuView;
 
         this.propEditor = new PropEditor(this);
 
@@ -210,6 +212,7 @@ class Game {
 
             this.player.playerActionManager.loadFromLocalStorage();
 
+            this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
@@ -350,6 +353,7 @@ class Game {
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
 
             //this.playerInventoryView.show(0.2);
+            //this.brickMenuView.show(0.1);
         }
 
         let mat = new TerrainMaterial("terrain", this.scene);

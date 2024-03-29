@@ -10,6 +10,9 @@ class PlayerControler {
         if (this.player.game.playerInventoryView.shown) {
             return PlayMode.Inventory;
         }
+        if (this.player.game.brickMenuView.shown) {
+            return PlayMode.Menu;
+        }
         if (this.player.game.router.inPlayMode) {
             return PlayMode.Playing;
         }
@@ -28,6 +31,8 @@ class PlayerControler {
         return this.player.game.playerInventoryView;
     }
 
+    private _pointerDownX: number = - 100;
+    private _pointerDownY: number = - 100;
     private _pointerIsDown: boolean = false;
     public gamepadInControl: boolean = false;
     public lastUsedPaintIndex: number = 0;
@@ -139,6 +144,8 @@ class PlayerControler {
     private _pointerDownTime: number;
     private _pointerDown = (event: PointerEvent) => {
         this._pointerDownTime = performance.now();
+        this._pointerDownX = event.clientX;
+        this._pointerDownY = event.clientY;
         this._pointerIsDown = true;
         if (this.playMode === PlayMode.Playing) {
             if (this.player.currentAction) {
@@ -180,29 +187,32 @@ class PlayerControler {
 
     private _pointerUp = (event: PointerEvent) => {
         this._pointerIsDown = false;
+        let dX = this._pointerDownX - event.clientX;
+        let dY = this._pointerDownY - event.clientY;
+        let distance = Math.sqrt(dX * dX + dY * dY);
         let duration = (performance.now() - this._pointerDownTime) / 1000;
         if (this.playMode === PlayMode.Playing) {
             if (this.player.currentAction) {
                 if (event.button === 0) {
                     if (this.player.currentAction.onPointerUp) {
-                        this.player.currentAction.onPointerUp(duration, this.player.currentChuncks);
+                        this.player.currentAction.onPointerUp(duration, distance, this.player.currentChuncks);
                     }
                 }
                 else if (event.button === 2) {
                     if (this.player.currentAction.onRightPointerUp) {
-                        this.player.currentAction.onRightPointerUp(duration, this.player.currentChuncks);
+                        this.player.currentAction.onRightPointerUp(duration, distance, this.player.currentChuncks);
                     }
                 }
             }
             else {
                 if (event.button === 0) {
                     if (this.player.defaultAction.onPointerUp) {
-                        this.player.defaultAction.onPointerUp(duration, this.player.currentChuncks);
+                        this.player.defaultAction.onPointerUp(duration, distance, this.player.currentChuncks);
                     }
                 }
                 else if (event.button === 2) {
                     if (this.player.defaultAction.onRightPointerUp) {
-                        this.player.defaultAction.onRightPointerUp(duration, this.player.currentChuncks);
+                        this.player.defaultAction.onRightPointerUp(duration, distance, this.player.currentChuncks);
                     }
                 }
             }

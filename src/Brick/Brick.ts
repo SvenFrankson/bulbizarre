@@ -34,6 +34,7 @@ class Brick extends BABYLON.TransformNode {
         return !(this.parent instanceof Brick);
     }
 
+    public anchored: boolean = false;
     public mesh: BrickMesh;
     public chunck: Kulla.Chunck;
     public get root(): Brick {
@@ -67,6 +68,7 @@ class Brick extends BABYLON.TransformNode {
 
     public setParent(node: BABYLON.Node, preserveScalingSign?: boolean, updatePivot?: boolean): BABYLON.TransformNode {
         if (node instanceof Brick) {
+            this.anchored = false;
             this.brickManager.unregisterBrick(this);
         }
         else {
@@ -232,6 +234,10 @@ class Brick extends BABYLON.TransformNode {
             qw: this.rotationQuaternion.w,
         }
 
+        if (this.anchored) {
+            data.anc = this.anchored;
+        }
+
         let children = this.getChildTransformNodes(true);
         if (children.length > 0) {
             data.c = [];
@@ -251,7 +257,9 @@ class Brick extends BABYLON.TransformNode {
         this.colorIndex = isFinite(data.col) ? data.col : 0;
         this.position.copyFromFloats(data.x, data.y, data.z);
         this.rotationQuaternion.copyFromFloats(data.qx, data.qy, data.qz, data.qw);
-
+        if (data.anc) {
+            this.anchored = true;
+        }
         if (data.c) {
             for (let i = 0; i < data.c.length; i++) {
                 let child = new Brick(this.brickManager, 0, 0, this);
@@ -266,6 +274,7 @@ var ALLBRICKS: number[] = [];
 interface IBrickData {
     id: number;
     col: number;
+    anc?: boolean;
     x: number;
     y: number;
     z: number;

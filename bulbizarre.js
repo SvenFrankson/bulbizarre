@@ -449,6 +449,7 @@ class Game {
         this.router = new GameRouter(this);
         this.playerActionView = new PlayerActionView();
         this.playerInventoryView = document.getElementsByTagName("inventory-page")[0];
+        this.brickMenuView = document.getElementsByTagName("brick-menu")[0];
         this.propEditor = new PropEditor(this);
         this.brickManager = new BrickManager(this);
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
@@ -513,6 +514,7 @@ class Game {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_COLORS[i].name, InventoryCategory.Paint));
             }
             this.player.playerActionManager.loadFromLocalStorage();
+            this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
@@ -635,6 +637,7 @@ class Game {
             this.terrain.initialize();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
             //this.playerInventoryView.show(0.2);
+            //this.brickMenuView.show(0.1);
         }
         let mat = new TerrainMaterial("terrain", this.scene);
         this.terrain.materials = [mat];
@@ -1846,6 +1849,7 @@ class Brick extends BABYLON.TransformNode {
         super("brick");
         this.brickManager = brickManager;
         this.colorIndex = colorIndex;
+        this.anchored = false;
         this.rotationQuaternion = BABYLON.Quaternion.Identity();
         this.index = Brick.BrickIdToIndex(arg1);
         if (parent) {
@@ -1885,6 +1889,7 @@ class Brick extends BABYLON.TransformNode {
     }
     setParent(node, preserveScalingSign, updatePivot) {
         if (node instanceof Brick) {
+            this.anchored = false;
             this.brickManager.unregisterBrick(this);
         }
         else {
@@ -2018,6 +2023,9 @@ class Brick extends BABYLON.TransformNode {
             qz: this.rotationQuaternion.z,
             qw: this.rotationQuaternion.w,
         };
+        if (this.anchored) {
+            data.anc = this.anchored;
+        }
         let children = this.getChildTransformNodes(true);
         if (children.length > 0) {
             data.c = [];
@@ -2035,6 +2043,9 @@ class Brick extends BABYLON.TransformNode {
         this.colorIndex = isFinite(data.col) ? data.col : 0;
         this.position.copyFromFloats(data.x, data.y, data.z);
         this.rotationQuaternion.copyFromFloats(data.qx, data.qy, data.qz, data.qw);
+        if (data.anc) {
+            this.anchored = true;
+        }
         if (data.c) {
             for (let i = 0; i < data.c.length; i++) {
                 let child = new Brick(this.brickManager, 0, 0, this);
@@ -2506,6 +2517,216 @@ class BrickVertexDataGenerator {
     }
 }
 BrickVertexDataGenerator._StudVertexData = [];
+class BrickMenuView extends HTMLElement {
+    constructor() {
+        super(...arguments);
+        this._loaded = false;
+        this._shown = false;
+        this.currentPointers = 0;
+        this._timer = 0;
+    }
+    static get observedAttributes() {
+        return [];
+    }
+    get shown() {
+        return this._shown;
+    }
+    get onLoad() {
+        return this._onLoad;
+    }
+    set onLoad(callback) {
+        this._onLoad = callback;
+        if (this._loaded) {
+            this._onLoad();
+        }
+    }
+    currentPointerUp() {
+        if (this._options.length > 0) {
+            this.setPointer((this.currentPointers - 1 + this._options.length) % this._options.length);
+        }
+    }
+    currentPointerDown() {
+        if (this._options.length > 0) {
+            this.setPointer((this.currentPointers + 1) % this._options.length);
+        }
+    }
+    setPointer(n) {
+        if (this._options[this.currentPointers]) {
+            this._options[this.currentPointers].classList.remove("highlit");
+        }
+        this.currentPointers = n;
+        if (this._options[this.currentPointers]) {
+            this._options[this.currentPointers].classList.add("highlit");
+        }
+    }
+    _makeCategoryBtnStyle(btn) {
+        btn.style.fontSize = "min(2svh, 2vw)";
+        btn.style.display = "block";
+        btn.style.marginRight = "1%";
+        btn.style.paddingTop = "0.5%";
+        btn.style.paddingBottom = "0.5%";
+        btn.style.width = "20%";
+        btn.style.textAlign = "center";
+        btn.style.borderLeft = "2px solid white";
+        btn.style.borderTop = "2px solid white";
+        btn.style.borderRight = "2px solid white";
+        btn.style.borderTopLeftRadius = "10px";
+        btn.style.borderTopRightRadius = "10px";
+    }
+    _makeCategoryBtnActive(btn) {
+        btn.style.borderLeft = "2px solid white";
+        btn.style.borderTop = "2px solid white";
+        btn.style.borderRight = "2px solid white";
+        btn.style.color = "#272b2e";
+        btn.style.backgroundColor = "white";
+        btn.style.fontWeight = "bold";
+    }
+    _makeCategoryBtnInactive(btn) {
+        btn.style.borderLeft = "2px solid #7F7F7F";
+        btn.style.borderTop = "2px solid #7F7F7F";
+        btn.style.borderRight = "2px solid #7F7F7F";
+        btn.style.borderBottom = "";
+        btn.style.color = "#7F7F7F";
+        btn.style.backgroundColor = "";
+        btn.style.fontWeight = "";
+    }
+    connectedCallback() {
+        this.style.display = "none";
+        this.style.opacity = "0";
+        this._title = document.createElement("h1");
+        this._title.classList.add("brick-menu-title");
+        this._title.innerHTML = "BRICK";
+        this.appendChild(this._title);
+        let categoriesContainer;
+        categoriesContainer = document.createElement("div");
+        this.appendChild(categoriesContainer);
+        this._anchorBtn = document.createElement("button");
+        this._anchorBtn.innerHTML = "ANCHOR";
+        categoriesContainer.appendChild(this._anchorBtn);
+        this._anchorBtn.onclick = () => {
+            if (this._brick) {
+                this._brick.root.anchored = !this._brick.root.anchored;
+            }
+            this._brick.brickManager.saveToLocalStorage();
+            this.hide(0.1);
+        };
+        this._copyBtn = document.createElement("button");
+        this._copyBtn.innerHTML = "COPY";
+        categoriesContainer.appendChild(this._copyBtn);
+        this._copyBtn.onclick = () => {
+            this._player.currentAction = PlayerActionTemplate.CreateBrickAction(this._player, this._brick.index, this._brick.colorIndex);
+            this.hide(0.1);
+        };
+        this._copyColorBtn = document.createElement("button");
+        this._copyColorBtn.innerHTML = "COPY COLOR";
+        categoriesContainer.appendChild(this._copyColorBtn);
+        this._copyColorBtn.onclick = () => {
+        };
+        this._cancelBtn = document.createElement("button");
+        this._cancelBtn.innerHTML = "CANCEL";
+        categoriesContainer.appendChild(this._cancelBtn);
+        this._cancelBtn.onclick = () => {
+            this.hide(0.1);
+        };
+        this._options = [
+            this._anchorBtn,
+            this._copyBtn,
+            this._copyColorBtn,
+            this._cancelBtn,
+        ];
+    }
+    attributeChangedCallback(name, oldValue, newValue) { }
+    async show(duration = 1) {
+        return new Promise((resolve) => {
+            if (!this._shown) {
+                this._shown = true;
+                this.style.display = "block";
+                let opacity0 = parseFloat(this.style.opacity);
+                let opacity1 = 1;
+                let t0 = performance.now();
+                let step = () => {
+                    let t = performance.now();
+                    let dt = (t - t0) / 1000;
+                    if (dt >= duration) {
+                        this.style.opacity = "1";
+                        resolve();
+                    }
+                    else {
+                        let f = dt / duration;
+                        this.style.opacity = ((1 - f) * opacity0 + f * opacity1).toFixed(2);
+                        requestAnimationFrame(step);
+                    }
+                };
+                step();
+            }
+        });
+    }
+    async hide(duration = 1) {
+        if (duration === 0) {
+            this._shown = false;
+            this.style.display = "none";
+            this.style.opacity = "0";
+        }
+        else {
+            return new Promise((resolve) => {
+                if (this._shown) {
+                    this._shown = false;
+                    this.style.display = "block";
+                    let opacity0 = parseFloat(this.style.opacity);
+                    let opacity1 = 0;
+                    let t0 = performance.now();
+                    let step = () => {
+                        let t = performance.now();
+                        let dt = (t - t0) / 1000;
+                        if (dt >= duration) {
+                            this.style.display = "none";
+                            this.style.opacity = "0";
+                            resolve();
+                        }
+                        else {
+                            let f = dt / duration;
+                            this.style.opacity = ((1 - f) * opacity0 + f * opacity1).toFixed(2);
+                            requestAnimationFrame(step);
+                        }
+                    };
+                    step();
+                }
+            });
+        }
+    }
+    setPlayer(player) {
+        this._player = player;
+    }
+    setBrick(brick) {
+        this._brick = brick;
+    }
+    update(dt) {
+        if (this._timer > 0) {
+            this._timer -= dt;
+        }
+        let gamepads = navigator.getGamepads();
+        let gamepad = gamepads[0];
+        if (gamepad) {
+            let axis1 = -Nabu.InputManager.DeadZoneAxis(gamepad.axes[1]);
+            if (axis1 > 0.5) {
+                if (this._timer <= 0) {
+                    this.currentPointerUp();
+                    this._timer = 0.5;
+                }
+            }
+            else if (axis1 < -0.5) {
+                if (this._timer <= 0) {
+                    this.currentPointerDown();
+                    this._timer = 0.5;
+                }
+            }
+            else {
+                this._timer = 0;
+            }
+        }
+    }
+}
+customElements.define("brick-menu", BrickMenuView);
 class Player extends BABYLON.Mesh {
     constructor(game) {
         super("player");
@@ -2899,11 +3120,15 @@ var PlayMode;
 class PlayerControler {
     constructor(player) {
         this.player = player;
+        this._pointerDownX = -100;
+        this._pointerDownY = -100;
         this._pointerIsDown = false;
         this.gamepadInControl = false;
         this.lastUsedPaintIndex = 0;
         this._pointerDown = (event) => {
             this._pointerDownTime = performance.now();
+            this._pointerDownX = event.clientX;
+            this._pointerDownY = event.clientY;
             this._pointerIsDown = true;
             if (this.playMode === PlayMode.Playing) {
                 if (this.player.currentAction) {
@@ -2943,29 +3168,32 @@ class PlayerControler {
         };
         this._pointerUp = (event) => {
             this._pointerIsDown = false;
+            let dX = this._pointerDownX - event.clientX;
+            let dY = this._pointerDownY - event.clientY;
+            let distance = Math.sqrt(dX * dX + dY * dY);
             let duration = (performance.now() - this._pointerDownTime) / 1000;
             if (this.playMode === PlayMode.Playing) {
                 if (this.player.currentAction) {
                     if (event.button === 0) {
                         if (this.player.currentAction.onPointerUp) {
-                            this.player.currentAction.onPointerUp(duration, this.player.currentChuncks);
+                            this.player.currentAction.onPointerUp(duration, distance, this.player.currentChuncks);
                         }
                     }
                     else if (event.button === 2) {
                         if (this.player.currentAction.onRightPointerUp) {
-                            this.player.currentAction.onRightPointerUp(duration, this.player.currentChuncks);
+                            this.player.currentAction.onRightPointerUp(duration, distance, this.player.currentChuncks);
                         }
                     }
                 }
                 else {
                     if (event.button === 0) {
                         if (this.player.defaultAction.onPointerUp) {
-                            this.player.defaultAction.onPointerUp(duration, this.player.currentChuncks);
+                            this.player.defaultAction.onPointerUp(duration, distance, this.player.currentChuncks);
                         }
                     }
                     else if (event.button === 2) {
                         if (this.player.defaultAction.onRightPointerUp) {
-                            this.player.defaultAction.onRightPointerUp(duration, this.player.currentChuncks);
+                            this.player.defaultAction.onRightPointerUp(duration, distance, this.player.currentChuncks);
                         }
                     }
                 }
@@ -2990,6 +3218,9 @@ class PlayerControler {
     get playMode() {
         if (this.player.game.playerInventoryView.shown) {
             return PlayMode.Inventory;
+        }
+        if (this.player.game.brickMenuView.shown) {
+            return PlayMode.Menu;
         }
         if (this.player.game.router.inPlayMode) {
             return PlayMode.Playing;
@@ -3567,14 +3798,28 @@ class PlayerActionDefault {
             setAimedBrickRoot(undefined);
             setAimedBrick(undefined);
         };
-        brickAction.onPointerUp = () => {
-            if (player.controler.playMode === PlayMode.Playing) {
-                if (aimedBrickRoot) {
-                    player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+        brickAction.onPointerUp = (duration, distance) => {
+            if (distance > 4) {
+                return;
+            }
+            if (duration > 0.3) {
+                if (aimedBrick) {
+                    player.game.brickMenuView.setBrick(aimedBrick);
+                    player.game.brickMenuView.show(0.1);
+                }
+            }
+            else {
+                if (player.controler.playMode === PlayMode.Playing) {
+                    if (aimedBrickRoot && !aimedBrickRoot.anchored) {
+                        player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+                    }
                 }
             }
         };
-        brickAction.onRightPointerUp = () => {
+        brickAction.onRightPointerUp = (duration, distance) => {
+            if (distance > 4) {
+                return;
+            }
             if (aimedBrick) {
                 let prevParent = aimedBrick.parent;
                 if (prevParent instanceof Brick) {
@@ -3824,7 +4069,7 @@ class PlayerActionTemplate {
         };
         return action;
     }
-    static CreateBrickAction(player, brickId) {
+    static CreateBrickAction(player, brickId, colorIndex) {
         let brickAction = new PlayerAction(Brick.BrickIdToName(brickId), player);
         brickAction.backgroundColor = "#000000";
         let previewMesh;
@@ -3902,7 +4147,7 @@ class PlayerActionTemplate {
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        let brick = new Brick(player.game.brickManager, brickId, player.controler.lastUsedPaintIndex);
+                        let brick = new Brick(player.game.brickManager, brickId, isFinite(colorIndex) ? colorIndex : player.controler.lastUsedPaintIndex);
                         brick.position.copyFrom(dp).addInPlace(rootPosition);
                         brick.rotationQuaternion = rotationQuaternion.clone();
                         brick.computeWorldMatrix(true);
@@ -3913,7 +4158,7 @@ class PlayerActionTemplate {
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                         if (chunckIJK) {
-                            let brick = new Brick(player.game.brickManager, brickId, player.controler.lastUsedPaintIndex);
+                            let brick = new Brick(player.game.brickManager, brickId, isFinite(colorIndex) ? colorIndex : player.controler.lastUsedPaintIndex);
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
                             brick.rotationQuaternion = rotationQuaternion.clone();
                             brick.updateMesh();

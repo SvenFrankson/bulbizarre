@@ -63,15 +63,29 @@ class PlayerActionDefault {
             setAimedBrick(undefined);
         }
 
-        brickAction.onPointerUp = () => {
-            if (player.controler.playMode === PlayMode.Playing) {
-                if (aimedBrickRoot) {
-                    player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+        brickAction.onPointerUp = (duration, distance) => {
+            if (distance > 4) {
+                return;
+            }
+            if (duration > 0.3) {
+                if (aimedBrick) {
+                    player.game.brickMenuView.setBrick(aimedBrick);
+                    player.game.brickMenuView.show(0.1);
+                }
+            }
+            else {
+                if (player.controler.playMode === PlayMode.Playing) {
+                    if (aimedBrickRoot && !aimedBrickRoot.anchored) {
+                        player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+                    }
                 }
             }
         }
 
-        brickAction.onRightPointerUp = () => {
+        brickAction.onRightPointerUp = (duration, distance) => {
+            if (distance > 4) {
+                return;
+            }
             if (aimedBrick) {
                 let prevParent = aimedBrick.parent;
                 if (prevParent instanceof Brick) {
