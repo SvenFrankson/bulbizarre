@@ -30,6 +30,7 @@ class PlayerControler {
 
     private _pointerIsDown: boolean = false;
     public gamepadInControl: boolean = false;
+    public lastUsedPaintIndex: number = 0;
 
     public aim: HTMLCanvasElement;
 

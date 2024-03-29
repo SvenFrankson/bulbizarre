@@ -111,6 +111,7 @@ class PlayerActionView {
         if (slotIndex >= 0 && slotIndex <= 9) {
             let tile = this.getTile(slotIndex);
             if (tile) {
+                tile.style.background = undefined;
                 tile.style.backgroundColor = undefined;
             }
         }

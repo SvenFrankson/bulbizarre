@@ -16,6 +16,15 @@ var BRICK_LIST = [
     "window-frame_2x2",
     "window-frame_3x2",
     "window-frame_4x3",
+    "tile_4x1",
+    "brick_4x1",
+    "plate_4x2",
+    "plate_4x1",
+    "tile-corner-round_3x1",
+    "brick-corner-round_3x1",
+    "window-frame-corner-round_3x2",
+    "window-frame-corner-round_3x3",
+    "window-frame-corner-round_3x4",
 ]
 
 var BRICK_COLORS = [

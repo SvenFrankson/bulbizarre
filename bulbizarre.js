@@ -697,9 +697,11 @@ class Game {
             this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
             let bricks = [
-                "window-frame_2x2",
-                "window-frame_3x2",
-                "window-frame_4x3"
+                "tile-corner-round_3x1",
+                "brick-corner-round_3x1",
+                "window-frame-corner-round_3x2",
+                "window-frame-corner-round_3x3",
+                "window-frame-corner-round_3x4",
             ];
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
@@ -2076,6 +2078,15 @@ var BRICK_LIST = [
     "window-frame_2x2",
     "window-frame_3x2",
     "window-frame_4x3",
+    "tile_4x1",
+    "brick_4x1",
+    "plate_4x2",
+    "plate_4x1",
+    "tile-corner-round_3x1",
+    "brick-corner-round_3x1",
+    "window-frame-corner-round_3x2",
+    "window-frame-corner-round_3x3",
+    "window-frame-corner-round_3x4",
 ];
 var BRICK_COLORS = [
     { name: "White", hex: "#FFFFFF" },
@@ -2198,7 +2209,21 @@ class BrickTemplate {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let h = parseInt(this.name.split("_")[1].split("x")[1]);
             this.vertexData = await BrickVertexDataGenerator.GetWindowFrameVertexData(l, h, lod);
-            BrickVertexDataGenerator.AddMarginInPlace(this.vertexData);
+        }
+        else if (this.name.startsWith("window-frame-corner-round_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let h = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = await BrickVertexDataGenerator.GetWindowFrameCornerRoundVertexData(l, h, lod);
+        }
+        else if (this.name.startsWith("tile-corner-round_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let w = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 1, lod);
+        }
+        else if (this.name.startsWith("brick-corner-round_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            let w = parseInt(this.name.split("_")[1].split("x")[1]);
+            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 3, lod);
         }
         else if (this.name === "tile-round-quarter_1x1") {
             this.vertexData = (await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-round-quarter_1x1.babylon"))[0];
@@ -2390,6 +2415,64 @@ class BrickVertexDataGenerator {
             Mummu.TranslateVertexDataInPlace(studData, new BABYLON.Vector3(0, yMax, z * BRICK_S));
             studDatas.push(studData);
         }
+        return Mummu.MergeVertexDatas(cutBoxRawData, ...studDatas);
+    }
+    static async GetWindowFrameCornerRoundVertexData(length, height, lod = 1) {
+        let datas = await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/window-frame-corner_" + length + "x2.babylon");
+        let cutBoxRawData = Mummu.CloneVertexData(datas[0]);
+        let dy = (height - 2) * BRICK_H * 3;
+        let positions = cutBoxRawData.positions;
+        for (let i = 0; i < positions.length / 3; i++) {
+            let y = positions[3 * i + 1];
+            if (y > BRICK_H * 3) {
+                y += dy;
+            }
+            positions[3 * i + 1] = y;
+        }
+        cutBoxRawData.positions = positions;
+        let normals = [];
+        BABYLON.VertexData.ComputeNormals(cutBoxRawData.positions, cutBoxRawData.indices, normals);
+        cutBoxRawData.normals = normals;
+        cutBoxRawData.colors = undefined;
+        BrickVertexDataGenerator.AddMarginInPlace(cutBoxRawData);
+        let studDatas = [];
+        /*
+        let yMax = height * BRICK_H * 3;
+        for (let z = 0; z < length; z++) {
+            let studData = Mummu.CloneVertexData(BrickVertexDataGenerator.GetStudVertexData(lod));
+            Mummu.TranslateVertexDataInPlace(studData, new BABYLON.Vector3(0, yMax, z * BRICK_S));
+            studDatas.push(studData);
+        }
+        */
+        return Mummu.MergeVertexDatas(cutBoxRawData, ...studDatas);
+    }
+    static async GetBoxCornerRoundVertexData(length, height, lod = 1) {
+        let datas = await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-corner-round.babylon");
+        let cutBoxRawData = Mummu.CloneVertexData(datas[0]);
+        let dy = (height - 1) * BRICK_H;
+        let positions = cutBoxRawData.positions;
+        for (let i = 0; i < positions.length / 3; i++) {
+            let y = positions[3 * i + 1];
+            if (y > BRICK_H * 0.5) {
+                y += dy;
+            }
+            positions[3 * i + 1] = y;
+        }
+        cutBoxRawData.positions = positions;
+        let normals = [];
+        BABYLON.VertexData.ComputeNormals(cutBoxRawData.positions, cutBoxRawData.indices, normals);
+        cutBoxRawData.normals = normals;
+        cutBoxRawData.colors = undefined;
+        BrickVertexDataGenerator.AddMarginInPlace(cutBoxRawData);
+        let studDatas = [];
+        /*
+        let yMax = height * BRICK_H * 3;
+        for (let z = 0; z < length; z++) {
+            let studData = Mummu.CloneVertexData(BrickVertexDataGenerator.GetStudVertexData(lod));
+            Mummu.TranslateVertexDataInPlace(studData, new BABYLON.Vector3(0, yMax, z * BRICK_S));
+            studDatas.push(studData);
+        }
+        */
         return Mummu.MergeVertexDatas(cutBoxRawData, ...studDatas);
     }
     static AddMarginInPlace(vertexData, margin = 0.002, cx = 0, cy = BRICK_H * 0.5, cz = 0) {
@@ -2793,6 +2876,7 @@ class PlayerActionView {
         if (slotIndex >= 0 && slotIndex <= 9) {
             let tile = this.getTile(slotIndex);
             if (tile) {
+                tile.style.background = undefined;
                 tile.style.backgroundColor = undefined;
             }
         }
@@ -2817,6 +2901,7 @@ class PlayerControler {
         this.player = player;
         this._pointerIsDown = false;
         this.gamepadInControl = false;
+        this.lastUsedPaintIndex = 0;
         this._pointerDown = (event) => {
             this._pointerDownTime = performance.now();
             this._pointerIsDown = true;
@@ -3817,7 +3902,7 @@ class PlayerActionTemplate {
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        let brick = new Brick(player.game.brickManager, brickId, 0);
+                        let brick = new Brick(player.game.brickManager, brickId, player.controler.lastUsedPaintIndex);
                         brick.position.copyFrom(dp).addInPlace(rootPosition);
                         brick.rotationQuaternion = rotationQuaternion.clone();
                         brick.computeWorldMatrix(true);
@@ -3828,7 +3913,7 @@ class PlayerActionTemplate {
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                         if (chunckIJK) {
-                            let brick = new Brick(player.game.brickManager, brickId, 0);
+                            let brick = new Brick(player.game.brickManager, brickId, player.controler.lastUsedPaintIndex);
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
                             brick.rotationQuaternion = rotationQuaternion.clone();
                             brick.updateMesh();
@@ -3889,6 +3974,7 @@ class PlayerActionTemplate {
                         let root = hit.pickedMesh.brick.root;
                         let aimedBrick = root.getBrickForFaceId(hit.faceId);
                         aimedBrick.colorIndex = paintIndex;
+                        player.controler.lastUsedPaintIndex = paintIndex;
                         aimedBrick.updateMesh();
                         aimedBrick.brickManager.saveToLocalStorage();
                     }
