@@ -43,7 +43,7 @@ class BrickTemplate {
         if (this.name.startsWith("brick_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 3, w, lod);
+            this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(l, 3, w, lod);
         }
         else if (this.name.startsWith("plate-corner-cut_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
@@ -57,12 +57,12 @@ class BrickTemplate {
         else if (this.name.startsWith("wall_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 12, w, lod);
+            this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(l, 12, w, lod);
         }
         else if (this.name.startsWith("plate_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 1, w, lod);
+            this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(l, 1, w, lod);
         }
         else if (this.name.startsWith("tile_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
@@ -82,12 +82,12 @@ class BrickTemplate {
         else if (this.name.startsWith("tile-corner-round_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 1, lod);
+            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 1, w, lod);
         }
         else if (this.name.startsWith("brick-corner-round_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 3, lod);
+            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 3, w, lod);
         }
         else if (this.name === "tile-round-quarter_1x1") {
             this.vertexData = (await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-round-quarter_1x1.babylon"))[0];

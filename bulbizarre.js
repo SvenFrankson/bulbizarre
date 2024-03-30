@@ -700,11 +700,8 @@ class Game {
             this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
             let bricks = [
-                "tile-corner-round_3x1",
-                "brick-corner-round_3x1",
-                "window-frame-corner-round_3x2",
-                "window-frame-corner-round_3x3",
-                "window-frame-corner-round_3x4",
+                "tile-corner-round_4x1",
+                "brick-corner-round_4x1"
             ];
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
@@ -2098,6 +2095,10 @@ var BRICK_LIST = [
     "window-frame-corner-round_3x2",
     "window-frame-corner-round_3x3",
     "window-frame-corner-round_3x4",
+    "tile-corner-round_4x2",
+    "brick-corner-round_4x2",
+    "tile-corner-round_4x1",
+    "brick-corner-round_4x1"
 ];
 var BRICK_COLORS = [
     { name: "White", hex: "#FFFFFF" },
@@ -2190,7 +2191,7 @@ class BrickTemplate {
         if (this.name.startsWith("brick_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 3, w, lod);
+            this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(l, 3, w, lod);
         }
         else if (this.name.startsWith("plate-corner-cut_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
@@ -2204,12 +2205,12 @@ class BrickTemplate {
         else if (this.name.startsWith("wall_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 12, w, lod);
+            this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(l, 12, w, lod);
         }
         else if (this.name.startsWith("plate_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = BrickVertexDataGenerator.GetStuddedBoxVertexData(l, 1, w, lod);
+            this.vertexData = BrickVertexDataGenerator.GetBoxVertexData(l, 1, w, lod);
         }
         else if (this.name.startsWith("tile_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
@@ -2229,12 +2230,12 @@ class BrickTemplate {
         else if (this.name.startsWith("tile-corner-round_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 1, lod);
+            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 1, w, lod);
         }
         else if (this.name.startsWith("brick-corner-round_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 3, lod);
+            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 3, w, lod);
         }
         else if (this.name === "tile-round-quarter_1x1") {
             this.vertexData = (await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-round-quarter_1x1.babylon"))[0];
@@ -2252,7 +2253,7 @@ class BrickTemplate {
 var BRICK_S = 0.375;
 var BRICK_H = 0.15;
 class BrickVertexDataGenerator {
-    static GetStudVertexData(lod) {
+    static GetStudVertexDataKill(lod) {
         if (!BrickVertexDataGenerator._StudVertexData[lod]) {
             BrickVertexDataGenerator._StudVertexData[lod] = new BABYLON.VertexData();
             if (lod === 0) {
@@ -2330,10 +2331,48 @@ class BrickVertexDataGenerator {
         BrickVertexDataGenerator.AddMarginInPlace(data);
         return data;
     }
-    static GetStuddedBoxVertexData(length, height, width, lod = 1) {
+    static async GetBoxCornerRoundVertexData(length, height, width, lod = 1) {
+        let datas = await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-corner-round.babylon");
+        let boxCornerRoundRawData = Mummu.CloneVertexData(datas[0]);
+        let innerD = (length - width) * BRICK_S;
+        let outterD = length * BRICK_S;
+        let dy = (height - 1) * BRICK_H;
+        let positions = boxCornerRoundRawData.positions;
+        for (let i = 0; i < positions.length / 3; i++) {
+            let x = positions[3 * i];
+            let y = positions[3 * i + 1];
+            let z = positions[3 * i + 2];
+            let dd = x * x + z * z;
+            if (dd > 3) {
+                // outter case
+                x = x / 2 * outterD;
+                z = z / 2 * outterD;
+            }
+            else {
+                // inner case
+                x = x * innerD;
+                z = z * innerD;
+            }
+            if (y > BRICK_H * 0.5) {
+                y += dy;
+            }
+            z -= BRICK_S * 0.5;
+            x -= innerD + BRICK_S * 0.5;
+            positions[3 * i] = x;
+            positions[3 * i + 1] = y;
+            positions[3 * i + 2] = z;
+        }
+        boxCornerRoundRawData.positions = positions;
+        boxCornerRoundRawData.colors = undefined;
+        BrickVertexDataGenerator.AddMarginInPlace(boxCornerRoundRawData);
+        return boxCornerRoundRawData;
+    }
+    /*
+    public static GetStuddedBoxVertexData(length: number, height: number, width: number, lod: number = 1): BABYLON.VertexData {
         let boxData = BrickVertexDataGenerator.GetBoxVertexData(length, height, width);
+
         let yMax = height * BRICK_H;
-        let studDatas = [];
+        let studDatas: BABYLON.VertexData[] = [];
         for (let z = 0; z < length; z++) {
             for (let x = 0; x < width; x++) {
                 let studData = Mummu.CloneVertexData(BrickVertexDataGenerator.GetStudVertexData(lod));
@@ -2341,8 +2380,10 @@ class BrickVertexDataGenerator {
                 studDatas.push(studData);
             }
         }
+
         return Mummu.MergeVertexDatas(boxData, ...studDatas);
     }
+    */
     static async GetStuddedCutBoxVertexData(cut, length, height, width, lod = 1) {
         let datas = await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/plate-corner-cut.babylon");
         let cutBoxRawData = Mummu.CloneVertexData(datas[0]);
@@ -2381,7 +2422,9 @@ class BrickVertexDataGenerator {
         cutBoxRawData.normals = normals;
         cutBoxRawData.colors = undefined;
         BrickVertexDataGenerator.AddMarginInPlace(cutBoxRawData);
-        let studDatas = [];
+        return cutBoxRawData;
+        /*
+        let studDatas: BABYLON.VertexData[] = [];
         let yMax = height * BRICK_H;
         let lim = Math.max(length, width) + cut - 1;
         for (let z = 0; z < length; z++) {
@@ -2393,7 +2436,9 @@ class BrickVertexDataGenerator {
                 }
             }
         }
+
         return Mummu.MergeVertexDatas(cutBoxRawData, ...studDatas);
+        */
     }
     static async GetWindowFrameVertexData(length, height, lod = 1) {
         let datas = await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/window-frame_2x2.babylon");
@@ -2419,14 +2464,18 @@ class BrickVertexDataGenerator {
         cutBoxRawData.normals = normals;
         cutBoxRawData.colors = undefined;
         BrickVertexDataGenerator.AddMarginInPlace(cutBoxRawData);
-        let studDatas = [];
+        return cutBoxRawData;
+        /*
+        let studDatas: BABYLON.VertexData[] = [];
         let yMax = height * BRICK_H * 3;
         for (let z = 0; z < length; z++) {
             let studData = Mummu.CloneVertexData(BrickVertexDataGenerator.GetStudVertexData(lod));
             Mummu.TranslateVertexDataInPlace(studData, new BABYLON.Vector3(0, yMax, z * BRICK_S));
             studDatas.push(studData);
         }
+
         return Mummu.MergeVertexDatas(cutBoxRawData, ...studDatas);
+        */
     }
     static async GetWindowFrameCornerRoundVertexData(length, height, lod = 1) {
         let datas = await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/window-frame-corner_" + length + "x2.babylon");
@@ -2436,35 +2485,6 @@ class BrickVertexDataGenerator {
         for (let i = 0; i < positions.length / 3; i++) {
             let y = positions[3 * i + 1];
             if (y > BRICK_H * 3) {
-                y += dy;
-            }
-            positions[3 * i + 1] = y;
-        }
-        cutBoxRawData.positions = positions;
-        let normals = [];
-        BABYLON.VertexData.ComputeNormals(cutBoxRawData.positions, cutBoxRawData.indices, normals);
-        cutBoxRawData.normals = normals;
-        cutBoxRawData.colors = undefined;
-        BrickVertexDataGenerator.AddMarginInPlace(cutBoxRawData);
-        let studDatas = [];
-        /*
-        let yMax = height * BRICK_H * 3;
-        for (let z = 0; z < length; z++) {
-            let studData = Mummu.CloneVertexData(BrickVertexDataGenerator.GetStudVertexData(lod));
-            Mummu.TranslateVertexDataInPlace(studData, new BABYLON.Vector3(0, yMax, z * BRICK_S));
-            studDatas.push(studData);
-        }
-        */
-        return Mummu.MergeVertexDatas(cutBoxRawData, ...studDatas);
-    }
-    static async GetBoxCornerRoundVertexData(length, height, lod = 1) {
-        let datas = await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-corner-round.babylon");
-        let cutBoxRawData = Mummu.CloneVertexData(datas[0]);
-        let dy = (height - 1) * BRICK_H;
-        let positions = cutBoxRawData.positions;
-        for (let i = 0; i < positions.length / 3; i++) {
-            let y = positions[3 * i + 1];
-            if (y > BRICK_H * 0.5) {
                 y += dy;
             }
             positions[3 * i + 1] = y;

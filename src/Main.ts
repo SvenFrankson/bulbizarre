@@ -434,11 +434,8 @@ class Game {
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
     
             let bricks = [
-                "tile-corner-round_3x1",
-                "brick-corner-round_3x1",
-                "window-frame-corner-round_3x2",
-                "window-frame-corner-round_3x3",
-                "window-frame-corner-round_3x4",
+                "tile-corner-round_4x1",
+                "brick-corner-round_4x1"
             ]
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
