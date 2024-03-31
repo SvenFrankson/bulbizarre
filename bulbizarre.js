@@ -1933,6 +1933,10 @@ class Brick extends BABYLON.TransformNode {
             this.mesh = new BrickMesh(this);
             this.mesh.position = this.position;
             this.mesh.rotationQuaternion = this.rotationQuaternion;
+            let brickMaterial = new BABYLON.StandardMaterial("brick-material");
+            brickMaterial.specularColor.copyFromFloats(0, 0, 0);
+            brickMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/test-dirt.png");
+            this.mesh.material = brickMaterial;
         }
         data.applyToMesh(this.mesh);
     }
@@ -1958,6 +1962,14 @@ class Brick extends BABYLON.TransformNode {
             colors.push(color.r, color.g, color.b, 1);
         }
         vData.colors = colors;
+        let dU = Math.random();
+        let dV = Math.random();
+        let uvs = vData.uvs;
+        for (let i = 0; i < uvs.length / 2; i++) {
+            uvs[2 * i] += dU;
+            uvs[2 * i + 1] += dV;
+        }
+        vData.uvs = uvs;
         Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
         Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
         vDatas.push(vData);
@@ -2296,36 +2308,42 @@ class BrickVertexDataGenerator {
             p2: new BABYLON.Vector3(xMax, yMin, zMin),
             p3: new BABYLON.Vector3(xMax, yMax, zMin),
             p4: new BABYLON.Vector3(xMin, yMax, zMin),
+            uvInWorldSpace: true
         });
         let right = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMax, yMin, zMin),
             p2: new BABYLON.Vector3(xMax, yMin, zMax),
             p3: new BABYLON.Vector3(xMax, yMax, zMax),
             p4: new BABYLON.Vector3(xMax, yMax, zMin),
+            uvInWorldSpace: true
         });
         let front = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMax, yMin, zMax),
             p2: new BABYLON.Vector3(xMin, yMin, zMax),
             p3: new BABYLON.Vector3(xMin, yMax, zMax),
             p4: new BABYLON.Vector3(xMax, yMax, zMax),
+            uvInWorldSpace: true
         });
         let left = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMin, yMin, zMax),
             p2: new BABYLON.Vector3(xMin, yMin, zMin),
             p3: new BABYLON.Vector3(xMin, yMax, zMin),
             p4: new BABYLON.Vector3(xMin, yMax, zMax),
+            uvInWorldSpace: true
         });
         let top = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMin, yMax, zMin),
             p2: new BABYLON.Vector3(xMax, yMax, zMin),
             p3: new BABYLON.Vector3(xMax, yMax, zMax),
             p4: new BABYLON.Vector3(xMin, yMax, zMax),
+            uvInWorldSpace: true
         });
         let bottom = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMax, yMin, zMin),
             p2: new BABYLON.Vector3(xMin, yMin, zMin),
             p3: new BABYLON.Vector3(xMin, yMin, zMax),
             p4: new BABYLON.Vector3(xMax, yMin, zMax),
+            uvInWorldSpace: true
         });
         let data = Mummu.MergeVertexDatas(back, right, front, left, top, bottom);
         BrickVertexDataGenerator.AddMarginInPlace(data);

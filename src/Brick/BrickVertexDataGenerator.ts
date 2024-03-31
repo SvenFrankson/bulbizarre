@@ -47,36 +47,42 @@ class BrickVertexDataGenerator {
             p2: new BABYLON.Vector3(xMax, yMin, zMin),
             p3: new BABYLON.Vector3(xMax, yMax, zMin),
             p4: new BABYLON.Vector3(xMin, yMax, zMin),
+            uvInWorldSpace: true
         });
         let right = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMax, yMin, zMin),
             p2: new BABYLON.Vector3(xMax, yMin, zMax),
             p3: new BABYLON.Vector3(xMax, yMax, zMax),
             p4: new BABYLON.Vector3(xMax, yMax, zMin),
+            uvInWorldSpace: true
         });
         let front = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMax, yMin, zMax),
             p2: new BABYLON.Vector3(xMin, yMin, zMax),
             p3: new BABYLON.Vector3(xMin, yMax, zMax),
             p4: new BABYLON.Vector3(xMax, yMax, zMax),
+            uvInWorldSpace: true
         });
         let left = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMin, yMin, zMax),
             p2: new BABYLON.Vector3(xMin, yMin, zMin),
             p3: new BABYLON.Vector3(xMin, yMax, zMin),
             p4: new BABYLON.Vector3(xMin, yMax, zMax),
+            uvInWorldSpace: true
         });
         let top = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMin, yMax, zMin),
             p2: new BABYLON.Vector3(xMax, yMax, zMin),
             p3: new BABYLON.Vector3(xMax, yMax, zMax),
             p4: new BABYLON.Vector3(xMin, yMax, zMax),
+            uvInWorldSpace: true
         });
         let bottom = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMax, yMin, zMin),
             p2: new BABYLON.Vector3(xMin, yMin, zMin),
             p3: new BABYLON.Vector3(xMin, yMin, zMax),
             p4: new BABYLON.Vector3(xMax, yMin, zMax),
+            uvInWorldSpace: true
         });
 
         let data = Mummu.MergeVertexDatas(back, right, front, left, top, bottom);
