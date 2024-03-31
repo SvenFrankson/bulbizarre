@@ -244,9 +244,54 @@ class BrickVertexDataGenerator {
         let dy = (height - 2) * BRICK_H * 3;
         let dz = (length - 2) * BRICK_S;
         let positions = cutBoxRawData.positions;
+        let normals = cutBoxRawData.normals;
+        let uvs = cutBoxRawData.uvs;
         for (let i = 0; i < positions.length / 3; i++) {
+            let nx = normals[3 * i];
+            let ny = normals[3 * i + 1];
+            let nz = normals[3 * i + 2];
+
+            let x = positions[3 * i];
             let y = positions[3 * i + 1];
             let z = positions[3 * i + 2];
+
+            let face = 0;
+
+            if (nx > 0.9) {
+                face = 1;
+            }
+            else if (nx < -0.9) {
+                face = 1;
+            }
+            else if (y < 0.001 && ny < - 0.9) {
+                face = 2;
+            }
+            else if (y > 6 * BRICK_H - 0.001 && ny > 0.9) {
+                face = 2;
+            }
+            else if (z < - 0.5 * BRICK_S + 0.01 && nz < - 0.9) {
+                face = 3;
+            }
+            else if (z > BRICK_S * 1.5 - 0.01 && nz > 0.9) {
+                face = 3;
+            }
+            else {
+                if (y > BRICK_H * 3 && z > BRICK_S * 0.5) {
+                    // do nothing
+                    if (uvs[2 * i] > 1) {
+                        uvs[2 * i] += 2 * dy + 2 * dz;
+                    }
+                }
+                else if (y < BRICK_H * 3 && z > BRICK_S * 0.5) {
+                    uvs[2 * i] += dy;
+                }
+                else if (y < BRICK_H * 3 && z < BRICK_S * 0.5) {
+                    uvs[2 * i] += dy + dz;
+                }
+                else if (y > BRICK_H * 3 && z < BRICK_S * 0.5) {
+                    uvs[2 * i] += 2 * dy + dz;
+                }
+            }
 
             if (y > BRICK_H * 3) {
                 y += dy;
@@ -256,12 +301,25 @@ class BrickVertexDataGenerator {
                 z += dz;
             }
 
+            if (face === 1) {
+                uvs[2 * i] = z;
+                uvs[2 * i + 1] = y;
+            }
+            else if (face === 2) {
+                uvs[2 * i] = z;
+                uvs[2 * i + 1] = x;
+            }
+            else if (face === 3) {
+                uvs[2 * i] = x;
+                uvs[2 * i + 1] = y;
+            }
+
             positions[3 * i + 1] = y;
             positions[3 * i + 2] = z;
         }
 
         cutBoxRawData.positions = positions;
-        let normals = [];
+        cutBoxRawData.uvs = uvs;
         BABYLON.VertexData.ComputeNormals(cutBoxRawData.positions, cutBoxRawData.indices, normals);
         cutBoxRawData.normals = normals;
         cutBoxRawData.colors = undefined;

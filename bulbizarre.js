@@ -1935,7 +1935,8 @@ class Brick extends BABYLON.TransformNode {
             this.mesh.rotationQuaternion = this.rotationQuaternion;
             let brickMaterial = new BABYLON.StandardMaterial("brick-material");
             brickMaterial.specularColor.copyFromFloats(0, 0, 0);
-            brickMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/test-dirt.png");
+            //brickMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/test-dirt.png");
+            brickMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/red-white-squares.png");
             this.mesh.material = brickMaterial;
         }
         data.applyToMesh(this.mesh);
@@ -1962,6 +1963,7 @@ class Brick extends BABYLON.TransformNode {
             colors.push(color.r, color.g, color.b, 1);
         }
         vData.colors = colors;
+        /*
         let a = 2 * Math.PI * Math.random();
         let cosa = Math.cos(a);
         let sina = Math.sin(a);
@@ -1975,6 +1977,7 @@ class Brick extends BABYLON.TransformNode {
             uvs[2 * i + 1] = sina * u + cosa * v + dV;
         }
         vData.uvs = uvs;
+        */
         Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
         Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
         vDatas.push(vData);
@@ -2496,20 +2499,74 @@ class BrickVertexDataGenerator {
         let dy = (height - 2) * BRICK_H * 3;
         let dz = (length - 2) * BRICK_S;
         let positions = cutBoxRawData.positions;
+        let normals = cutBoxRawData.normals;
+        let uvs = cutBoxRawData.uvs;
         for (let i = 0; i < positions.length / 3; i++) {
+            let nx = normals[3 * i];
+            let ny = normals[3 * i + 1];
+            let nz = normals[3 * i + 2];
+            let x = positions[3 * i];
             let y = positions[3 * i + 1];
             let z = positions[3 * i + 2];
+            let face = 0;
+            if (nx > 0.9) {
+                face = 1;
+            }
+            else if (nx < -0.9) {
+                face = 1;
+            }
+            else if (y < 0.001 && ny < -0.9) {
+                face = 2;
+            }
+            else if (y > 6 * BRICK_H - 0.001 && ny > 0.9) {
+                face = 2;
+            }
+            else if (z < -0.5 * BRICK_S + 0.01 && nz < -0.9) {
+                face = 3;
+            }
+            else if (z > BRICK_S * 1.5 - 0.01 && nz > 0.9) {
+                face = 3;
+            }
+            else {
+                if (y > BRICK_H * 3 && z > BRICK_S * 0.5) {
+                    // do nothing
+                    if (uvs[2 * i] > 1) {
+                        uvs[2 * i] += 2 * dy + 2 * dz;
+                    }
+                }
+                else if (y < BRICK_H * 3 && z > BRICK_S * 0.5) {
+                    uvs[2 * i] += dy;
+                }
+                else if (y < BRICK_H * 3 && z < BRICK_S * 0.5) {
+                    uvs[2 * i] += dy + dz;
+                }
+                else if (y > BRICK_H * 3 && z < BRICK_S * 0.5) {
+                    uvs[2 * i] += 2 * dy + dz;
+                }
+            }
             if (y > BRICK_H * 3) {
                 y += dy;
             }
             if (z > BRICK_S * 0.5) {
                 z += dz;
             }
+            if (face === 1) {
+                uvs[2 * i] = z;
+                uvs[2 * i + 1] = y;
+            }
+            else if (face === 2) {
+                uvs[2 * i] = z;
+                uvs[2 * i + 1] = x;
+            }
+            else if (face === 3) {
+                uvs[2 * i] = x;
+                uvs[2 * i + 1] = y;
+            }
             positions[3 * i + 1] = y;
             positions[3 * i + 2] = z;
         }
         cutBoxRawData.positions = positions;
-        let normals = [];
+        cutBoxRawData.uvs = uvs;
         BABYLON.VertexData.ComputeNormals(cutBoxRawData.positions, cutBoxRawData.indices, normals);
         cutBoxRawData.normals = normals;
         cutBoxRawData.colors = undefined;
@@ -2909,7 +2966,6 @@ class Player extends BABYLON.Mesh {
             this.position.addInPlace(this.velocity.scale(dt));
         }
         else {
-            console.log(this.position);
             if (this.position.y < 80) {
                 this.position.y += 0.1;
             }
