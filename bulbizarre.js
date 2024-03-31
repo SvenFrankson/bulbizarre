@@ -1962,12 +1962,17 @@ class Brick extends BABYLON.TransformNode {
             colors.push(color.r, color.g, color.b, 1);
         }
         vData.colors = colors;
+        let a = 2 * Math.PI * Math.random();
+        let cosa = Math.cos(a);
+        let sina = Math.sin(a);
         let dU = Math.random();
         let dV = Math.random();
         let uvs = vData.uvs;
         for (let i = 0; i < uvs.length / 2; i++) {
-            uvs[2 * i] += dU;
-            uvs[2 * i + 1] += dV;
+            let u = uvs[2 * i];
+            let v = uvs[2 * i + 1];
+            uvs[2 * i] = cosa * u - sina * v + dU;
+            uvs[2 * i + 1] = sina * u + cosa * v + dV;
         }
         vData.uvs = uvs;
         Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
@@ -2352,38 +2357,65 @@ class BrickVertexDataGenerator {
     static async GetBoxCornerRoundVertexData(length, height, width, lod = 1) {
         let datas = await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-corner-round.babylon");
         let boxCornerRoundRawData = Mummu.CloneVertexData(datas[0]);
-        let innerD = (length - width) * BRICK_S;
-        let outterD = length * BRICK_S;
-        let dy = (height - 1) * BRICK_H;
-        let positions = boxCornerRoundRawData.positions;
-        for (let i = 0; i < positions.length / 3; i++) {
-            let x = positions[3 * i];
-            let y = positions[3 * i + 1];
-            let z = positions[3 * i + 2];
-            let dd = x * x + z * z;
-            if (dd > 3) {
-                // outter case
-                x = x / 2 * outterD;
-                z = z / 2 * outterD;
-            }
-            else {
-                // inner case
-                x = x * innerD;
-                z = z * innerD;
-            }
-            if (y > BRICK_H * 0.5) {
-                y += dy;
-            }
-            z -= BRICK_S * 0.5;
-            x -= innerD + BRICK_S * 0.5;
-            positions[3 * i] = x;
-            positions[3 * i + 1] = y;
-            positions[3 * i + 2] = z;
-        }
-        boxCornerRoundRawData.positions = positions;
-        boxCornerRoundRawData.colors = undefined;
-        BrickVertexDataGenerator.AddMarginInPlace(boxCornerRoundRawData);
-        return boxCornerRoundRawData;
+        let innerR = (length - width) * BRICK_S;
+        let outterR = length * BRICK_S;
+        let y = height * BRICK_H;
+        let back = Mummu.CreateQuadVertexData({
+            p1: new BABYLON.Vector3(innerR, 0, 0),
+            p2: new BABYLON.Vector3(outterR, 0, 0),
+            p3: new BABYLON.Vector3(outterR, y, 0),
+            p4: new BABYLON.Vector3(innerR, y, 0),
+            uvInWorldSpace: true
+        });
+        let right = Mummu.CreateCylinderSliceVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            radius: outterR,
+            yMin: 0,
+            yMax: y,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
+        let front = Mummu.CreateQuadVertexData({
+            p1: new BABYLON.Vector3(0, 0, outterR),
+            p2: new BABYLON.Vector3(0, 0, innerR),
+            p3: new BABYLON.Vector3(0, y, innerR),
+            p4: new BABYLON.Vector3(0, y, outterR),
+            uvInWorldSpace: true
+        });
+        let left = Mummu.CreateCylinderSliceVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            radius: innerR,
+            yMin: 0,
+            yMax: y,
+            sideOrientation: BABYLON.Mesh.BACKSIDE,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
+        let top = Mummu.CreateDiscSliceVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            innerRadius: innerR,
+            outterRadius: outterR,
+            y: y,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
+        let bottom = Mummu.CreateDiscSliceVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            innerRadius: innerR,
+            outterRadius: outterR,
+            y: 0,
+            sideOrientation: BABYLON.Mesh.BACKSIDE,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
+        let data = Mummu.MergeVertexDatas(back, right, front, left, top, bottom);
+        Mummu.TranslateVertexDataInPlace(data, new BABYLON.Vector3(-innerR - BRICK_S * 0.5, 0, -BRICK_S * 0.5));
+        BrickVertexDataGenerator.AddMarginInPlace(data);
+        return data;
     }
     /*
     public static GetStuddedBoxVertexData(length: number, height: number, width: number, lod: number = 1): BABYLON.VertexData {
@@ -2524,7 +2556,7 @@ class BrickVertexDataGenerator {
         */
         return Mummu.MergeVertexDatas(cutBoxRawData, ...studDatas);
     }
-    static AddMarginInPlace(vertexData, margin = 0.002, cx = 0, cy = BRICK_H * 0.5, cz = 0) {
+    static AddMarginInPlace(vertexData, margin = 0.001, cx = 0, cy = BRICK_H * 0.5, cz = 0) {
         let positions = vertexData.positions;
         for (let i = 0; i < positions.length / 3; i++) {
             let x = positions[3 * i];

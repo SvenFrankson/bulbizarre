@@ -94,45 +94,67 @@ class BrickVertexDataGenerator {
         let datas = await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-corner-round.babylon");
         let boxCornerRoundRawData = Mummu.CloneVertexData(datas[0]);
 
-        let innerD: number = (length - width) * BRICK_S;
-        let outterD: number = length * BRICK_S;
-        let dy = (height - 1) * BRICK_H;
+        let innerR: number = (length - width) * BRICK_S;
+        let outterR: number = length * BRICK_S;
+        let y = height * BRICK_H;
 
-        let positions = boxCornerRoundRawData.positions;
-        for (let i = 0; i < positions.length / 3; i++) {
-            let x = positions[3 * i];
-            let y = positions[3 * i + 1];
-            let z = positions[3 * i + 2];
+        let back = Mummu.CreateQuadVertexData({
+            p1: new BABYLON.Vector3(innerR, 0, 0),
+            p2: new BABYLON.Vector3(outterR, 0, 0),
+            p3: new BABYLON.Vector3(outterR, y, 0),
+            p4: new BABYLON.Vector3(innerR, y, 0),
+            uvInWorldSpace: true
+        });
+        let right = Mummu.CreateCylinderSliceVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            radius: outterR,
+            yMin: 0,
+            yMax: y,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
+        let front = Mummu.CreateQuadVertexData({
+            p1: new BABYLON.Vector3(0, 0, outterR),
+            p2: new BABYLON.Vector3(0, 0, innerR),
+            p3: new BABYLON.Vector3(0, y, innerR),
+            p4: new BABYLON.Vector3(0, y, outterR),
+            uvInWorldSpace: true
+        });
+        let left = Mummu.CreateCylinderSliceVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            radius: innerR,
+            yMin: 0,
+            yMax: y,
+            sideOrientation: BABYLON.Mesh.BACKSIDE,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
+        let top = Mummu.CreateDiscSliceVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            innerRadius: innerR,
+            outterRadius: outterR,
+            y: y,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
+        let bottom = Mummu.CreateDiscSliceVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            innerRadius: innerR,
+            outterRadius: outterR,
+            y: 0,
+            sideOrientation: BABYLON.Mesh.BACKSIDE,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
 
-            let dd = x * x + z * z;
-            if (dd > 3) {
-                // outter case
-                x = x / 2 * outterD;
-                z = z / 2 * outterD;
-            }
-            else {
-                // inner case
-                x = x * innerD;
-                z = z * innerD;
-            }
-
-            if (y > BRICK_H * 0.5) {
-                y += dy;
-            }
-
-            z -= BRICK_S * 0.5;
-            x -= innerD + BRICK_S * 0.5;
-
-            positions[3 * i] = x;
-            positions[3 * i + 1] = y;
-            positions[3 * i + 2] = z;
-        }
-        boxCornerRoundRawData.positions = positions;
-        boxCornerRoundRawData.colors = undefined;
-
-        BrickVertexDataGenerator.AddMarginInPlace(boxCornerRoundRawData);
-
-        return boxCornerRoundRawData;
+        let data = Mummu.MergeVertexDatas(back, right, front, left, top, bottom);
+        Mummu.TranslateVertexDataInPlace(data, new BABYLON.Vector3(- innerR - BRICK_S * 0.5, 0, - BRICK_S * 0.5))
+        BrickVertexDataGenerator.AddMarginInPlace(data);
+        return data;
     }
 
     /*
@@ -295,7 +317,7 @@ class BrickVertexDataGenerator {
         return Mummu.MergeVertexDatas(cutBoxRawData, ...studDatas);
     }
 
-    public static AddMarginInPlace(vertexData: BABYLON.VertexData, margin: number = 0.002, cx: number = 0, cy: number = BRICK_H * 0.5, cz: number = 0): void {
+    public static AddMarginInPlace(vertexData: BABYLON.VertexData, margin: number = 0.001, cx: number = 0, cy: number = BRICK_H * 0.5, cz: number = 0): void {
         let positions = vertexData.positions;
         for (let i = 0; i < positions.length / 3; i++) {
             let x = positions[3 * i];

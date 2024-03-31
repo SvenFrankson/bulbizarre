@@ -170,12 +170,17 @@ class Brick extends BABYLON.TransformNode {
         }
         vData.colors = colors;
 
+        let a = 2 * Math.PI * Math.random();
+        let cosa = Math.cos(a);
+        let sina = Math.sin(a);
         let dU = Math.random();
         let dV = Math.random();
         let uvs = vData.uvs;
         for (let i = 0; i < uvs.length / 2; i++) {
-            uvs[2 * i] += dU;
-            uvs[2 * i + 1] += dV;
+            let u = uvs[2 * i];
+            let v = uvs[2 * i + 1];
+            uvs[2 * i] = cosa * u - sina * v + dU;
+            uvs[2 * i + 1] = sina * u + cosa * v + dV;
         }
         vData.uvs = uvs;
 
