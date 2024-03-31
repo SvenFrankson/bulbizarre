@@ -136,8 +136,8 @@ class Brick extends BABYLON.TransformNode {
 
             let brickMaterial = new BABYLON.StandardMaterial("brick-material");
             brickMaterial.specularColor.copyFromFloats(0, 0, 0);
-            //brickMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/test-dirt.png");
-            brickMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/red-white-squares.png");
+            brickMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/test-dirt.png");
+            //brickMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/red-white-squares.png");
 
             this.mesh.material = brickMaterial;
         }
@@ -171,7 +171,6 @@ class Brick extends BABYLON.TransformNode {
         }
         vData.colors = colors;
 
-        /*
         let a = 2 * Math.PI * Math.random();
         let cosa = Math.cos(a);
         let sina = Math.sin(a);
@@ -185,7 +184,6 @@ class Brick extends BABYLON.TransformNode {
             uvs[2 * i + 1] = sina * u + cosa * v + dV;
         }
         vData.uvs = uvs;
-        */
 
         Mummu.RotateVertexDataInPlace(vData, this.absoluteRotationQuaternion);
         Mummu.TranslateVertexDataInPlace(vData, this.absolutePosition);
