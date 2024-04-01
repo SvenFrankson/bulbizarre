@@ -20,15 +20,16 @@ var BRICK_LIST = [
     "brick_4x1",
     "plate_4x2",
     "plate_4x1",
-    "tile-corner-round_3x1",
-    "brick-corner-round_3x1",
-    "window-frame-corner-round_3x2",
-    "window-frame-corner-round_3x3",
-    "window-frame-corner-round_3x4",
-    "tile-corner-round_4x2",
-    "brick-corner-round_4x2",
-    "tile-corner-round_4x1",
-    "brick-corner-round_4x1"
+    "tile-corner-curved_3x1",
+    "brick-corner-curved_3x1",
+    "window-frame-corner-curved_3x2",
+    "window-frame-corner-curved_3x3",
+    "window-frame-corner-curved_3x4",
+    "tile-corner-curved_4x2",
+    "brick-corner-curved_4x2",
+    "tile-corner-curved_4x1",
+    "brick-corner-curved_4x1",
+    "brick-corner-round_1x1"
 ]
 
 var BRICK_COLORS = [

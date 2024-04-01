@@ -74,20 +74,24 @@ class BrickTemplate {
             let h = parseInt(this.name.split("_")[1].split("x")[1]);
             this.vertexData = await BrickVertexDataGenerator.GetWindowFrameVertexData(l, h, lod);
         }
-        else if (this.name.startsWith("window-frame-corner-round_")) {
+        else if (this.name.startsWith("window-frame-corner-curved_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let h = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = await BrickVertexDataGenerator.GetWindowFrameCornerRoundVertexData(l, h, lod);
+            this.vertexData = await BrickVertexDataGenerator.GetWindowFrameCornerCurvedVertexData(l, h, lod);
         }
-        else if (this.name.startsWith("tile-corner-round_")) {
+        else if (this.name.startsWith("tile-corner-curved_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 1, w, lod);
+            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerCurvedVertexData(l, 1, w, lod);
         }
-        else if (this.name.startsWith("brick-corner-round_")) {
+        else if (this.name.startsWith("brick-corner-curved_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
-            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerRoundVertexData(l, 3, w, lod);
+            this.vertexData = await BrickVertexDataGenerator.GetBoxCornerCurvedVertexData(l, 3, w, lod);
+        }
+        else if (this.name.startsWith("brick-corner-round_1x1")) {
+            this.vertexData = (await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/brick-corner-round_1x1.babylon"))[0];
+            BrickVertexDataGenerator.AddMarginInPlace(this.vertexData);
         }
         else if (this.name === "tile-round-quarter_1x1") {
             this.vertexData = (await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/tile-round-quarter_1x1.babylon"))[0];

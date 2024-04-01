@@ -3,7 +3,7 @@
 "materials":[],
 "multiMaterials":[],
 "skeletons":[],
-"meshes":[{"name":"tile-corner-round","id":"tile-corner-round","billboardMode":0,"position":[0,0,0],"rotation":[0,0,0],"scaling":[1,1,1],"isVisible":true,"freezeWorldMatrix":false,"isEnabled":true,"checkCollisions":false,"receiveShadows":false,"pickable":true,"tags":""
+"meshes":[{"name":"tile-corner-curved","id":"tile-corner-curved","billboardMode":0,"position":[0,0,0],"rotation":[0,0,0],"scaling":[1,1,1],"isVisible":true,"freezeWorldMatrix":false,"isEnabled":true,"checkCollisions":false,"receiveShadows":false,"pickable":true,"tags":""
 ,"positions":[2,0,0,1,0.15,0,1,0,0,1.9021,0,0.618,1.618,0.15,1.1756,1.9021,0.15,0.618,2,0.15,0,0.9511,0.15,0.309,1,0.15,0,1,0.15,0,0.9511,0,0.309,1,0,0,2,0,0,2,0.15,0,1,0,0,1.9021,0,0.618,2,0,0
 ,0.809,0,0.5878,1.1756,0,1.618,1.618,0,1.1756,0.9511,0,0.309,1.9021,0.15,0.618,0.809,0.15,0.5878,0.9511,0.15,0.309,0.809,0,0.5878,1.1756,0.15,1.618,0.309,0.15,0.9511,0.5878,0.15,0.809,0.809,0.15,0.5878,0.5878,0,0.809,1.618,0,1.1756,1.1756,0.15,1.618,0.618,0,1.9021,0,0.15,2
 ,0.618,0.15,1.9021,0.5878,0.15,0.809,0.309,0,0.9511,1.1756,0,1.618,0.309,0,0.9511,0.618,0,1.9021,0,0.15,1,0,0,2,0,0,1,0,0,1,0,0,2,0.618,0.15,1.9021,0,0.15,1,0.309,0.15,0.9511,0,0,1,2,0.15,0,0.5878,0,0.809

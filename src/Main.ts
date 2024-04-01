@@ -434,9 +434,10 @@ class Game {
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
     
             let bricks = [
-                "tile-corner-round_4x1",
-                "brick-corner-round_4x1"
+                "tile-corner-curved_4x1",
+                "brick-corner-curved_4x1"
             ]
+            bricks = BRICK_LIST;
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
                     await this.makeScreenshot(bricks[i], i === bricks.length - 1);
