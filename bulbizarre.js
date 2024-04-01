@@ -336,12 +336,8 @@ class GameConfiguration extends Nabu.Configuration {
             new Nabu.ConfigurationElement("godMode", Nabu.ConfigurationElementType.Boolean, 0, Nabu.ConfigurationElementCategory.Dev, {
                 displayName: "God Mode"
             }, (newValue) => {
-                if (newValue === 1) {
-                    this.game.freeCamera.speed = 1;
-                }
-                else {
-                    this.game.freeCamera.speed = 0.2;
-                }
+                console.log(newValue);
+                this.game.player.godMode = newValue === 1 ? true : false;
             }),
             new Nabu.ConfigurationElement("showRenderDistDebug", Nabu.ConfigurationElementType.Boolean, 0, Nabu.ConfigurationElementCategory.Dev, {
                 displayName: "Show Render Distance Debug"
@@ -507,6 +503,7 @@ class Game {
             this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
+            this.configuration.getElement("godMode").forceInit();
             for (let i = 0; i < BRICK_LIST.length; i++) {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_LIST[i], InventoryCategory.Brick));
             }
@@ -707,6 +704,7 @@ class Game {
                 "brick-round_6x1",
                 "brick-round_8x1",
             ];
+            bricks = BRICK_LIST;
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
                     await this.makeScreenshot(bricks[i], i === bricks.length - 1);
@@ -2091,36 +2089,34 @@ Brick.depthColors = [
 ];
 var ALLBRICKS = [];
 var BRICK_LIST = [
-    "tile_6x1",
-    "plate_6x2",
-    "plate_14x2",
-    "plate_4x4",
-    "plate-corner-cut_3x3",
-    "plate-corner-cut_6x6",
-    "tile-round-quarter_1x1",
-    "tile-triangle_2x2",
-    "plate-corner-cut_2x2",
-    "brick_1x1",
-    "plate_3x1",
-    "plate_1x1",
-    "brick_3x1",
-    "plate_3x2",
-    "window-frame_2x2",
-    "window-frame_3x2",
-    "window-frame_4x3",
+    "tile_1x1",
+    "tile_2x1",
+    "tile_3x1",
     "tile_4x1",
+    "tile_6x1",
+    "tile_8x1",
+    "tile_10x1",
+    "tile_12x1",
+    "tile_2x2",
+    "tile_3x2",
+    "tile_4x2",
+    "tile_6x2",
+    "tile_8x2",
+    "tile_10x2",
+    "tile_12x2",
+    "tile_4x4",
+    "tile_6x6",
+    "tile_8x8",
+    "tile_10x10",
+    "tile_12x12",
+    "brick_1x1",
+    "brick_2x1",
+    "brick_3x1",
     "brick_4x1",
-    "plate_4x2",
-    "plate_4x1",
-    "tile-corner-curved_3x1",
-    "brick-corner-curved_3x1",
-    "window-frame-corner-curved_3x2",
-    "window-frame-corner-curved_3x3",
-    "window-frame-corner-curved_3x4",
-    "tile-corner-curved_4x2",
-    "brick-corner-curved_4x2",
-    "tile-corner-curved_4x1",
-    "brick-corner-curved_4x1",
+    "brick_6x1",
+    "brick_8x1",
+    "brick_10x1",
+    "brick_12x1",
     "brick-corner-round_1x1",
     "brick-round_1x1",
     "brick-round_2x1",
@@ -2128,6 +2124,31 @@ var BRICK_LIST = [
     "brick-round_4x1",
     "brick-round_6x1",
     "brick-round_8x1",
+    "brick-round_10x1",
+    "brick-round_12x1",
+    "tile-corner-curved_2x1",
+    "tile-corner-curved_3x1",
+    "tile-corner-curved_4x1",
+    "tile-corner-curved_5x1",
+    "tile-corner-curved_6x1",
+    "tile-corner-curved_3x2",
+    "tile-corner-curved_4x2",
+    "tile-corner-curved_5x2",
+    "tile-corner-curved_6x2",
+    "brick-corner-curved_2x1",
+    "brick-corner-curved_3x1",
+    "brick-corner-curved_4x1",
+    "brick-corner-curved_5x1",
+    "brick-corner-curved_6x1",
+    "window-frame_2x2",
+    "window-frame_2x3",
+    "window-frame_3x2",
+    "window-frame_3x3",
+    "window-frame_4x2",
+    "window-frame_4x3",
+    "window-frame-corner-curved_3x2",
+    "window-frame-corner-curved_3x3",
+    "window-frame-corner-curved_3x4",
 ];
 var BRICK_COLORS = [
     { name: "White", hex: "#FFFFFF" },
@@ -2850,6 +2871,7 @@ class Player extends BABYLON.Mesh {
     constructor(game) {
         super("player");
         this.game = game;
+        this.godMode = false;
         this.mass = 2;
         this.height = 2;
         this.velocity = BABYLON.Vector3.Zero();
@@ -2926,14 +2948,23 @@ class Player extends BABYLON.Mesh {
             }
         }
         this.velocity.x = 0;
+        if (this.godMode) {
+            this.velocity.y = 0;
+        }
         this.velocity.z = 0;
         let inputL = Math.sqrt(this.inputX * this.inputX + this.inputZ * this.inputZ);
         if (inputL > this.speed) {
             this.inputX /= inputL * this.speed;
             this.inputZ /= inputL * this.speed;
         }
-        this.velocity.addInPlace(this.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
-        this.velocity.addInPlace(this.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
+        if (this.godMode) {
+            this.velocity.addInPlace(this.head.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
+            this.velocity.addInPlace(this.head.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
+        }
+        else {
+            this.velocity.addInPlace(this.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
+            this.velocity.addInPlace(this.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
+        }
         this.rotation.y += this.rSpeed * this.inputRY * dt;
         this.head.rotation.x += this.rSpeed * this.inputRX * dt;
         this.head.rotation.x = Nabu.MinMax(this.head.rotation.x, -Math.PI * 0.5, Math.PI * 0.5);
@@ -2946,18 +2977,20 @@ class Player extends BABYLON.Mesh {
             this.inputDeltaY = 0;
         }
         if (bestPick && bestPick.hit) {
-            if (bestPick.distance <= this.height) {
-                this.velocity.y = (this.height - bestPick.distance);
-            }
-            else {
-                this.velocity.y -= this.mass * 9.2 * dt;
+            if (!this.godMode) {
+                if (bestPick.distance <= this.height) {
+                    this.velocity.y = (this.height - bestPick.distance);
+                }
+                else {
+                    this.velocity.y -= this.mass * 9.2 * dt;
+                }
             }
             if (!Mummu.IsFinite(this.velocity)) {
                 this.velocity.copyFromFloats(0, 0, 0);
             }
             this.position.addInPlace(this.velocity.scale(dt));
         }
-        else {
+        else if (!this.godMode) {
             if (this.position.y < 80) {
                 this.position.y += 0.1;
             }

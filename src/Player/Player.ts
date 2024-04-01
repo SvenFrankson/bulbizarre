@@ -1,5 +1,6 @@
 class Player extends BABYLON.Mesh {
 
+    public godMode: boolean = false;
     public controler: PlayerControler;
     public inventory: PlayerInventory;
     public playerActionManager: PlayerActionManager;
@@ -99,14 +100,23 @@ class Player extends BABYLON.Mesh {
         }
 
         this.velocity.x = 0;
+        if (this.godMode) {
+            this.velocity.y = 0;
+        }
         this.velocity.z = 0;
         let inputL = Math.sqrt(this.inputX * this.inputX + this.inputZ * this.inputZ);
         if (inputL > this.speed) {
             this.inputX /= inputL * this.speed;
             this.inputZ /= inputL * this.speed;
         }
-        this.velocity.addInPlace(this.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
-        this.velocity.addInPlace(this.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
+        if (this.godMode) {
+            this.velocity.addInPlace(this.head.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
+            this.velocity.addInPlace(this.head.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
+        }
+        else {
+            this.velocity.addInPlace(this.getDirection(BABYLON.Axis.X).scale(this.inputX).scale(this.speed));
+            this.velocity.addInPlace(this.getDirection(BABYLON.Axis.Z).scale(this.inputZ).scale(this.speed));
+        }
 
         this.rotation.y += this.rSpeed * this.inputRY * dt;
         this.head.rotation.x += this.rSpeed * this.inputRX * dt;
@@ -122,19 +132,22 @@ class Player extends BABYLON.Mesh {
         }
         
         if (bestPick && bestPick.hit) {
-            if (bestPick.distance <= this.height) {
-                this.velocity.y = (this.height - bestPick.distance);
-            }
-            else {
-                this.velocity.y -= this.mass * 9.2 * dt;
+            if (!this.godMode) {
+                if (bestPick.distance <= this.height) {
+                    this.velocity.y = (this.height - bestPick.distance);
+                }
+                else {
+                    this.velocity.y -= this.mass * 9.2 * dt;
+                }
             }
     
             if (!Mummu.IsFinite(this.velocity)) {
                 this.velocity.copyFromFloats(0, 0, 0);
             }
+
             this.position.addInPlace(this.velocity.scale(dt));
         }
-        else {
+        else if (!this.godMode) {
             if (this.position.y < 80) {
                 this.position.y += 0.1;
             }

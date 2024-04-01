@@ -202,6 +202,8 @@ class Game {
             this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
 
+            this.configuration.getElement("godMode").forceInit();
+
             for (let i = 0; i < BRICK_LIST.length; i++) {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_LIST[i], InventoryCategory.Brick));
             }
@@ -441,6 +443,7 @@ class Game {
                 "brick-round_6x1",
                 "brick-round_8x1",
             ]
+            bricks = BRICK_LIST;
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
                     await this.makeScreenshot(bricks[i], i === bricks.length - 1);
