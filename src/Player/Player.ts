@@ -38,7 +38,7 @@ class Player extends BABYLON.Mesh {
     public height: number = 2;
     public velocity: BABYLON.Vector3 = BABYLON.Vector3.Zero();
     public frozen: boolean = true;
-    public speed: number = 3;
+    public speed: number = 5;
     public rSpeed: number = Math.PI;
 
     public inputZ: number = 0;

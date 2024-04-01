@@ -282,7 +282,7 @@ class PlayerActionTemplate {
     public static CreatePaintAction(player: Player, paintIndex: number): PlayerAction {
         let brickAction = new PlayerAction("paint_" + BRICK_COLORS[paintIndex].name, player);
         brickAction.backgroundColor = BRICK_COLORS[paintIndex].hex;
-        brickAction.iconUrl = undefined;
+        brickAction.iconUrl = "/datas/icons/paintbrush.svg";
 
         let brush: BABYLON.Mesh;
 

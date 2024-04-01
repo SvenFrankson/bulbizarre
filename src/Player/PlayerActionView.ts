@@ -98,6 +98,7 @@ class PlayerActionView {
                     tile.style.backgroundSize = "contain";
                     tile.style.backgroundRepeat = "no-repeat";
                     tile.style.backgroundPosition = "center";
+                    tile.style.backgroundColor = action.backgroundColor;
                 }
                 else {
                     tile.style.background = undefined;

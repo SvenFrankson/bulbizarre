@@ -2882,7 +2882,7 @@ class Player extends BABYLON.Mesh {
         this.height = 2;
         this.velocity = BABYLON.Vector3.Zero();
         this.frozen = true;
-        this.speed = 3;
+        this.speed = 5;
         this.rSpeed = Math.PI;
         this.inputZ = 0;
         this.inputX = 0;
@@ -3242,6 +3242,7 @@ class PlayerActionView {
                     tile.style.backgroundSize = "contain";
                     tile.style.backgroundRepeat = "no-repeat";
                     tile.style.backgroundPosition = "center";
+                    tile.style.backgroundColor = action.backgroundColor;
                 }
                 else {
                     tile.style.background = undefined;
@@ -4370,7 +4371,7 @@ class PlayerActionTemplate {
     static CreatePaintAction(player, paintIndex) {
         let brickAction = new PlayerAction("paint_" + BRICK_COLORS[paintIndex].name, player);
         brickAction.backgroundColor = BRICK_COLORS[paintIndex].hex;
-        brickAction.iconUrl = undefined;
+        brickAction.iconUrl = "/datas/icons/paintbrush.svg";
         let brush;
         brickAction.onUpdate = () => {
         };
