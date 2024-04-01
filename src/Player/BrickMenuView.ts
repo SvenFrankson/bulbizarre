@@ -121,7 +121,8 @@ class BrickMenuView extends HTMLElement implements Nabu.IPage {
         this._copyColorBtn.innerHTML = "COPY COLOR";
         categoriesContainer.appendChild(this._copyColorBtn);
         this._copyColorBtn.onclick = () => {
-            
+            this._player.currentAction = PlayerActionTemplate.CreatePaintAction(this._player, this._brick.colorIndex);
+            this.hide(0.1);
         }
         
         this._cancelBtn = document.createElement("button");
@@ -140,7 +141,7 @@ class BrickMenuView extends HTMLElement implements Nabu.IPage {
     }
 
     public attributeChangedCallback(name: string, oldValue: string, newValue: string) {}
-    
+
     public onNextHide: () => void;
 
     public async show(duration: number = 1): Promise<void> {

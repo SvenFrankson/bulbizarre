@@ -2761,6 +2761,8 @@ class BrickMenuView extends HTMLElement {
         this._copyColorBtn.innerHTML = "COPY COLOR";
         categoriesContainer.appendChild(this._copyColorBtn);
         this._copyColorBtn.onclick = () => {
+            this._player.currentAction = PlayerActionTemplate.CreatePaintAction(this._player, this._brick.colorIndex);
+            this.hide(0.1);
         };
         this._cancelBtn = document.createElement("button");
         this._cancelBtn.innerHTML = "CANCEL";
@@ -4369,6 +4371,7 @@ class PlayerActionTemplate {
         let brickAction = new PlayerAction("paint_" + BRICK_COLORS[paintIndex].name, player);
         brickAction.backgroundColor = BRICK_COLORS[paintIndex].hex;
         brickAction.iconUrl = undefined;
+        let brush;
         brickAction.onUpdate = () => {
         };
         brickAction.onPointerDown = () => {
@@ -4398,9 +4401,27 @@ class PlayerActionTemplate {
                 }
             }
         };
-        brickAction.onEquip = () => {
+        brickAction.onEquip = async () => {
+            brush = new BABYLON.Mesh("brush");
+            brush.parent = player;
+            brush.position.z = 0.8;
+            brush.position.x = 0.1;
+            brush.position.y = -0.2;
+            let tip = new BABYLON.Mesh("tip");
+            tip.parent = brush;
+            let tipMaterial = new BABYLON.StandardMaterial("tip-material");
+            tipMaterial.diffuseColor = BABYLON.Color3.FromHexString(BRICK_COLORS[paintIndex].hex);
+            tip.material = tipMaterial;
+            let vDatas = await player.game.vertexDataLoader.get("./datas/meshes/paintbrush.babylon");
+            if (brush && !brush.isDisposed()) {
+                vDatas[0].applyToMesh(brush);
+                vDatas[1].applyToMesh(tip);
+            }
         };
         brickAction.onUnequip = () => {
+            if (brush) {
+                brush.dispose();
+            }
         };
         return brickAction;
     }
