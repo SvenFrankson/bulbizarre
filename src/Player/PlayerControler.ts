@@ -111,6 +111,12 @@ class PlayerControler {
                 this.playerInventoryView.hide(0.2);
             }
             else {
+                if (this.inputManager.isPointerLocked) {
+                    document.exitPointerLock();
+                    this.playerInventoryView.onNextHide = () => {
+                        this.player.game.canvas.requestPointerLock();
+                    }
+                }
                 this.playerInventoryView.show(0.2);
             }
         })
@@ -220,6 +226,7 @@ class PlayerControler {
     }
 
     public update(dt: number): void {
+        console.log(this.inputManager.isPointerLocked);
         this.player.inputX = 0;
         this.player.inputZ = 0;
 

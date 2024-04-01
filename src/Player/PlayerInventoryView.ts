@@ -189,6 +189,8 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
 
     public attributeChangedCallback(name: string, oldValue: string, newValue: string) {}
 
+    public onNextHide: () => void;
+
     public async show(duration: number = 1): Promise<void> {
         this.createPage();
         return new Promise<void>((resolve) => {
@@ -234,6 +236,10 @@ class PlayerInventoryView extends HTMLElement implements Nabu.IPage {
                         if (dt >= duration) {
                             this.style.display = "none";
                             this.style.opacity = "0";
+                            if (this.onNextHide) {
+                                this.onNextHide();
+                                this.onNextHide = undefined;
+                            }
                             resolve();
                         } else {
                             let f = dt / duration;

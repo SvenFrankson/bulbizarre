@@ -2821,6 +2821,10 @@ class BrickMenuView extends HTMLElement {
                         if (dt >= duration) {
                             this.style.display = "none";
                             this.style.opacity = "0";
+                            if (this.onNextHide) {
+                                this.onNextHide();
+                                this.onNextHide = undefined;
+                            }
                             resolve();
                         }
                         else {
@@ -3433,6 +3437,12 @@ class PlayerControler {
                 this.playerInventoryView.hide(0.2);
             }
             else {
+                if (this.inputManager.isPointerLocked) {
+                    document.exitPointerLock();
+                    this.playerInventoryView.onNextHide = () => {
+                        this.player.game.canvas.requestPointerLock();
+                    };
+                }
                 this.playerInventoryView.show(0.2);
             }
         });
@@ -3460,6 +3470,7 @@ class PlayerControler {
         });
     }
     update(dt) {
+        console.log(this.inputManager.isPointerLocked);
         this.player.inputX = 0;
         this.player.inputZ = 0;
         if (this.playMode === PlayMode.Inventory) {
@@ -3782,6 +3793,10 @@ class PlayerInventoryView extends HTMLElement {
                         if (dt >= duration) {
                             this.style.display = "none";
                             this.style.opacity = "0";
+                            if (this.onNextHide) {
+                                this.onNextHide();
+                                this.onNextHide = undefined;
+                            }
                             resolve();
                         }
                         else {
@@ -3956,6 +3971,12 @@ class PlayerActionDefault {
             if (duration > 0.3) {
                 if (aimedBrick) {
                     player.game.brickMenuView.setBrick(aimedBrick);
+                    if (player.game.inputManager.isPointerLocked) {
+                        document.exitPointerLock();
+                        player.game.brickMenuView.onNextHide = () => {
+                            player.game.canvas.requestPointerLock();
+                        };
+                    }
                     player.game.brickMenuView.show(0.1);
                 }
             }

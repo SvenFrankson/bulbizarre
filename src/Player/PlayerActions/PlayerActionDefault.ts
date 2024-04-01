@@ -70,6 +70,12 @@ class PlayerActionDefault {
             if (duration > 0.3) {
                 if (aimedBrick) {
                     player.game.brickMenuView.setBrick(aimedBrick);
+                    if (player.game.inputManager.isPointerLocked) {
+                        document.exitPointerLock();
+                        player.game.brickMenuView.onNextHide = () => {
+                            player.game.canvas.requestPointerLock();
+                        }
+                    }
                     player.game.brickMenuView.show(0.1);
                 }
             }
