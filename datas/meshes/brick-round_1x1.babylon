@@ -3,7 +3,7 @@
 "materials":[{"name":"Material","id":"Material","customType":"BABYLON.PBRMaterial","backFaceCulling":true,"checkReadyOnlyOnce":false,"maxSimultaneousLights":4,"environmentIntensity":1,"albedo":[0.8,0.8,0.8],"reflectivity":[0.5,0.5,0.5],"roughness":0.4,"alpha":1,"transparencyMode":0,"alphaCutOff":0.4,"metallic":0}],
 "multiMaterials":[],
 "skeletons":[],
-"meshes":[{"name":"brick-corner-curved_1x1","id":"brick-corner-curved_1x1","materialId":"Material","billboardMode":0,"position":[0,0,0],"rotation":[0,0,0],"scaling":[1,1,1],"isVisible":true,"freezeWorldMatrix":false,"isEnabled":true,"checkCollisions":false,"receiveShadows":false,"pickable":true,"tags":""
+"meshes":[{"name":"brick-corner-round_1x1","id":"brick-corner-round_1x1","materialId":"Material","billboardMode":0,"position":[0,0,0],"rotation":[0,0,0],"scaling":[1,1,1],"isVisible":true,"freezeWorldMatrix":false,"isEnabled":true,"checkCollisions":false,"receiveShadows":false,"pickable":true,"tags":""
 ,"positions":[0.1691,0.1909,-0.1875,0.1159,0.2954,0.1875,0.1159,0.2954,-0.1875,-0.0716,0.4316,0.1875,-0.1875,0.45,-0.1875,-0.0716,0.4316,-0.1875,0.0329,0.3784,-0.1875,-0.1875,0.45,0.1875,-0.1875,0,-0.1875,-0.1875,0.45,-0.1875,0.1875,0.075,0.1875,0.1875,0.075,-0.1875,0.1875,0,0.1875,0.1875,0,-0.1875,0.0329,0.3784,0.1875,-0.1875,0,0.1875,0.1875,0,-0.1875
 ,-0.1875,0,-0.1875,-0.0716,0.4316,0.1875,-0.1875,0,0.1875,-0.1875,0.45,0.1875,0.1691,0.1909,0.1875,0.1159,0.2954,0.1875,0.1875,0.075,0.1875,0.0329,0.3784,0.1875,0.1875,0,-0.1875,0.1875,0.075,-0.1875,-0.1875,0,-0.1875,0.1159,0.2954,-0.1875,0.0329,0.3784,-0.1875,-0.0716,0.4316,-0.1875,0.1691,0.1909,-0.1875,-0.1875,0.45,-0.1875,0.1875,0,0.1875
 ,0.1691,0.1909,0.1875,-0.1875,0.45,0.1875,-0.1875,0,0.1875,0.1875,0,0.1875]

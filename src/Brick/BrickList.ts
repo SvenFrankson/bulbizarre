@@ -29,7 +29,13 @@ var BRICK_LIST = [
     "brick-corner-curved_4x2",
     "tile-corner-curved_4x1",
     "brick-corner-curved_4x1",
-    "brick-corner-round_1x1"
+    "brick-corner-round_1x1",
+    "brick-round_1x1",
+    "brick-round_2x1",
+    "brick-round_3x1",
+    "brick-round_4x1",
+    "brick-round_6x1",
+    "brick-round_8x1",
 ]
 
 var BRICK_COLORS = [

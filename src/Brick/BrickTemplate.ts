@@ -89,6 +89,10 @@ class BrickTemplate {
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
             this.vertexData = await BrickVertexDataGenerator.GetBoxCornerCurvedVertexData(l, 3, w, lod);
         }
+        else if (this.name.startsWith("brick-round_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            this.vertexData = await BrickVertexDataGenerator.GetBrickRoundVertexData(l, lod);
+        }
         else if (this.name.startsWith("brick-corner-round_1x1")) {
             this.vertexData = (await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/brick-corner-round_1x1.babylon"))[0];
             BrickVertexDataGenerator.AddMarginInPlace(this.vertexData);
