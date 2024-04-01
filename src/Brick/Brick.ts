@@ -107,6 +107,13 @@ class Brick extends BABYLON.TransformNode {
         }
     }
 
+    public cloneWithChildren(): Brick {
+        let clone = new Brick(this.brickManager, this.index, this.colorIndex);
+        let data = this.serialize();
+        clone.deserialize(data);
+        return clone;
+    }
+
     public posWorldToLocal(pos: BABYLON.Vector3): BABYLON.Vector3 {
         let matrix = this.getWorldMatrix().invert();
         return BABYLON.Vector3.TransformCoordinates(pos, matrix);

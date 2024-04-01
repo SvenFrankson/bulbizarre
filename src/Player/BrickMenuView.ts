@@ -14,7 +14,8 @@ class BrickMenuView extends HTMLElement implements Nabu.IPage {
     private _player: Player;
     private _title: HTMLHeadingElement;
     private _anchorBtn: HTMLButtonElement;
-    private _copyBtn: HTMLButtonElement;
+    private _copyWithChildrenBtn: HTMLButtonElement;
+    private _copyBrickBtn: HTMLButtonElement;
     private _copyColorBtn: HTMLButtonElement;
     private _cancelBtn: HTMLButtonElement;
     private _options: HTMLButtonElement[];
@@ -109,11 +110,21 @@ class BrickMenuView extends HTMLElement implements Nabu.IPage {
             this.hide(0.1);
         }
 
-        this._copyBtn = document.createElement("button");
-        this._copyBtn.innerHTML = "COPY";
-        categoriesContainer.appendChild(this._copyBtn);
-        this._copyBtn.onclick = () => {
+        this._copyBrickBtn = document.createElement("button");
+        this._copyBrickBtn.innerHTML = "COPY BRICK";
+        categoriesContainer.appendChild(this._copyBrickBtn);
+        this._copyBrickBtn.onclick = () => {
             this._player.currentAction = PlayerActionTemplate.CreateBrickAction(this._player, this._brick.index, this._brick.colorIndex);
+            this.hide(0.1);
+        }
+
+        this._copyWithChildrenBtn = document.createElement("button");
+        this._copyWithChildrenBtn.innerHTML = "COPY FULL";
+        categoriesContainer.appendChild(this._copyWithChildrenBtn);
+        this._copyWithChildrenBtn.onclick = () => {
+            let clone = this._brick.cloneWithChildren();
+            clone.updateMesh();
+            this._player.currentAction = PlayerActionMoveBrick.Create(this._player, clone);
             this.hide(0.1);
         }
         
@@ -134,7 +145,7 @@ class BrickMenuView extends HTMLElement implements Nabu.IPage {
 
         this._options = [
             this._anchorBtn,
-            this._copyBtn,
+            this._copyBrickBtn,
             this._copyColorBtn,
             this._cancelBtn,
         ]
