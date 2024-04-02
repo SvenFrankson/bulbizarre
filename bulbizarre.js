@@ -2048,15 +2048,26 @@ class Brick extends BABYLON.TransformNode {
     serialize() {
         let data = {
             id: this.index,
-            col: this.colorIndex,
-            x: this.position.x,
-            y: this.position.y,
-            z: this.position.z,
+            col: this.colorIndex /*,
             qx: this.rotationQuaternion.x,
             qy: this.rotationQuaternion.y,
             qz: this.rotationQuaternion.z,
-            qw: this.rotationQuaternion.w,
+            qw: this.rotationQuaternion.w,*/
         };
+        if (this.isRoot) {
+            data.x = this.position.x;
+            data.y = this.position.y;
+            data.z = this.position.z;
+        }
+        else {
+            data.p = [];
+            data.p[0] = Math.round(this.position.x / BRICK_S);
+            data.p[1] = Math.round(this.position.y / BRICK_H);
+            data.p[2] = Math.round(this.position.z / BRICK_S);
+        }
+        let dir = BABYLON.Vector3.Forward().applyRotationQuaternion(this.rotationQuaternion);
+        let a = Mummu.AngleFromToAround(BABYLON.Axis.Z, dir, BABYLON.Axis.Y);
+        data.d = Math.round(a / (Math.PI * 0.5));
         if (this.anchored) {
             data.anc = this.anchored;
         }
@@ -2075,8 +2086,20 @@ class Brick extends BABYLON.TransformNode {
     deserialize(data) {
         this.index = data.id;
         this.colorIndex = isFinite(data.col) ? data.col : 0;
-        this.position.copyFromFloats(data.x, data.y, data.z);
-        this.rotationQuaternion.copyFromFloats(data.qx, data.qy, data.qz, data.qw);
+        if (data.p) {
+            this.position.copyFromFloats(data.p[0] * BRICK_S, data.p[1] * BRICK_H, data.p[2] * BRICK_S);
+        }
+        else {
+            this.position.copyFromFloats(data.x, data.y, data.z);
+        }
+        console.log(this.position);
+        if (isFinite(data.d)) {
+            BABYLON.Quaternion.RotationAxisToRef(BABYLON.Axis.Y, data.d * Math.PI * 0.5, this.rotationQuaternion);
+        }
+        else {
+            this.rotationQuaternion.copyFromFloats(data.qx, data.qy, data.qz, data.qw);
+        }
+        console.log(this.rotationQuaternion);
         if (data.anc) {
             this.anchored = true;
         }
@@ -3127,7 +3150,7 @@ class Player extends BABYLON.Mesh {
             this.head.rotation.x += this.inputDeltaY / 500;
             this.inputDeltaY = 0;
         }
-        if (bestPick && bestPick.hit) {
+        if (this.godMode || bestPick && bestPick.hit) {
             if (!this.godMode) {
                 if (bestPick.distance <= this.height) {
                     this.velocity.y = (this.height - bestPick.distance);

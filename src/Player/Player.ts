@@ -131,7 +131,7 @@ class Player extends BABYLON.Mesh {
             this.inputDeltaY = 0;
         }
         
-        if (bestPick && bestPick.hit) {
+        if (this.godMode || bestPick && bestPick.hit) {
             if (!this.godMode) {
                 if (bestPick.distance <= this.height) {
                     this.velocity.y = (this.height - bestPick.distance);
