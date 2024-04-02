@@ -436,14 +436,25 @@ class Game {
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
     
             let bricks = [
-                "brick-round_1x1",
-                "brick-round_2x1",
-                "brick-round_3x1",
-                "brick-round_4x1",
-                "brick-round_6x1",
-                "brick-round_8x1",
+
+                "plate-quarter_1x1",
+                "plate-quarter_2x2",
+                "plate-quarter_3x3",
+                "plate-quarter_4x4",
+                "plate-quarter_5x5",
+                "plate-quarter_6x6",
+                "plate-quarter_7x7",
+                "plate-quarter_8x8",
+            
+                "brick-quarter_1x1",
+                "brick-quarter_2x2",
+                "brick-quarter_3x3",
+                "brick-quarter_4x4",
+                "brick-quarter_5x5",
+                "brick-quarter_6x6",
+                "brick-quarter_7x7",
+                "brick-quarter_8x8",
             ]
-            bricks = BRICK_LIST;
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
                     await this.makeScreenshot(bricks[i], i === bricks.length - 1);

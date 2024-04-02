@@ -89,6 +89,14 @@ class BrickTemplate {
             let w = parseInt(this.name.split("_")[1].split("x")[1]);
             this.vertexData = await BrickVertexDataGenerator.GetBoxCornerCurvedVertexData(l, 3, w, lod);
         }
+        else if (this.name.startsWith("plate-quarter_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            this.vertexData = await BrickVertexDataGenerator.GetBoxQuarterVertexData(l, 1, lod);
+        }
+        else if (this.name.startsWith("brick-quarter_")) {
+            let l = parseInt(this.name.split("_")[1].split("x")[0]);
+            this.vertexData = await BrickVertexDataGenerator.GetBoxQuarterVertexData(l, 3, lod);
+        }
         else if (this.name.startsWith("brick-round_")) {
             let l = parseInt(this.name.split("_")[1].split("x")[0]);
             this.vertexData = await BrickVertexDataGenerator.GetBrickRoundVertexData(l, lod);

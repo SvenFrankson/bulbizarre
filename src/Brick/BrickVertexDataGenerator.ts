@@ -154,6 +154,57 @@ class BrickVertexDataGenerator {
         return data;
     }
 
+    public static async GetBoxQuarterVertexData(length: number, height: number, lod: number = 1): Promise<BABYLON.VertexData> {
+        let radius: number = length * BRICK_S;
+        let y = height * BRICK_H;
+
+        let back = Mummu.CreateQuadVertexData({
+            p1: new BABYLON.Vector3(0, 0, 0),
+            p2: new BABYLON.Vector3(radius, 0, 0),
+            p3: new BABYLON.Vector3(radius, y, 0),
+            p4: new BABYLON.Vector3(0, y, 0),
+            uvInWorldSpace: true
+        });
+        let right = Mummu.CreateCylinderSliceVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            radius: radius,
+            yMin: 0,
+            yMax: y,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
+        let front = Mummu.CreateQuadVertexData({
+            p1: new BABYLON.Vector3(0, 0, radius),
+            p2: new BABYLON.Vector3(0, 0, 0),
+            p3: new BABYLON.Vector3(0, y, 0),
+            p4: new BABYLON.Vector3(0, y, radius),
+            uvInWorldSpace: true
+        });
+        let top = Mummu.CreateDiscVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            radius: radius,
+            y: y,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
+        let bottom = Mummu.CreateDiscVertexData({
+            alphaMin: 0,
+            alphaMax: Math.PI * 0.5,
+            radius: radius,
+            y: 0,
+            sideOrientation: BABYLON.Mesh.BACKSIDE,
+            tesselation: 5,
+            uvInWorldSpace: true
+        });
+
+        let data = Mummu.MergeVertexDatas(back, right, front, top, bottom);
+        Mummu.TranslateVertexDataInPlace(data, new BABYLON.Vector3(- BRICK_S * 0.5, 0, - BRICK_S * 0.5))
+        BrickVertexDataGenerator.AddMarginInPlace(data);
+        return data;
+    }
+
     public static async GetStuddedCutBoxVertexData(cut: number, length: number, height: number, width: number, lod: number = 1): Promise<BABYLON.VertexData> {
         let datas = await BrickTemplateManager.Instance.vertexDataLoader.get("./datas/meshes/plate-corner-cut.babylon");
         let cutBoxRawData = Mummu.CloneVertexData(datas[0]);
