@@ -449,11 +449,10 @@ class Game {
                 uvSize: 4 * BRICK_S
             })
             ground.position.copyFromFloats(BRICK_S * 0.5, 0, BRICK_S * 0.5);
-            console.log("ground created");
             let groundMaterial = new BABYLON.StandardMaterial("ground-material");
             groundMaterial.specularColor.copyFromFloats(0, 0, 0);
             groundMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/black_white_squares.png");
-            groundMaterial.alpha = 0.1;
+            groundMaterial.alpha = 0.05;
             ground.material = groundMaterial;
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
@@ -491,20 +490,21 @@ class Game {
 
                 let hAngle = Math.PI * 0.5 + this.orthoCamera.alpha;
                 let vAngle = Math.PI * 0.5 - this.orthoCamera.beta;
-                let halfCamMinW = d * 0.5 * Math.sin(hAngle) + w * 0.5 * Math.cos(hAngle) + 0.1;
-                let halfCamMinH = h * 0.5 * Math.cos(vAngle) + d * 0.5 * Math.cos(hAngle) * Math.sin(vAngle) + w * 0.5 * Math.sin(hAngle) * Math.sin(vAngle) + 0.1;
+                let halfCamMinW = d * 0.5 * Math.sin(hAngle) + w * 0.5 * Math.cos(hAngle);
+                let halfCamMinH = h * 0.5 * Math.cos(vAngle) + d * 0.5 * Math.cos(hAngle) * Math.sin(vAngle) + w * 0.5 * Math.sin(hAngle) * Math.sin(vAngle);
 
+                let f = 1.1;
                 if (halfCamMinW >= halfCamMinH) {
-                    this.orthoCamera.orthoTop = halfCamMinW;
-                    this.orthoCamera.orthoBottom = - halfCamMinW;
-                    this.orthoCamera.orthoLeft = - halfCamMinW;
-                    this.orthoCamera.orthoRight = halfCamMinW;
+                    this.orthoCamera.orthoTop = halfCamMinW * f;
+                    this.orthoCamera.orthoBottom = - halfCamMinW * f;
+                    this.orthoCamera.orthoLeft = - halfCamMinW * f;
+                    this.orthoCamera.orthoRight = halfCamMinW * f;
                 }
                 else {
-                    this.orthoCamera.orthoTop = halfCamMinH;
-                    this.orthoCamera.orthoBottom = - halfCamMinH;
-                    this.orthoCamera.orthoLeft = - halfCamMinH;
-                    this.orthoCamera.orthoRight = halfCamMinH;
+                    this.orthoCamera.orthoTop = halfCamMinH * f;
+                    this.orthoCamera.orthoBottom = - halfCamMinH * f;
+                    this.orthoCamera.orthoLeft = - halfCamMinH * f;
+                    this.orthoCamera.orthoRight = halfCamMinH * f;
                 }
 
                 setTimeout(async () => {
