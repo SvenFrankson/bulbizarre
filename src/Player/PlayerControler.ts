@@ -44,6 +44,7 @@ class PlayerControler {
         window.addEventListener("pointerdown", this._pointerDown);
         window.addEventListener("pointermove", this._pointerMove);
         window.addEventListener("pointerup", this._pointerUp);
+        window.addEventListener("wheel", this._wheel);
 
         this.aim = document.createElement("canvas");
         this.aim.width = 21;
@@ -225,8 +226,20 @@ class PlayerControler {
         }
     }
 
+    private _wheel = (event: WheelEvent) => {
+        if (this.player.currentAction) {
+            if (this.player.currentAction.onWheel) {
+                this.player.currentAction.onWheel(event);
+            }
+        }
+        else {
+            if (this.player.defaultAction.onWheel) {
+                this.player.defaultAction.onWheel(event);
+            }
+        }
+    }
+
     public update(dt: number): void {
-        console.log(this.inputManager.isPointerLocked);
         this.player.inputX = 0;
         this.player.inputZ = 0;
 

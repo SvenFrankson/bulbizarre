@@ -134,6 +134,19 @@ class PlayerActionMoveBrick {
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick)
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick)
         }
+
+        brickAction.onWheel = (e: WheelEvent) => {
+            if (brick.isRoot && brick.getChildTransformNodes().length === 0) {
+                if (e.deltaY > 0) {
+                    brick.index = (brick.index + BRICK_LIST.length - 1) % BRICK_LIST.length;
+                    brick.updateMesh();
+                }
+                else if (e.deltaY < 0) {
+                    brick.index = (brick.index + 1) % BRICK_LIST.length;
+                    brick.updateMesh();
+                }
+            }
+        }
         
         return brickAction;
     }

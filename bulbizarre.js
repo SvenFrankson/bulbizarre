@@ -3453,10 +3453,23 @@ class PlayerControler {
                 }
             }
         };
+        this._wheel = (event) => {
+            if (this.player.currentAction) {
+                if (this.player.currentAction.onWheel) {
+                    this.player.currentAction.onWheel(event);
+                }
+            }
+            else {
+                if (this.player.defaultAction.onWheel) {
+                    this.player.defaultAction.onWheel(event);
+                }
+            }
+        };
         player.controler = this;
         window.addEventListener("pointerdown", this._pointerDown);
         window.addEventListener("pointermove", this._pointerMove);
         window.addEventListener("pointerup", this._pointerUp);
+        window.addEventListener("wheel", this._wheel);
         this.aim = document.createElement("canvas");
         this.aim.width = 21;
         this.aim.height = 21;
@@ -3569,7 +3582,6 @@ class PlayerControler {
         });
     }
     update(dt) {
-        console.log(this.inputManager.isPointerLocked);
         this.player.inputX = 0;
         this.player.inputZ = 0;
         if (this.playMode === PlayMode.Inventory) {
@@ -4223,6 +4235,18 @@ class PlayerActionMoveBrick {
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.DELETE_SELECTED, deleteBrick);
         };
+        brickAction.onWheel = (e) => {
+            if (brick.isRoot && brick.getChildTransformNodes().length === 0) {
+                if (e.deltaY > 0) {
+                    brick.index = (brick.index + BRICK_LIST.length - 1) % BRICK_LIST.length;
+                    brick.updateMesh();
+                }
+                else if (e.deltaY < 0) {
+                    brick.index = (brick.index + 1) % BRICK_LIST.length;
+                    brick.updateMesh();
+                }
+            }
+        };
         return brickAction;
     }
 }
@@ -4341,6 +4365,7 @@ class PlayerActionTemplate {
         return action;
     }
     static CreateBrickAction(player, brickId, colorIndex) {
+        let brickIndex = Brick.BrickIdToIndex(brickId);
         let brickAction = new PlayerAction(Brick.BrickIdToName(brickId), player);
         brickAction.backgroundColor = "#000000";
         let previewMesh;
@@ -4418,7 +4443,7 @@ class PlayerActionTemplate {
                         dp.x = terrain.blockSizeIJ_m * Math.round(dp.x / terrain.blockSizeIJ_m);
                         dp.y = (terrain.blockSizeK_m / 3) * Math.floor(dp.y / (terrain.blockSizeK_m / 3));
                         dp.z = terrain.blockSizeIJ_m * Math.round(dp.z / terrain.blockSizeIJ_m);
-                        let brick = new Brick(player.game.brickManager, brickId, isFinite(colorIndex) ? colorIndex : player.controler.lastUsedPaintIndex);
+                        let brick = new Brick(player.game.brickManager, brickIndex, isFinite(colorIndex) ? colorIndex : player.controler.lastUsedPaintIndex);
                         brick.position.copyFrom(dp).addInPlace(rootPosition);
                         brick.rotationQuaternion = rotationQuaternion.clone();
                         brick.computeWorldMatrix(true);
@@ -4429,7 +4454,7 @@ class PlayerActionTemplate {
                     else {
                         let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                         if (chunckIJK) {
-                            let brick = new Brick(player.game.brickManager, brickId, isFinite(colorIndex) ? colorIndex : player.controler.lastUsedPaintIndex);
+                            let brick = new Brick(player.game.brickManager, brickIndex, isFinite(colorIndex) ? colorIndex : player.controler.lastUsedPaintIndex);
                             brick.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * terrain.blockSizeIJ_m).addInPlace(chunckIJK.chunck.position);
                             brick.rotationQuaternion = rotationQuaternion.clone();
                             brick.updateMesh();
@@ -4445,7 +4470,9 @@ class PlayerActionTemplate {
             quat.multiplyToRef(rotationQuaternion, rotationQuaternion);
         };
         brickAction.onEquip = () => {
-            previewMesh = new BABYLON.Mesh("brick-preview-mesh");
+            if (!previewMesh || previewMesh.isDisposed()) {
+                previewMesh = new BABYLON.Mesh("brick-preview-mesh");
+            }
             let previewMat = new BABYLON.StandardMaterial("brick-preview-material");
             previewMat.alpha = 0.5;
             previewMat.specularColor.copyFromFloats(1, 1, 1);
@@ -4462,6 +4489,24 @@ class PlayerActionTemplate {
             }
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
         };
+        brickAction.onWheel = (e) => {
+            if (e.deltaY > 0) {
+                brickIndex = (brickIndex + BRICK_LIST.length - 1) % BRICK_LIST.length;
+                BrickTemplateManager.Instance.getTemplate(brickIndex).then(template => {
+                    if (previewMesh && !previewMesh.isDisposed()) {
+                        template.vertexData.applyToMesh(previewMesh);
+                    }
+                });
+            }
+            else if (e.deltaY < 0) {
+                brickIndex = (brickIndex + 1) % BRICK_LIST.length;
+                BrickTemplateManager.Instance.getTemplate(brickIndex).then(template => {
+                    if (previewMesh && !previewMesh.isDisposed()) {
+                        template.vertexData.applyToMesh(previewMesh);
+                    }
+                });
+            }
+        };
         return brickAction;
     }
     static CreatePaintAction(player, paintIndex) {
@@ -4469,6 +4514,7 @@ class PlayerActionTemplate {
         brickAction.backgroundColor = BRICK_COLORS[paintIndex].hex;
         brickAction.iconUrl = "/datas/icons/paintbrush.svg";
         let brush;
+        let tip;
         brickAction.onUpdate = () => {
         };
         brickAction.onPointerDown = () => {
@@ -4504,7 +4550,7 @@ class PlayerActionTemplate {
             brush.position.z = 0.8;
             brush.position.x = 0.1;
             brush.position.y = -0.2;
-            let tip = new BABYLON.Mesh("tip");
+            tip = new BABYLON.Mesh("tip");
             tip.parent = brush;
             let tipMaterial = new BABYLON.StandardMaterial("tip-material");
             tipMaterial.diffuseColor = BABYLON.Color3.FromHexString(BRICK_COLORS[paintIndex].hex);
@@ -4518,6 +4564,20 @@ class PlayerActionTemplate {
         brickAction.onUnequip = () => {
             if (brush) {
                 brush.dispose();
+            }
+        };
+        brickAction.onWheel = (e) => {
+            if (e.deltaY > 0) {
+                paintIndex = (paintIndex + BRICK_COLORS.length - 1) % BRICK_COLORS.length;
+                if (tip && !tip.isDisposed() && tip.material instanceof BABYLON.StandardMaterial) {
+                    tip.material.diffuseColor = BABYLON.Color3.FromHexString(BRICK_COLORS[paintIndex].hex);
+                }
+            }
+            else if (e.deltaY < 0) {
+                paintIndex = (paintIndex + 1) % BRICK_COLORS.length;
+                if (tip && !tip.isDisposed() && tip.material instanceof BABYLON.StandardMaterial) {
+                    tip.material.diffuseColor = BABYLON.Color3.FromHexString(BRICK_COLORS[paintIndex].hex);
+                }
             }
         };
         return brickAction;
