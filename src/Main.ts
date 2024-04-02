@@ -436,25 +436,25 @@ class Game {
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
     
             let bricks = [
-
                 "plate-quarter_1x1",
-                "plate-quarter_2x2",
-                "plate-quarter_3x3",
-                "plate-quarter_4x4",
-                "plate-quarter_5x5",
-                "plate-quarter_6x6",
-                "plate-quarter_7x7",
-                "plate-quarter_8x8",
-            
-                "brick-quarter_1x1",
-                "brick-quarter_2x2",
-                "brick-quarter_3x3",
-                "brick-quarter_4x4",
-                "brick-quarter_5x5",
-                "brick-quarter_6x6",
-                "brick-quarter_7x7",
                 "brick-quarter_8x8",
             ]
+            bricks = BRICK_LIST;
+            let ground = Mummu.CreateQuad("ground", {
+                p1: new BABYLON.Vector3(- 100 * BRICK_S, 0, - 100 * BRICK_S),
+                p2: new BABYLON.Vector3(100 * BRICK_S, 0, - 100 * BRICK_S),
+                p3: new BABYLON.Vector3(100 * BRICK_S, 0, 100 * BRICK_S),
+                p4: new BABYLON.Vector3(- 100 * BRICK_S, 0, 100 * BRICK_S),
+                uvInWorldSpace: true,
+                uvSize: 4 * BRICK_S
+            })
+            ground.position.copyFromFloats(BRICK_S * 0.5, 0, BRICK_S * 0.5);
+            console.log("ground created");
+            let groundMaterial = new BABYLON.StandardMaterial("ground-material");
+            groundMaterial.specularColor.copyFromFloats(0, 0, 0);
+            groundMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/black_white_squares.png");
+            groundMaterial.alpha = 0.1;
+            ground.material = groundMaterial;
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
                     await this.makeScreenshot(bricks[i], i === bricks.length - 1);

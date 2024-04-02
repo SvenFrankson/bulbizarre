@@ -698,22 +698,24 @@ class Game {
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
             let bricks = [
                 "plate-quarter_1x1",
-                "plate-quarter_2x2",
-                "plate-quarter_3x3",
-                "plate-quarter_4x4",
-                "plate-quarter_5x5",
-                "plate-quarter_6x6",
-                "plate-quarter_7x7",
-                "plate-quarter_8x8",
-                "brick-quarter_1x1",
-                "brick-quarter_2x2",
-                "brick-quarter_3x3",
-                "brick-quarter_4x4",
-                "brick-quarter_5x5",
-                "brick-quarter_6x6",
-                "brick-quarter_7x7",
                 "brick-quarter_8x8",
             ];
+            bricks = BRICK_LIST;
+            let ground = Mummu.CreateQuad("ground", {
+                p1: new BABYLON.Vector3(-100 * BRICK_S, 0, -100 * BRICK_S),
+                p2: new BABYLON.Vector3(100 * BRICK_S, 0, -100 * BRICK_S),
+                p3: new BABYLON.Vector3(100 * BRICK_S, 0, 100 * BRICK_S),
+                p4: new BABYLON.Vector3(-100 * BRICK_S, 0, 100 * BRICK_S),
+                uvInWorldSpace: true,
+                uvSize: 4 * BRICK_S
+            });
+            ground.position.copyFromFloats(BRICK_S * 0.5, 0, BRICK_S * 0.5);
+            console.log("ground created");
+            let groundMaterial = new BABYLON.StandardMaterial("ground-material");
+            groundMaterial.specularColor.copyFromFloats(0, 0, 0);
+            groundMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/black_white_squares.png");
+            groundMaterial.alpha = 0.1;
+            ground.material = groundMaterial;
             let doMinis = async () => {
                 for (let i = 0; i < bricks.length; i++) {
                     await this.makeScreenshot(bricks[i], i === bricks.length - 1);
@@ -4470,6 +4472,7 @@ class PlayerActionTemplate {
             quat.multiplyToRef(rotationQuaternion, rotationQuaternion);
         };
         brickAction.onEquip = () => {
+            brickIndex = Brick.BrickIdToIndex(brickId);
             if (!previewMesh || previewMesh.isDisposed()) {
                 previewMesh = new BABYLON.Mesh("brick-preview-mesh");
             }
@@ -4478,7 +4481,7 @@ class PlayerActionTemplate {
             previewMat.specularColor.copyFromFloats(1, 1, 1);
             previewMesh.material = previewMat;
             previewMesh.rotationQuaternion = rotationQuaternion;
-            BrickTemplateManager.Instance.getTemplate(Brick.BrickIdToIndex(brickId)).then(template => {
+            BrickTemplateManager.Instance.getTemplate(brickIndex).then(template => {
                 template.vertexData.applyToMesh(previewMesh);
             });
             player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
@@ -4510,14 +4513,14 @@ class PlayerActionTemplate {
         return brickAction;
     }
     static CreatePaintAction(player, paintIndex) {
-        let brickAction = new PlayerAction("paint_" + BRICK_COLORS[paintIndex].name, player);
-        brickAction.backgroundColor = BRICK_COLORS[paintIndex].hex;
-        brickAction.iconUrl = "/datas/icons/paintbrush.svg";
+        let paintAction = new PlayerAction("paint_" + BRICK_COLORS[paintIndex].name, player);
+        paintAction.backgroundColor = BRICK_COLORS[paintIndex].hex;
+        paintAction.iconUrl = "/datas/icons/paintbrush.svg";
         let brush;
         let tip;
-        brickAction.onUpdate = () => {
+        paintAction.onUpdate = () => {
         };
-        brickAction.onPointerDown = () => {
+        paintAction.onPointerDown = () => {
             if (player.controler.playMode === PlayMode.Playing) {
                 let x;
                 let y;
@@ -4544,7 +4547,7 @@ class PlayerActionTemplate {
                 }
             }
         };
-        brickAction.onEquip = async () => {
+        paintAction.onEquip = async () => {
             brush = new BABYLON.Mesh("brush");
             brush.parent = player;
             brush.position.z = 0.8;
@@ -4561,12 +4564,12 @@ class PlayerActionTemplate {
                 vDatas[1].applyToMesh(tip);
             }
         };
-        brickAction.onUnequip = () => {
+        paintAction.onUnequip = () => {
             if (brush) {
                 brush.dispose();
             }
         };
-        brickAction.onWheel = (e) => {
+        paintAction.onWheel = (e) => {
             if (e.deltaY > 0) {
                 paintIndex = (paintIndex + BRICK_COLORS.length - 1) % BRICK_COLORS.length;
                 if (tip && !tip.isDisposed() && tip.material instanceof BABYLON.StandardMaterial) {
@@ -4580,7 +4583,7 @@ class PlayerActionTemplate {
                 }
             }
         };
-        return brickAction;
+        return paintAction;
     }
 }
 class GameRouter extends Nabu.Router {

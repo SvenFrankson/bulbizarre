@@ -256,6 +256,7 @@ class PlayerActionTemplate {
         }
 
         brickAction.onEquip = () => {
+            brickIndex = Brick.BrickIdToIndex(brickId);
             if (!previewMesh || previewMesh.isDisposed()) {
                 previewMesh = new BABYLON.Mesh("brick-preview-mesh");
             }
@@ -264,7 +265,7 @@ class PlayerActionTemplate {
             previewMat.specularColor.copyFromFloats(1, 1, 1);
             previewMesh.material = previewMat;
             previewMesh.rotationQuaternion = rotationQuaternion;
-            BrickTemplateManager.Instance.getTemplate(Brick.BrickIdToIndex(brickId)).then(template => {
+            BrickTemplateManager.Instance.getTemplate(brickIndex).then(template => {
                 template.vertexData.applyToMesh(previewMesh);
             });
 
@@ -302,18 +303,18 @@ class PlayerActionTemplate {
     }
 
     public static CreatePaintAction(player: Player, paintIndex: number): PlayerAction {
-        let brickAction = new PlayerAction("paint_" + BRICK_COLORS[paintIndex].name, player);
-        brickAction.backgroundColor = BRICK_COLORS[paintIndex].hex;
-        brickAction.iconUrl = "/datas/icons/paintbrush.svg";
+        let paintAction = new PlayerAction("paint_" + BRICK_COLORS[paintIndex].name, player);
+        paintAction.backgroundColor = BRICK_COLORS[paintIndex].hex;
+        paintAction.iconUrl = "/datas/icons/paintbrush.svg";
 
         let brush: BABYLON.Mesh;
         let tip: BABYLON.Mesh;
 
-        brickAction.onUpdate = () => {
+        paintAction.onUpdate = () => {
             
         }
 
-        brickAction.onPointerDown = () => {
+        paintAction.onPointerDown = () => {
             if (player.controler.playMode === PlayMode.Playing) {
                 let x: number;
                 let y: number;
@@ -345,7 +346,7 @@ class PlayerActionTemplate {
             }
         }
 
-        brickAction.onEquip = async () => {
+        paintAction.onEquip = async () => {
             brush = new BABYLON.Mesh("brush");
             brush.parent = player;
             brush.position.z = 0.8;
@@ -363,13 +364,13 @@ class PlayerActionTemplate {
             }
         }
 
-        brickAction.onUnequip = () => {
+        paintAction.onUnequip = () => {
             if (brush) {
                 brush.dispose();
             }
         }
 
-        brickAction.onWheel = (e: WheelEvent) => {
+        paintAction.onWheel = (e: WheelEvent) => {
             if (e.deltaY > 0) {
                 paintIndex = (paintIndex + BRICK_COLORS.length - 1) % BRICK_COLORS.length;
                 if (tip && !tip.isDisposed() && tip.material instanceof BABYLON.StandardMaterial) {
@@ -384,6 +385,6 @@ class PlayerActionTemplate {
             }
         }
         
-        return brickAction;
+        return paintAction;
     }
 }
