@@ -32,6 +32,8 @@ class Game {
     public arcCamera: BABYLON.ArcRotateCamera;
     public orthoCamera: BABYLON.ArcRotateCamera;
     public uiCamera: BABYLON.FreeCamera;
+    public shadowCamera: BABYLON.ArcRotateCamera;
+    public shadowTexture: BABYLON.RenderTargetTexture;
     
     public light: BABYLON.HemisphericLight;
     public vertexDataLoader: Mummu.VertexDataLoader;
@@ -75,7 +77,7 @@ class Game {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#87CEEBFF");
         }
 
-        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 3, - 2.5)).normalize(), this.scene);
+        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(0, 3, - 3)).normalize(), this.scene);
 
         /*
         this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 / Math.sqrt(3) }, this.scene);
@@ -114,9 +116,8 @@ class Game {
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
 
-
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
-        
+
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-position")) {
                 let positionItem = JSON.parse(window.localStorage.getItem("camera-position"));
@@ -331,6 +332,23 @@ class Game {
         this.freeCamera.parent = this.player.head;
         this.freeCamera.position.copyFromFloats(0, 0, 0);
         this.freeCamera.rotation.copyFromFloats(0, 0, 0);
+        
+        this.shadowTexture = new BABYLON.RenderTargetTexture("shadow-texture", 2048, this.scene, true);
+        this.shadowCamera = new BABYLON.ArcRotateCamera("shadow-camera", 0, 0, 15, BABYLON.Vector3.Zero());
+        this.shadowCamera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+        this.shadowTexture.activeCamera = this.shadowCamera;
+        this.shadowTexture.refreshRate = 6;
+
+        this.scene.customRenderTargets.push(this.shadowTexture);
+
+        let cubeTest = BABYLON.MeshBuilder.CreateBox("test");
+        cubeTest.parent = this.freeCamera;
+        cubeTest.position.copyFromFloats(2, 0, 4);
+
+        let testMaterial = new BABYLON.StandardMaterial("test");
+        testMaterial.emissiveTexture = this.shadowTexture;
+        testMaterial.disableLighting = true;
+        cubeTest.material = testMaterial;
 
         if (!(this.terrain && this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFromMapSimple)) {
             if (this.terrain) {

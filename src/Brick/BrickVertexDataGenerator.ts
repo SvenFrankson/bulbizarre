@@ -1,6 +1,8 @@
 var BRICK_S: number = 0.375;
 var BRICK_H: number = 0.15;
 
+var UV_S: number = 0.75;
+
 class BrickVertexDataGenerator {
     private static _StudVertexData: BABYLON.VertexData[] = [];
     public static GetStudVertexDataKill(lod: number): BABYLON.VertexData {
@@ -47,42 +49,48 @@ class BrickVertexDataGenerator {
             p2: new BABYLON.Vector3(xMax, yMin, zMin),
             p3: new BABYLON.Vector3(xMax, yMax, zMin),
             p4: new BABYLON.Vector3(xMin, yMax, zMin),
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let right = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMax, yMin, zMin),
             p2: new BABYLON.Vector3(xMax, yMin, zMax),
             p3: new BABYLON.Vector3(xMax, yMax, zMax),
             p4: new BABYLON.Vector3(xMax, yMax, zMin),
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let front = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMax, yMin, zMax),
             p2: new BABYLON.Vector3(xMin, yMin, zMax),
             p3: new BABYLON.Vector3(xMin, yMax, zMax),
             p4: new BABYLON.Vector3(xMax, yMax, zMax),
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let left = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMin, yMin, zMax),
             p2: new BABYLON.Vector3(xMin, yMin, zMin),
             p3: new BABYLON.Vector3(xMin, yMax, zMin),
             p4: new BABYLON.Vector3(xMin, yMax, zMax),
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let top = Mummu.CreateQuadVertexData({
-            p1: new BABYLON.Vector3(xMin, yMax, zMin),
-            p2: new BABYLON.Vector3(xMax, yMax, zMin),
-            p3: new BABYLON.Vector3(xMax, yMax, zMax),
-            p4: new BABYLON.Vector3(xMin, yMax, zMax),
-            uvInWorldSpace: true
+            p1: new BABYLON.Vector3(xMax, yMax, zMin),
+            p2: new BABYLON.Vector3(xMax, yMax, zMax),
+            p3: new BABYLON.Vector3(xMin, yMax, zMax),
+            p4: new BABYLON.Vector3(xMin, yMax, zMin),
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let bottom = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(xMax, yMin, zMin),
             p2: new BABYLON.Vector3(xMin, yMin, zMin),
             p3: new BABYLON.Vector3(xMin, yMin, zMax),
             p4: new BABYLON.Vector3(xMax, yMin, zMax),
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
 
         let data = Mummu.MergeVertexDatas(back, right, front, left, top, bottom);
@@ -100,7 +108,8 @@ class BrickVertexDataGenerator {
             p2: new BABYLON.Vector3(outterR, 0, 0),
             p3: new BABYLON.Vector3(outterR, y, 0),
             p4: new BABYLON.Vector3(innerR, y, 0),
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let right = Mummu.CreateCylinderSliceVertexData({
             alphaMin: 0,
@@ -109,14 +118,16 @@ class BrickVertexDataGenerator {
             yMin: 0,
             yMax: y,
             tesselation: 5,
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let front = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(0, 0, outterR),
             p2: new BABYLON.Vector3(0, 0, innerR),
             p3: new BABYLON.Vector3(0, y, innerR),
             p4: new BABYLON.Vector3(0, y, outterR),
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let left = Mummu.CreateCylinderSliceVertexData({
             alphaMin: 0,
@@ -126,7 +137,8 @@ class BrickVertexDataGenerator {
             yMax: y,
             sideOrientation: BABYLON.Mesh.BACKSIDE,
             tesselation: 5,
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let top = Mummu.CreateDiscSliceVertexData({
             alphaMin: 0,
@@ -135,7 +147,8 @@ class BrickVertexDataGenerator {
             outterRadius: outterR,
             y: y,
             tesselation: 5,
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let bottom = Mummu.CreateDiscSliceVertexData({
             alphaMin: 0,
@@ -145,7 +158,8 @@ class BrickVertexDataGenerator {
             y: 0,
             sideOrientation: BABYLON.Mesh.BACKSIDE,
             tesselation: 5,
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
 
         let data = Mummu.MergeVertexDatas(back, right, front, left, top, bottom);
@@ -163,7 +177,8 @@ class BrickVertexDataGenerator {
             p2: new BABYLON.Vector3(radius, 0, 0),
             p3: new BABYLON.Vector3(radius, y, 0),
             p4: new BABYLON.Vector3(0, y, 0),
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let right = Mummu.CreateCylinderSliceVertexData({
             alphaMin: 0,
@@ -172,14 +187,16 @@ class BrickVertexDataGenerator {
             yMin: 0,
             yMax: y,
             tesselation: 5,
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let front = Mummu.CreateQuadVertexData({
             p1: new BABYLON.Vector3(0, 0, radius),
             p2: new BABYLON.Vector3(0, 0, 0),
             p3: new BABYLON.Vector3(0, y, 0),
             p4: new BABYLON.Vector3(0, y, radius),
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let top = Mummu.CreateDiscVertexData({
             alphaMin: 0,
@@ -187,7 +204,8 @@ class BrickVertexDataGenerator {
             radius: radius,
             y: y,
             tesselation: 5,
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
         let bottom = Mummu.CreateDiscVertexData({
             alphaMin: 0,
@@ -196,7 +214,8 @@ class BrickVertexDataGenerator {
             y: 0,
             sideOrientation: BABYLON.Mesh.BACKSIDE,
             tesselation: 5,
-            uvInWorldSpace: true
+            uvInWorldSpace: true,
+            uvSize: UV_S
         });
 
         let data = Mummu.MergeVertexDatas(back, right, front, top, bottom);
@@ -327,6 +346,8 @@ class BrickVertexDataGenerator {
                 uvs[2 * i] = x;
                 uvs[2 * i + 1] = y;
             }
+            uvs[2 * i] /= UV_S;
+            uvs[2 * i + 1] /= UV_S;
 
             positions[3 * i + 1] = y;
             positions[3 * i + 2] = z;
@@ -349,6 +370,11 @@ class BrickVertexDataGenerator {
         let data = Mummu.CloneVertexData(datas[index]);
 
         if (data) {
+            let uvs = data.uvs;
+            for (let i = 0; i < uvs.length; i++) {
+                uvs[i] = uvs[i] / UV_S;
+            }
+            data.uvs = uvs;
             BrickVertexDataGenerator.AddMarginInPlace(data);
             return data;
         }

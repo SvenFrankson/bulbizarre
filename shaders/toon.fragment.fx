@@ -9,6 +9,7 @@ uniform float autoLight;
 uniform float diffuseSharpness;
 uniform vec3 diffuse;
 uniform sampler2D diffuseTexture;
+uniform sampler2D normalTexture;
 uniform vec3 lightInvDirW;
 uniform float alpha;
 uniform float specularIntensity;
@@ -27,11 +28,18 @@ out vec4 outColor;
 void main() {
 	float sunLightFactor = 0.;
 	vec3 camDir = normalize(viewPositionW - vPositionW);
+
+	// obtain normal from normal map in range [0,1]
+    vec3 normal = texture(normalTexture, vUv).rgb;
+    // transform normal vector to range [-1,1]
+    normal = normalize(normal * 2.0 - 1.0);
+	normal = normalize(normal + vNormalW);
+
 	if (useLightFromPOV == 1) {
-		sunLightFactor = (max(dot(vNormalW, camDir), diffuseSharpness) - diffuseSharpness) / (1. - diffuseSharpness);
+		sunLightFactor = (max(dot(normal, camDir), diffuseSharpness) - diffuseSharpness) / (1. - diffuseSharpness);
 	}
 	else {
-		sunLightFactor = (max(dot(vNormalW, lightInvDirW), diffuseSharpness) - diffuseSharpness) / (1. - diffuseSharpness);
+		sunLightFactor = (max(dot(normal, lightInvDirW), diffuseSharpness) - diffuseSharpness) / (1. - diffuseSharpness);
 	}
 
 	float lightFactor = 1.5;
@@ -47,18 +55,19 @@ void main() {
 	float factor = 2. * specularCount - 1.;
 	float specularValue = 0.;
 	vec3 lightPos = vec3(1., 1., 1.);
-	vec3 mirrorCamDir = normalize(reflect(camDir, vNormalW));
+	vec3 mirrorCamDir = - normalize(reflect(camDir, normal));
 	if (useFlatSpecular == 1) {
 		vec3 mirrorDirAxisPlaneN = normalize(cross(vPositionW - lightPos, lightInvDirW));
 		specularValue = 1. - abs(dot(mirrorDirAxisPlaneN, mirrorCamDir));
 	}
 	else {
-		specularValue = max(dot(lightInvDirW, -mirrorCamDir), 0.);
+		specularValue = max(dot(lightInvDirW, mirrorCamDir), 0.);
 	}
-	specularValue = (cos((specularValue - 1.) * factor * 3.14) + 1.) * 0.5 * sqrt(specularValue);
+	specularValue = (cos((specularValue - 1.) * factor * 3.14 * 0.5) + 1.) * 0.5 * sqrt(specularValue);
 	specularValue = pow(specularValue, specularPower);
 	specularValue = round(specularValue * specularCount) / specularCount;
 	specularValue = specularValue * specularIntensity;
+	
 	lightFactor = max(lightFactor, autoLight);
 
 	outColor = vec4(color * lightFactor + specular * specularValue, alpha + specularValue);

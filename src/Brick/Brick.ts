@@ -138,15 +138,79 @@ class Brick extends BABYLON.TransformNode {
         Mummu.RotateVertexDataInPlace(data, this.absoluteRotationQuaternion.invert());
         if (!this.mesh) {
             this.mesh = new BrickMesh(this);
+            this.mesh.layerMask |= 0x20000000;
             this.mesh.position = this.position;
             this.mesh.rotationQuaternion = this.rotationQuaternion;
 
             let brickMaterial = new BABYLON.StandardMaterial("brick-material");
             brickMaterial.specularColor.copyFromFloats(0, 0, 0);
-            brickMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/test-dirt.png");
+            brickMaterial.bumpTexture = new BABYLON.Texture("./datas/textures/test-steel-normal-dx.png", undefined, undefined, true);
+            brickMaterial.invertNormalMapX = true;
             //brickMaterial.diffuseTexture = new BABYLON.Texture("./datas/textures/red-white-squares.png");
 
-            this.mesh.material = brickMaterial;
+            let steelMaterial = new ToonMaterial("steel", this.mesh._scene);
+            steelMaterial.setDiffuse(BABYLON.Color3.FromHexString("#868b8a"));
+            steelMaterial.setSpecularIntensity(1);
+            steelMaterial.setSpecularCount(4);
+            steelMaterial.setSpecularPower(32);
+            steelMaterial.setUseVertexColor(true);
+
+            let logoMaterial = new ToonMaterial("logo", this.mesh._scene);
+            logoMaterial.setDiffuse(BABYLON.Color3.FromHexString("#262b2a"));
+            logoMaterial.setSpecularIntensity(0.5);
+            logoMaterial.setSpecularCount(1);
+            logoMaterial.setSpecularPower(16);
+            logoMaterial.setUseLightFromPOV(true);
+            logoMaterial.setUseFlatSpecular(true);
+
+            this.mesh.material = steelMaterial;
+            this.mesh.computeWorldMatrix(true);
+            this.mesh.refreshBoundingInfo();
+
+            setTimeout(() => {
+                let shadowCam = Game.Instance.shadowCamera;
+    
+                let bbox = this.mesh.getBoundingInfo().boundingBox;
+                let w = bbox.maximumWorld.x - bbox.minimumWorld.x;
+                let h = bbox.maximumWorld.y - bbox.minimumWorld.y;
+                let d = bbox.maximumWorld.z - bbox.minimumWorld.z;
+    
+                shadowCam.setTarget(bbox.maximumWorld.add(bbox.minimumWorld).scaleInPlace(0.5));
+                shadowCam.radius = 20;
+                shadowCam.alpha = - Math.PI / 3;
+                shadowCam.beta = Math.PI / 3;
+    
+                let hAngle = Math.PI * 0.5 + shadowCam.alpha;
+                let vAngle = Math.PI * 0.5 - shadowCam.beta;
+                let halfCamMinW = d * 0.5 * Math.sin(hAngle) + w * 0.5 * Math.cos(hAngle);
+                let halfCamMinH = h * 0.5 * Math.cos(vAngle) + d * 0.5 * Math.cos(hAngle) * Math.sin(vAngle) + w * 0.5 * Math.sin(hAngle) * Math.sin(vAngle);
+    
+                let f = 1;
+                if (halfCamMinW >= halfCamMinH) {
+                    shadowCam.orthoTop = halfCamMinW * f;
+                    shadowCam.orthoBottom = - halfCamMinW * f;
+                    shadowCam.orthoLeft = - halfCamMinW * f;
+                    shadowCam.orthoRight = halfCamMinW * f;
+                }
+                else {
+                    shadowCam.orthoTop = halfCamMinH * f;
+                    shadowCam.orthoBottom = - halfCamMinH * f;
+                    shadowCam.orthoLeft = - halfCamMinH * f;
+                    shadowCam.orthoRight = halfCamMinH * f;
+                }
+    
+                Game.Instance.shadowTexture.renderList.push(this.mesh);
+            }, 1000);
+            
+            /*
+            let lights = this.getScene().lights;
+            for (let i = 0; i < lights.length; i++) {
+                let light = lights[i];
+                if (light instanceof BABYLON.HemisphericLight) {
+                    Mummu.DrawDebugLine(this.mesh.position, this.mesh.position.add(light.direction.scale(20)), Infinity);
+                }
+            }
+            */
         }
 
         data.applyToMesh(this.mesh);
@@ -179,10 +243,13 @@ class Brick extends BABYLON.TransformNode {
         vData.colors = colors;
 
         let a = 2 * Math.PI * Math.random();
+        a = 0;
         let cosa = Math.cos(a);
         let sina = Math.sin(a);
         let dU = Math.random();
+        dU = 0;
         let dV = Math.random();
+        dV = 0;
         let uvs = vData.uvs;
         for (let i = 0; i < uvs.length / 2; i++) {
             let u = uvs[2 * i];

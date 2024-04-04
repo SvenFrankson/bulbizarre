@@ -1,6 +1,7 @@
 class ToonMaterial extends BABYLON.ShaderMaterial {
 
-    private _voidTexture: BABYLON.Texture;
+    private _whiteTexture: BABYLON.Texture;
+    private _blackTexture: BABYLON.Texture;
 
     constructor(name: string, scene: BABYLON.Scene) {
         super(
@@ -20,6 +21,7 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
                     "diffuseSharpness",
                     "diffuse",
                     "diffuseTexture",
+                    "normalTexture",
                     "viewPositionW",
                     "viewDirectionW",
                     "lightInvDirW",
@@ -33,9 +35,12 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
             }
         );
 
-        this._voidTexture = new BABYLON.Texture("./datas/textures/void-texture.png");
-        this._voidTexture.wrapU = 1;
-        this._voidTexture.wrapV = 1;
+        this._whiteTexture = new BABYLON.Texture("./datas/textures/void-texture.png");
+        this._whiteTexture.wrapU = 1;
+        this._whiteTexture.wrapV = 1;
+        this._blackTexture = new BABYLON.Texture("./datas/textures/black-texture.png");
+        this._blackTexture.wrapU = 1;
+        this._blackTexture.wrapV = 1;
         
         this.updateUseVertexColor();
         this.updateUseLightFromPOV();
@@ -43,6 +48,7 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
         this.updateDiffuseSharpness();
         this.updateDiffuse();
         this.updateDiffuseTexture();
+        this.updateNormalTexture();
         this.updateAlpha();
         this.updateUseFlatSpecular();
         this.updateSpecularIntensity();
@@ -65,7 +71,7 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
     private _update = () => {
         let camera = this.getScene().activeCamera;
         let direction = camera.getForwardRay().direction;
-        this.setVector3("viewPositionW", camera.position);
+        this.setVector3("viewPositionW", camera.globalPosition);
         this.setVector3("viewDirectionW", direction);
         let lights = this.getScene().lights;
         for (let i = 0; i < lights.length; i++) {
@@ -149,7 +155,24 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
             this.setTexture("diffuseTexture", this._diffuseTexture);
         }
         else {
-            this.setTexture("diffuseTexture", this._voidTexture);
+            this.setTexture("diffuseTexture", this._whiteTexture);
+        }
+    }
+
+    private _normalTexture: BABYLON.Texture;
+    public get normalTexture(): BABYLON.Texture {
+        return this._normalTexture;
+    }
+    public setNormalTexture(t: BABYLON.Texture): void {
+        this._normalTexture = t;
+        this.updateNormalTexture();
+    }
+    public updateNormalTexture(): void {
+        if (this._normalTexture) {
+            this.setTexture("normalTexture", this._normalTexture);
+        }
+        else {
+            this.setTexture("normalTexture", this._blackTexture);
         }
     }
 
