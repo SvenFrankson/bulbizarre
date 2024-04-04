@@ -27,18 +27,15 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
         let w = 32;
         let h = 256;
         let d = 32;
-        let data: Uint8ClampedArray = new Uint8ClampedArray(32 * 356 * 32 * 4);
+        let data: Uint8ClampedArray = new Uint8ClampedArray(32 * 356 * 32);
         for (let i = 0; i < w; i++) {
             for (let j = 0; j < d; j++) {
                 for (let k = 0; k < h; k++) {
-                    data[4 * (i + j * w + k * w * w)] = Math.floor(Math.random() * 256);
-                    data[4 * (i + j * w + k * w * w) + 1] = Math.floor(Math.random() * 256);
-                    data[4 * (i + j * w + k * w * w) + 2] = Math.floor(Math.random() * 256);
-                    data[4 * (i + j * w + k * w * w) + 3] = Math.floor(Math.random() * 256);
+                    data[(i + j * w + k * w * w)] = Math.floor(Math.random() * 256);
                 }
             }
         }
-        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, 32, 256, 32, BABYLON.Constants.TEXTUREFORMAT_RGBA, this.getScene());
+        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, 32, 256, 32, BABYLON.Constants.TEXTUREFORMAT_R, this.getScene());
         myTestRaw3DTexture.wrapU = 1;
         myTestRaw3DTexture.wrapV = 1;
         myTestRaw3DTexture.wrapR = 1;
