@@ -1,11 +1,13 @@
 #version 300 es
 precision highp float;
+precision mediump sampler3D;
  
 uniform vec3 terrainColors[13];
 uniform vec3 lightInvDirW;
 uniform int level;
 uniform float blockSize_m;
 uniform sampler2D noiseTexture;
+uniform sampler3D lightTexture;
 
 in vec3 vPositionW;
 in vec3 vNormalW;
@@ -198,6 +200,8 @@ void main() {
       lightFactor *= 0.7;
    }
    
+   vec3 gi = texture(lightTexture, vPositionW / 32.).rgb;
+   lightFactor = lightFactor * gi.r;
    lightFactor = round(lightFactor * 12.) / 12.;
 
    /*

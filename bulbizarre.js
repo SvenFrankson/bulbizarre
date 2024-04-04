@@ -614,6 +614,7 @@ class Game {
         this.freeCamera.rotation.copyFromFloats(0, 0, 0);
         this.shadowTexture = new BABYLON.RenderTargetTexture("shadow-texture", 2048, this.scene, true);
         this.shadowCamera = new BABYLON.ArcRotateCamera("shadow-camera", 0, 0, 15, BABYLON.Vector3.Zero());
+        this.shadowCamera.layerMask = 0x20000000;
         this.shadowCamera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
         this.shadowTexture.activeCamera = this.shadowCamera;
         this.shadowTexture.refreshRate = 6;
@@ -1630,15 +1631,36 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
             uniforms: [
                 "world", "worldView", "worldViewProjection", "view", "projection",
                 "lightInvDirW",
-                "level"
+                "level",
+                "noiseTexture",
+                "terrainColors",
+                "lightTexture"
             ]
         });
         this._lightInvDirW = BABYLON.Vector3.Up();
         this._level = 0;
+        let w = 32;
+        let h = 256;
+        let d = 32;
+        let data = new Uint8ClampedArray(32 * 356 * 32 * 4);
+        for (let i = 0; i < w; i++) {
+            for (let j = 0; j < d; j++) {
+                for (let k = 0; k < h; k++) {
+                    data[4 * (i + j * w + k * w * w)] = Math.floor(Math.random() * 256);
+                    data[4 * (i + j * w + k * w * w) + 1] = Math.floor(Math.random() * 256);
+                    data[4 * (i + j * w + k * w * w) + 2] = Math.floor(Math.random() * 256);
+                    data[4 * (i + j * w + k * w * w) + 3] = Math.floor(Math.random() * 256);
+                }
+            }
+        }
+        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, 32, 256, 32, BABYLON.Constants.TEXTUREFORMAT_RGBA, this.getScene());
+        myTestRaw3DTexture.wrapU = 1;
+        myTestRaw3DTexture.wrapV = 1;
+        myTestRaw3DTexture.wrapR = 1;
         this.setLightInvDir(BABYLON.Vector3.One().normalize());
-        this.setLevel(0);
         this.setFloat("blockSize_m", 0.45);
         this.setTexture("noiseTexture", new BABYLON.Texture("./datas/textures/test-noise.png"));
+        this.setTexture("lightTexture", myTestRaw3DTexture);
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
     }
     getLightInvDir() {
@@ -2035,6 +2057,10 @@ class Brick extends BABYLON.TransformNode {
                     shadowCam.orthoRight = halfCamMinH * f;
                 }
                 Game.Instance.shadowTexture.renderList.push(this.mesh);
+                //let stupidMat = new BABYLON.StandardMaterial("stupid-mat");
+                //stupidMat.diffuseColor.copyFromFloats(0, 0, 0);
+                //stupidMat.specularColor.copyFromFloats(0, 0, 0);
+                //Game.Instance.shadowTexture.setMaterialForRendering(this.mesh, stupidMat);
             }, 1000);
             /*
             let lights = this.getScene().lights;

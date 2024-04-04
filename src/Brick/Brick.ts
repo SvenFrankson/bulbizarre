@@ -200,6 +200,11 @@ class Brick extends BABYLON.TransformNode {
                 }
     
                 Game.Instance.shadowTexture.renderList.push(this.mesh);
+                
+                //let stupidMat = new BABYLON.StandardMaterial("stupid-mat");
+                //stupidMat.diffuseColor.copyFromFloats(0, 0, 0);
+                //stupidMat.specularColor.copyFromFloats(0, 0, 0);
+                //Game.Instance.shadowTexture.setMaterialForRendering(this.mesh, stupidMat);
             }, 1000);
             
             /*

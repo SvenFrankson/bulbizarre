@@ -333,8 +333,15 @@ class Game {
         this.freeCamera.position.copyFromFloats(0, 0, 0);
         this.freeCamera.rotation.copyFromFloats(0, 0, 0);
         
-        this.shadowTexture = new BABYLON.RenderTargetTexture("shadow-texture", 2048, this.scene, true);
+
+        this.shadowTexture = new BABYLON.RenderTargetTexture(
+            "shadow-texture",
+            2048,
+            this.scene,
+            true
+        );
         this.shadowCamera = new BABYLON.ArcRotateCamera("shadow-camera", 0, 0, 15, BABYLON.Vector3.Zero());
+        this.shadowCamera.layerMask = 0x20000000;
         this.shadowCamera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
         this.shadowTexture.activeCamera = this.shadowCamera;
         this.shadowTexture.refreshRate = 6;
