@@ -511,6 +511,7 @@ class Game {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_COLORS[i].name, InventoryCategory.Paint));
             }
             this.player.playerActionManager.loadFromLocalStorage();
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), 0);
             this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
             window.addEventListener("keydown", (event) => {
@@ -1658,7 +1659,6 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
     }
     setLightInvDir(p) {
         this._lightInvDirW.copyFrom(p);
-        console.log(this._lightInvDirW);
         this.setVector3("lightInvDirW", this._lightInvDirW);
     }
     get debugColor() {
@@ -2917,6 +2917,60 @@ class BrickVertexDataGenerator {
     }
 }
 BrickVertexDataGenerator._StudVertexData = [];
+class Mushroom {
+    constructor(game) {
+        this.game = game;
+        this.height = 10;
+        this.radius = 5;
+        this.age = 0;
+        this.maxAge = 10;
+        this.doStep = () => {
+            if (this.ijk && this.chunck) {
+                if (!this.currentHeadPos) {
+                    this.currentHeadPos = { i: this.ijk.i, j: this.ijk.j, k: this.ijk.k - 1 };
+                }
+                if (!this.headCone) {
+                    this.headCone = new Kulla.Cone(this.chunck.terrain, {});
+                }
+                if (this.age < this.maxAge) {
+                    if (this.age > 0) {
+                        this.headCone.draw(this.chunck, Kulla.BlockType.Ice, Kulla.TerrainEditionMode.Erase);
+                    }
+                    this.age++;
+                    this.currentHeadPos.k++;
+                    this.headCone.props.position = this.currentHeadPos;
+                    this.headCone.props.sBase = Math.floor(1 + (this.age / 2));
+                    this.headCone.props.sTop = 1;
+                    this.headCone.props.length = Math.floor(2 + (this.age / 4));
+                    if (Math.random() < 0.3) {
+                        if (Math.random() < 0.5) {
+                            this.currentHeadPos.i++;
+                        }
+                        else {
+                            this.currentHeadPos.i--;
+                        }
+                    }
+                    if (Math.random() < 0.3) {
+                        if (Math.random() < 0.5) {
+                            this.currentHeadPos.j++;
+                        }
+                        else {
+                            this.currentHeadPos.j--;
+                        }
+                    }
+                    this.headCone.draw(this.chunck, Kulla.BlockType.Ice, Kulla.TerrainEditionMode.AddIfEmpty);
+                    this.game.terrainEditor.doAction(this.chunck, this.currentHeadPos, { brushBlock: Kulla.BlockType.Rock, brushSize: 2, mode: Kulla.TerrainEditionMode.Add });
+                }
+                else {
+                    clearInterval(this._debugStepInterval);
+                }
+            }
+        };
+    }
+    instantiate() {
+        this._debugStepInterval = setInterval(this.doStep, 2000);
+    }
+}
 class BrickMenuView extends HTMLElement {
     constructor() {
         super(...arguments);
@@ -3418,6 +3472,9 @@ class PlayerActionManager {
                         let paintName = linkedItemName.replace("paint_", "");
                         let paintIndex = BRICK_COLORS.findIndex(c => { return c.name === paintName; });
                         this.linkAction(PlayerActionTemplate.CreatePaintAction(this.player, paintIndex), i);
+                    }
+                    else if (linkedItemName === "mushroom") {
+                        this.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), i);
                     }
                     else if (linkedItemName) {
                         this.linkAction(PlayerActionTemplate.CreateBrickAction(this.player, linkedItemName), i);
@@ -4426,6 +4483,113 @@ class PlayerActionMoveBrick {
 var ACTIVE_DEBUG_PLAYER_ACTION = true;
 var ADD_BRICK_ANIMATION_DURATION = 1000;
 class PlayerActionTemplate {
+    static CreateMushroomAction(player) {
+        let action = new PlayerAction("mushroom", player);
+        action.backgroundColor = "#00FFFF";
+        let previewMesh;
+        let previewBox;
+        action.iconUrl = undefined;
+        let lastSize;
+        let lastI;
+        let lastJ;
+        let lastK;
+        let size = 1;
+        action.onUpdate = () => {
+            let terrain = player.game.terrain;
+            if (player.controler.playMode === PlayMode.Playing) {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                });
+                if (hit && hit.pickedPoint) {
+                    let n = hit.getNormal(true).scaleInPlace(0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
+                    if (chunckIJK) {
+                        // Redraw block preview
+                        if (!previewMesh) {
+                            previewMesh = Mummu.CreateLineBox("preview", { width: size * terrain.blockSizeIJ_m, height: size * terrain.blockSizeK_m, depth: size * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
+                        }
+                        let needRedrawMesh = false;
+                        if (lastI != chunckIJK.ijk.i) {
+                            lastI = chunckIJK.ijk.i;
+                            needRedrawMesh = true;
+                        }
+                        if (lastJ != chunckIJK.ijk.j) {
+                            lastJ = chunckIJK.ijk.j;
+                            needRedrawMesh = true;
+                        }
+                        if (lastK != chunckIJK.ijk.k) {
+                            lastK = chunckIJK.ijk.k;
+                            needRedrawMesh = true;
+                        }
+                        let offset = (size % 2) * 0.5;
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i + offset) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + offset) * terrain.blockSizeK_m, (chunckIJK.ijk.j + offset) * terrain.blockSizeIJ_m);
+                        previewMesh.parent = chunckIJK.chunck.mesh;
+                        return;
+                    }
+                }
+            }
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+        };
+        action.onPointerDown = () => {
+            if (player.controler.playMode === PlayMode.Playing) {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                });
+                if (hit && hit.pickedPoint) {
+                    let n = hit.getNormal(true).scaleInPlace(0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
+                    if (chunckIJK) {
+                        let mushroom = new Mushroom(player.game);
+                        mushroom.chunck = chunckIJK.chunck;
+                        mushroom.ijk = chunckIJK.ijk;
+                        mushroom.instantiate();
+                    }
+                }
+            }
+        };
+        action.onUnequip = () => {
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+            lastSize = undefined;
+            lastI = undefined;
+            lastJ = undefined;
+            lastK = undefined;
+        };
+        return action;
+    }
     static CreateBlockAction(player, blockType) {
         let action = new PlayerAction("block_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();

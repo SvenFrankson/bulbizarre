@@ -4,6 +4,132 @@ var ADD_BRICK_ANIMATION_DURATION = 1000;
 
 class PlayerActionTemplate {
 
+    public static CreateMushroomAction(player: Player): PlayerAction {
+        let action = new PlayerAction("mushroom", player);
+        action.backgroundColor = "#00FFFF";
+        let previewMesh: BABYLON.Mesh;
+        let previewBox: BABYLON.Mesh;
+        action.iconUrl = undefined;
+
+        let lastSize: number;
+        let lastI: number;
+        let lastJ: number;
+        let lastK: number;
+
+        let size = 1;
+
+        action.onUpdate = () => {
+            let terrain = player.game.terrain;
+            if (player.controler.playMode === PlayMode.Playing) {
+                let x: number;
+                let y: number;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(
+                    x,
+                    y,
+                    (mesh) => {
+                        return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                    }
+                )
+                if (hit && hit.pickedPoint) {
+                    let n =  hit.getNormal(true).scaleInPlace(0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
+                    if (chunckIJK) {
+                        // Redraw block preview
+                        if (!previewMesh) {
+                            previewMesh = Mummu.CreateLineBox("preview", { width: size * terrain.blockSizeIJ_m, height: size * terrain.blockSizeK_m, depth: size * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
+                        }
+                        
+                        let needRedrawMesh: boolean = false;
+                        if (lastI != chunckIJK.ijk.i) {
+                            lastI = chunckIJK.ijk.i;
+                            needRedrawMesh = true;
+                        }
+                        if (lastJ != chunckIJK.ijk.j) {
+                            lastJ = chunckIJK.ijk.j;
+                            needRedrawMesh = true;
+                        }
+                        if (lastK != chunckIJK.ijk.k) {
+                            lastK = chunckIJK.ijk.k;
+                            needRedrawMesh = true;
+                        }
+                        
+                        let offset = (size % 2) * 0.5;
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i + offset) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + offset) * terrain.blockSizeK_m, (chunckIJK.ijk.j + offset) * terrain.blockSizeIJ_m);
+                        previewMesh.parent = chunckIJK.chunck.mesh;
+
+                        return;
+                    }
+                }
+            }
+            
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+        }
+
+        action.onPointerDown = () => {
+            if (player.controler.playMode === PlayMode.Playing) {
+                let x: number;
+                let y: number;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(
+                    x,
+                    y,
+                    (mesh) => {
+                        return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                    }
+                )
+                if (hit && hit.pickedPoint) {
+                    let n =  hit.getNormal(true).scaleInPlace(0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
+                    if (chunckIJK) {
+                        let mushroom = new Mushroom(player.game);
+                        mushroom.chunck = chunckIJK.chunck;
+                        mushroom.ijk = chunckIJK.ijk;
+                        mushroom.instantiate();
+                    }
+                }
+            }
+        }
+
+        action.onUnequip = () => {
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+            lastSize = undefined;
+            lastI = undefined;
+            lastJ = undefined;
+            lastK = undefined;
+        }
+        
+        return action;
+    }
+
     public static CreateBlockAction(player: Player, blockType: Kulla.BlockType): PlayerAction {
         let action = new PlayerAction("block_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();

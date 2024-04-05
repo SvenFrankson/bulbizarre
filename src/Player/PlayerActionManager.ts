@@ -156,6 +156,9 @@ class PlayerActionManager {
                         let paintIndex = BRICK_COLORS.findIndex(c => { return c.name === paintName; });
                         this.linkAction(PlayerActionTemplate.CreatePaintAction(this.player, paintIndex), i);
                     }
+                    else if (linkedItemName === "mushroom") {
+                        this.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), i);
+                    }
                     else if (linkedItemName) {
                         this.linkAction(PlayerActionTemplate.CreateBrickAction(this.player, linkedItemName), i);
                     }
