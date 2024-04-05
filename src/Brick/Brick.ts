@@ -166,56 +166,6 @@ class Brick extends BABYLON.TransformNode {
             this.mesh.material = steelMaterial;
             this.mesh.computeWorldMatrix(true);
             this.mesh.refreshBoundingInfo();
-
-            setTimeout(() => {
-                let shadowCam = Game.Instance.shadowCamera;
-    
-                let bbox = this.mesh.getBoundingInfo().boundingBox;
-                let w = bbox.maximumWorld.x - bbox.minimumWorld.x;
-                let h = bbox.maximumWorld.y - bbox.minimumWorld.y;
-                let d = bbox.maximumWorld.z - bbox.minimumWorld.z;
-    
-                shadowCam.setTarget(bbox.maximumWorld.add(bbox.minimumWorld).scaleInPlace(0.5));
-                shadowCam.radius = 20;
-                shadowCam.alpha = - Math.PI / 3;
-                shadowCam.beta = Math.PI / 3;
-    
-                let hAngle = Math.PI * 0.5 + shadowCam.alpha;
-                let vAngle = Math.PI * 0.5 - shadowCam.beta;
-                let halfCamMinW = d * 0.5 * Math.sin(hAngle) + w * 0.5 * Math.cos(hAngle);
-                let halfCamMinH = h * 0.5 * Math.cos(vAngle) + d * 0.5 * Math.cos(hAngle) * Math.sin(vAngle) + w * 0.5 * Math.sin(hAngle) * Math.sin(vAngle);
-    
-                let f = 1;
-                if (halfCamMinW >= halfCamMinH) {
-                    shadowCam.orthoTop = halfCamMinW * f;
-                    shadowCam.orthoBottom = - halfCamMinW * f;
-                    shadowCam.orthoLeft = - halfCamMinW * f;
-                    shadowCam.orthoRight = halfCamMinW * f;
-                }
-                else {
-                    shadowCam.orthoTop = halfCamMinH * f;
-                    shadowCam.orthoBottom = - halfCamMinH * f;
-                    shadowCam.orthoLeft = - halfCamMinH * f;
-                    shadowCam.orthoRight = halfCamMinH * f;
-                }
-    
-                Game.Instance.shadowTexture.renderList.push(this.mesh);
-                
-                //let stupidMat = new BABYLON.StandardMaterial("stupid-mat");
-                //stupidMat.diffuseColor.copyFromFloats(0, 0, 0);
-                //stupidMat.specularColor.copyFromFloats(0, 0, 0);
-                //Game.Instance.shadowTexture.setMaterialForRendering(this.mesh, stupidMat);
-            }, 1000);
-            
-            /*
-            let lights = this.getScene().lights;
-            for (let i = 0; i < lights.length; i++) {
-                let light = lights[i];
-                if (light instanceof BABYLON.HemisphericLight) {
-                    Mummu.DrawDebugLine(this.mesh.position, this.mesh.position.add(light.direction.scale(20)), Infinity);
-                }
-            }
-            */
         }
 
         data.applyToMesh(this.mesh);

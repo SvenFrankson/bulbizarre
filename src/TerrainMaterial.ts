@@ -19,34 +19,34 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
                     "level",
                     "noiseTexture",
                     "terrainColors",
-                    "lightTexture"
+                    "lightTexture",
+                    "debugColor",
+                    "blockSize_m",
+                    "blockHeight_m"
                 ]
             }
         );
 
-        let w = 32;
-        let h = 256;
-        let d = 32;
-        let data: Uint8ClampedArray = new Uint8ClampedArray(32 * 356 * 32);
-        for (let i = 0; i < w; i++) {
-            for (let j = 0; j < d; j++) {
-                for (let k = 0; k < h; k++) {
-                    data[(i + j * w + k * w * w)] = Math.floor(Math.random() * 256);
-                }
-            }
-        }
-        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, 32, 256, 32, BABYLON.Constants.TEXTUREFORMAT_R, this.getScene());
+        let w = 2;
+        let h = 2;
+        let d = 2;
+        let data: Uint8ClampedArray = new Uint8ClampedArray(w * h * d);
+        data.fill(255);
+        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, w, h, d, BABYLON.Constants.TEXTUREFORMAT_R, this.getScene(), false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
         myTestRaw3DTexture.wrapU = 1;
         myTestRaw3DTexture.wrapV = 1;
         myTestRaw3DTexture.wrapR = 1;
 
         this.setLightInvDir(BABYLON.Vector3.One().normalize());
         
-        this.setFloat("blockSize_m", 0.45);
+        this.setFloat("blockSize_m", 0.375);
+        this.setFloat("blockHeight_m", 0.45);
         this.setTexture("noiseTexture", new BABYLON.Texture("./datas/textures/test-noise.png"));
         this.setTexture("lightTexture", myTestRaw3DTexture);
         
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
+
+        this.updateDebugColor();
     }
 
     public getLightInvDir(): BABYLON.Vector3 {
@@ -56,6 +56,18 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
     public setLightInvDir(p: BABYLON.Vector3): void {
         this._lightInvDirW.copyFrom(p);
         this.setVector3("lightInvDirW", this._lightInvDirW);
+    }
+
+    private _debugColor: BABYLON.Color3 = BABYLON.Color3.White();
+    public get debugColor(): BABYLON.Color3 {
+        return this._debugColor;
+    }
+    public setDebugColor(c: BABYLON.Color3) {
+        this._debugColor = c;
+        this.updateDebugColor();
+    }
+    public updateDebugColor(): void {
+        this.setColor3("debugColor", this._debugColor);
     }
 
     public getLevel(): number {

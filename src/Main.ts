@@ -32,8 +32,10 @@ class Game {
     public arcCamera: BABYLON.ArcRotateCamera;
     public orthoCamera: BABYLON.ArcRotateCamera;
     public uiCamera: BABYLON.FreeCamera;
+    /*
     public shadowCamera: BABYLON.ArcRotateCamera;
     public shadowTexture: BABYLON.RenderTargetTexture;
+    */
     
     public light: BABYLON.HemisphericLight;
     public vertexDataLoader: Mummu.VertexDataLoader;
@@ -333,30 +335,6 @@ class Game {
         this.freeCamera.position.copyFromFloats(0, 0, 0);
         this.freeCamera.rotation.copyFromFloats(0, 0, 0);
         
-
-        this.shadowTexture = new BABYLON.RenderTargetTexture(
-            "shadow-texture",
-            2048,
-            this.scene,
-            true
-        );
-        this.shadowCamera = new BABYLON.ArcRotateCamera("shadow-camera", 0, 0, 15, BABYLON.Vector3.Zero());
-        this.shadowCamera.layerMask = 0x20000000;
-        this.shadowCamera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
-        this.shadowTexture.activeCamera = this.shadowCamera;
-        this.shadowTexture.refreshRate = 6;
-
-        this.scene.customRenderTargets.push(this.shadowTexture);
-
-        let cubeTest = BABYLON.MeshBuilder.CreateBox("test");
-        cubeTest.parent = this.freeCamera;
-        cubeTest.position.copyFromFloats(2, 0, 4);
-
-        let testMaterial = new BABYLON.StandardMaterial("test");
-        testMaterial.emissiveTexture = this.shadowTexture;
-        testMaterial.disableLighting = true;
-        cubeTest.material = testMaterial;
-
         if (!(this.terrain && this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFromMapSimple)) {
             if (this.terrain) {
                 this.terrain.dispose();
@@ -385,7 +363,14 @@ class Game {
 
         let mat = new TerrainMaterial("terrain", this.scene);
         this.terrain.materials = [mat];
-        mat.freeze();
+        this.terrain.customChunckMaterialSet = (chunck: Kulla.Chunck) => {
+            let mat = new TerrainMaterial("terrain", this.scene);
+            chunck.updateGlobalLight3DTexture();
+            mat.setTexture("lightTexture", chunck.globalLight3DTexture);
+            //let color = new BABYLON.Color3(Math.random(), Math.random(), Math.random());
+            //mat.setDebugColor(color);
+            chunck.mesh.material = mat;
+        }
 
         this.configuration.getElement("renderDist").forceInit();
         this.configuration.getElement("showRenderDistDebug").forceInit();

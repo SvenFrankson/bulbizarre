@@ -612,20 +612,6 @@ class Game {
         this.freeCamera.parent = this.player.head;
         this.freeCamera.position.copyFromFloats(0, 0, 0);
         this.freeCamera.rotation.copyFromFloats(0, 0, 0);
-        this.shadowTexture = new BABYLON.RenderTargetTexture("shadow-texture", 2048, this.scene, true);
-        this.shadowCamera = new BABYLON.ArcRotateCamera("shadow-camera", 0, 0, 15, BABYLON.Vector3.Zero());
-        this.shadowCamera.layerMask = 0x20000000;
-        this.shadowCamera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
-        this.shadowTexture.activeCamera = this.shadowCamera;
-        this.shadowTexture.refreshRate = 6;
-        this.scene.customRenderTargets.push(this.shadowTexture);
-        let cubeTest = BABYLON.MeshBuilder.CreateBox("test");
-        cubeTest.parent = this.freeCamera;
-        cubeTest.position.copyFromFloats(2, 0, 4);
-        let testMaterial = new BABYLON.StandardMaterial("test");
-        testMaterial.emissiveTexture = this.shadowTexture;
-        testMaterial.disableLighting = true;
-        cubeTest.material = testMaterial;
         if (!(this.terrain && this.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFromMapSimple)) {
             if (this.terrain) {
                 this.terrain.dispose();
@@ -652,7 +638,14 @@ class Game {
         }
         let mat = new TerrainMaterial("terrain", this.scene);
         this.terrain.materials = [mat];
-        mat.freeze();
+        this.terrain.customChunckMaterialSet = (chunck) => {
+            let mat = new TerrainMaterial("terrain", this.scene);
+            chunck.updateGlobalLight3DTexture();
+            mat.setTexture("lightTexture", chunck.globalLight3DTexture);
+            //let color = new BABYLON.Color3(Math.random(), Math.random(), Math.random());
+            //mat.setDebugColor(color);
+            chunck.mesh.material = mat;
+        };
         this.configuration.getElement("renderDist").forceInit();
         this.configuration.getElement("showRenderDistDebug").forceInit();
     }
@@ -1634,31 +1627,31 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
                 "level",
                 "noiseTexture",
                 "terrainColors",
-                "lightTexture"
+                "lightTexture",
+                "debugColor",
+                "blockSize_m",
+                "blockHeight_m"
             ]
         });
         this._lightInvDirW = BABYLON.Vector3.Up();
         this._level = 0;
-        let w = 32;
-        let h = 256;
-        let d = 32;
-        let data = new Uint8ClampedArray(32 * 356 * 32);
-        for (let i = 0; i < w; i++) {
-            for (let j = 0; j < d; j++) {
-                for (let k = 0; k < h; k++) {
-                    data[(i + j * w + k * w * w)] = Math.floor(Math.random() * 256);
-                }
-            }
-        }
-        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, 32, 256, 32, BABYLON.Constants.TEXTUREFORMAT_R, this.getScene());
+        this._debugColor = BABYLON.Color3.White();
+        let w = 2;
+        let h = 2;
+        let d = 2;
+        let data = new Uint8ClampedArray(w * h * d);
+        data.fill(255);
+        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, w, h, d, BABYLON.Constants.TEXTUREFORMAT_R, this.getScene(), false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
         myTestRaw3DTexture.wrapU = 1;
         myTestRaw3DTexture.wrapV = 1;
         myTestRaw3DTexture.wrapR = 1;
         this.setLightInvDir(BABYLON.Vector3.One().normalize());
-        this.setFloat("blockSize_m", 0.45);
+        this.setFloat("blockSize_m", 0.375);
+        this.setFloat("blockHeight_m", 0.45);
         this.setTexture("noiseTexture", new BABYLON.Texture("./datas/textures/test-noise.png"));
         this.setTexture("lightTexture", myTestRaw3DTexture);
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
+        this.updateDebugColor();
     }
     getLightInvDir() {
         return this._lightInvDirW;
@@ -1666,6 +1659,16 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
     setLightInvDir(p) {
         this._lightInvDirW.copyFrom(p);
         this.setVector3("lightInvDirW", this._lightInvDirW);
+    }
+    get debugColor() {
+        return this._debugColor;
+    }
+    setDebugColor(c) {
+        this._debugColor = c;
+        this.updateDebugColor();
+    }
+    updateDebugColor() {
+        this.setColor3("debugColor", this._debugColor);
     }
     getLevel() {
         return this._level;
@@ -2026,48 +2029,6 @@ class Brick extends BABYLON.TransformNode {
             this.mesh.material = steelMaterial;
             this.mesh.computeWorldMatrix(true);
             this.mesh.refreshBoundingInfo();
-            setTimeout(() => {
-                let shadowCam = Game.Instance.shadowCamera;
-                let bbox = this.mesh.getBoundingInfo().boundingBox;
-                let w = bbox.maximumWorld.x - bbox.minimumWorld.x;
-                let h = bbox.maximumWorld.y - bbox.minimumWorld.y;
-                let d = bbox.maximumWorld.z - bbox.minimumWorld.z;
-                shadowCam.setTarget(bbox.maximumWorld.add(bbox.minimumWorld).scaleInPlace(0.5));
-                shadowCam.radius = 20;
-                shadowCam.alpha = -Math.PI / 3;
-                shadowCam.beta = Math.PI / 3;
-                let hAngle = Math.PI * 0.5 + shadowCam.alpha;
-                let vAngle = Math.PI * 0.5 - shadowCam.beta;
-                let halfCamMinW = d * 0.5 * Math.sin(hAngle) + w * 0.5 * Math.cos(hAngle);
-                let halfCamMinH = h * 0.5 * Math.cos(vAngle) + d * 0.5 * Math.cos(hAngle) * Math.sin(vAngle) + w * 0.5 * Math.sin(hAngle) * Math.sin(vAngle);
-                let f = 1;
-                if (halfCamMinW >= halfCamMinH) {
-                    shadowCam.orthoTop = halfCamMinW * f;
-                    shadowCam.orthoBottom = -halfCamMinW * f;
-                    shadowCam.orthoLeft = -halfCamMinW * f;
-                    shadowCam.orthoRight = halfCamMinW * f;
-                }
-                else {
-                    shadowCam.orthoTop = halfCamMinH * f;
-                    shadowCam.orthoBottom = -halfCamMinH * f;
-                    shadowCam.orthoLeft = -halfCamMinH * f;
-                    shadowCam.orthoRight = halfCamMinH * f;
-                }
-                Game.Instance.shadowTexture.renderList.push(this.mesh);
-                //let stupidMat = new BABYLON.StandardMaterial("stupid-mat");
-                //stupidMat.diffuseColor.copyFromFloats(0, 0, 0);
-                //stupidMat.specularColor.copyFromFloats(0, 0, 0);
-                //Game.Instance.shadowTexture.setMaterialForRendering(this.mesh, stupidMat);
-            }, 1000);
-            /*
-            let lights = this.getScene().lights;
-            for (let i = 0; i < lights.length; i++) {
-                let light = lights[i];
-                if (light instanceof BABYLON.HemisphericLight) {
-                    Mummu.DrawDebugLine(this.mesh.position, this.mesh.position.add(light.direction.scale(20)), Infinity);
-                }
-            }
-            */
         }
         data.applyToMesh(this.mesh);
     }
@@ -4474,6 +4435,7 @@ class PlayerActionTemplate {
         let lastI;
         let lastJ;
         let lastK;
+        let size = 1;
         action.onUpdate = () => {
             let terrain = player.game.terrain;
             if (player.controler.playMode === PlayMode.Playing) {
@@ -4492,15 +4454,15 @@ class PlayerActionTemplate {
                 });
                 if (hit && hit.pickedPoint) {
                     let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
                         // Redraw block preview
                         if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: 2 * terrain.blockSizeIJ_m, height: 2 * terrain.blockSizeK_m, depth: 2 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(1, 0, 0, 1) });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: size * terrain.blockSizeIJ_m, height: size * terrain.blockSizeK_m, depth: size * terrain.blockSizeIJ_m, color: new BABYLON.Color4(1, 0, 0, 1) });
                             }
                             else {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: 2 * terrain.blockSizeIJ_m, height: 2 * terrain.blockSizeK_m, depth: 2 * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: size * terrain.blockSizeIJ_m, height: size * terrain.blockSizeK_m, depth: size * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
                             }
                         }
                         let needRedrawMesh = false;
@@ -4516,7 +4478,8 @@ class PlayerActionTemplate {
                             lastK = chunckIJK.ijk.k;
                             needRedrawMesh = true;
                         }
-                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * terrain.blockSizeK_m, (chunckIJK.ijk.j) * terrain.blockSizeIJ_m);
+                        let offset = (size % 2) * 0.5;
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i + offset) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + offset) * terrain.blockSizeK_m, (chunckIJK.ijk.j + offset) * terrain.blockSizeIJ_m);
                         previewMesh.parent = chunckIJK.chunck.mesh;
                         return;
                     }
@@ -4548,10 +4511,10 @@ class PlayerActionTemplate {
                 });
                 if (hit && hit.pickedPoint) {
                     let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, true);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
                         player.game.terrainEditor.doAction(chunckIJK.chunck, chunckIJK.ijk, {
-                            brushSize: 2,
+                            brushSize: size,
                             brushBlock: blockType,
                             saveToLocalStorage: true
                         });
