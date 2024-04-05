@@ -16,7 +16,7 @@ class PlayerActionTemplate {
         let lastJ: number;
         let lastK: number;
 
-        let size = 1;
+        let size = 2;
 
         action.onUpdate = () => {
             let terrain = player.game.terrain;

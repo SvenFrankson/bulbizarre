@@ -364,9 +364,11 @@ class Game {
         }
 
         let mat = new TerrainMaterial("terrain", this.scene);
+        mat.setLightInvDir(this.light.direction);
         this.terrain.materials = [mat];
         this.terrain.customChunckMaterialSet = (chunck: Kulla.Chunck) => {
             let mat = new TerrainMaterial("terrain", this.scene);
+            mat.setLightInvDir(this.light.direction);
             chunck.mesh.material = mat;
             chunck.startGlobalLight3DTextureComputation();
         }

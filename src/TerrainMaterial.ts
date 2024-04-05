@@ -55,6 +55,7 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
 
     public setLightInvDir(p: BABYLON.Vector3): void {
         this._lightInvDirW.copyFrom(p);
+        console.log(this._lightInvDirW);
         this.setVector3("lightInvDirW", this._lightInvDirW);
     }
 

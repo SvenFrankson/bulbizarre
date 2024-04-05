@@ -638,9 +638,11 @@ class Game {
             //this.brickMenuView.show(0.1);
         }
         let mat = new TerrainMaterial("terrain", this.scene);
+        mat.setLightInvDir(this.light.direction);
         this.terrain.materials = [mat];
         this.terrain.customChunckMaterialSet = (chunck) => {
             let mat = new TerrainMaterial("terrain", this.scene);
+            mat.setLightInvDir(this.light.direction);
             chunck.mesh.material = mat;
             chunck.startGlobalLight3DTextureComputation();
         };
@@ -1656,6 +1658,7 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
     }
     setLightInvDir(p) {
         this._lightInvDirW.copyFrom(p);
+        console.log(this._lightInvDirW);
         this.setVector3("lightInvDirW", this._lightInvDirW);
     }
     get debugColor() {
@@ -4433,7 +4436,7 @@ class PlayerActionTemplate {
         let lastI;
         let lastJ;
         let lastK;
-        let size = 1;
+        let size = 2;
         action.onUpdate = () => {
             let terrain = player.game.terrain;
             if (player.controler.playMode === PlayMode.Playing) {
