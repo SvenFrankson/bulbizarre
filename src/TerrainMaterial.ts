@@ -32,17 +32,17 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
         let d = 2;
         let data: Uint8ClampedArray = new Uint8ClampedArray(w * h * d);
         data.fill(255);
-        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, w, h, d, BABYLON.Constants.TEXTUREFORMAT_R, this.getScene(), false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, w, h, d, BABYLON.Constants.TEXTUREFORMAT_R, this.getScene(), false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE, BABYLON.Engine.TEXTURETYPE_UNSIGNED_BYTE);
         myTestRaw3DTexture.wrapU = 1;
         myTestRaw3DTexture.wrapV = 1;
         myTestRaw3DTexture.wrapR = 1;
+        this.setTexture("lightTexture", myTestRaw3DTexture);
 
         this.setLightInvDir(BABYLON.Vector3.One().normalize());
         
         this.setFloat("blockSize_m", 0.375);
         this.setFloat("blockHeight_m", 0.45);
         this.setTexture("noiseTexture", new BABYLON.Texture("./datas/textures/test-noise.png"));
-        this.setTexture("lightTexture", myTestRaw3DTexture);
         
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
 

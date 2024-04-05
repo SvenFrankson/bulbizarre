@@ -79,7 +79,7 @@ class Game {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#87CEEBFF");
         }
 
-        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(0, 3, - 3)).normalize(), this.scene);
+        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 1, - 3)).normalize(), this.scene);
 
         /*
         this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 / Math.sqrt(3) }, this.scene);
@@ -357,6 +357,8 @@ class Game {
             this.terrain.initialize();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
 
+            this.terrain.sunDir.copyFrom(this.light.direction);
+
             //this.playerInventoryView.show(0.2);
             //this.brickMenuView.show(0.1);
         }
@@ -365,11 +367,8 @@ class Game {
         this.terrain.materials = [mat];
         this.terrain.customChunckMaterialSet = (chunck: Kulla.Chunck) => {
             let mat = new TerrainMaterial("terrain", this.scene);
-            chunck.updateGlobalLight3DTexture();
-            mat.setTexture("lightTexture", chunck.globalLight3DTexture);
-            //let color = new BABYLON.Color3(Math.random(), Math.random(), Math.random());
-            //mat.setDebugColor(color);
             chunck.mesh.material = mat;
+            chunck.startGlobalLight3DTextureComputation();
         }
 
         this.configuration.getElement("renderDist").forceInit();
@@ -427,7 +426,7 @@ class Game {
             this.terrain.dispose();
         }
     
-        this.light.direction = (new BABYLON.Vector3(3, 2, - 1)).normalize();
+        this.light.direction = (new BABYLON.Vector3(3, 1, - 2)).normalize();
 
         this.uiCamera.parent = this.orthoCamera;
         this.freeCamera.detachControl();

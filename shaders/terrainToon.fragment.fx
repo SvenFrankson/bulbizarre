@@ -205,9 +205,9 @@ void main() {
    
    vec3 uvr = vec3(vPositionL.x / 25. / 0.375, vPositionL.z / 25. / 0.375, vPositionL.y / 257. / 0.45);
    float gi = texture(lightTexture, uvr).r;
+   gi = round(gi * 4.) / 4.;
    lightFactor = lightFactor * gi;
    lightFactor = round(lightFactor * 12.) / 12.;
-   lightFactor = gi;
 
    /*
    if (dx < 0.02 || dx > 0.98) {

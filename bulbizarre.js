@@ -396,7 +396,7 @@ class Game {
         else {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#87CEEBFF");
         }
-        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(0, 3, -3)).normalize(), this.scene);
+        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 1, -3)).normalize(), this.scene);
         /*
         this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 / Math.sqrt(3) }, this.scene);
         let skyboxMaterial: BABYLON.StandardMaterial = new BABYLON.StandardMaterial("skyBox", this.scene);
@@ -633,6 +633,7 @@ class Game {
             });
             this.terrain.initialize();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
+            this.terrain.sunDir.copyFrom(this.light.direction);
             //this.playerInventoryView.show(0.2);
             //this.brickMenuView.show(0.1);
         }
@@ -640,11 +641,8 @@ class Game {
         this.terrain.materials = [mat];
         this.terrain.customChunckMaterialSet = (chunck) => {
             let mat = new TerrainMaterial("terrain", this.scene);
-            chunck.updateGlobalLight3DTexture();
-            mat.setTexture("lightTexture", chunck.globalLight3DTexture);
-            //let color = new BABYLON.Color3(Math.random(), Math.random(), Math.random());
-            //mat.setDebugColor(color);
             chunck.mesh.material = mat;
+            chunck.startGlobalLight3DTextureComputation();
         };
         this.configuration.getElement("renderDist").forceInit();
         this.configuration.getElement("showRenderDistDebug").forceInit();
@@ -690,7 +688,7 @@ class Game {
         if (this.terrain) {
             this.terrain.dispose();
         }
-        this.light.direction = (new BABYLON.Vector3(3, 2, -1)).normalize();
+        this.light.direction = (new BABYLON.Vector3(3, 1, -2)).normalize();
         this.uiCamera.parent = this.orthoCamera;
         this.freeCamera.detachControl();
         this.scene.activeCameras = [this.orthoCamera];
@@ -1641,15 +1639,15 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
         let d = 2;
         let data = new Uint8ClampedArray(w * h * d);
         data.fill(255);
-        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, w, h, d, BABYLON.Constants.TEXTUREFORMAT_R, this.getScene(), false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+        let myTestRaw3DTexture = new BABYLON.RawTexture3D(data, w, h, d, BABYLON.Constants.TEXTUREFORMAT_R, this.getScene(), false, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE, BABYLON.Engine.TEXTURETYPE_UNSIGNED_BYTE);
         myTestRaw3DTexture.wrapU = 1;
         myTestRaw3DTexture.wrapV = 1;
         myTestRaw3DTexture.wrapR = 1;
+        this.setTexture("lightTexture", myTestRaw3DTexture);
         this.setLightInvDir(BABYLON.Vector3.One().normalize());
         this.setFloat("blockSize_m", 0.375);
         this.setFloat("blockHeight_m", 0.45);
         this.setTexture("noiseTexture", new BABYLON.Texture("./datas/textures/test-noise.png"));
-        this.setTexture("lightTexture", myTestRaw3DTexture);
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
         this.updateDebugColor();
     }
