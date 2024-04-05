@@ -13,6 +13,7 @@ uniform mat4 worldViewProjection;
 uniform mat4 world;
 uniform vec3 lightInvDirW;
 
+out vec3 vPositionL;
 out vec3 vPositionW;
 out vec3 vNormalW;
 out vec2 vUv;
@@ -31,6 +32,7 @@ void main()
 {
   gl_Position = worldViewProjection * vec4(position, 1.);
 
+  vPositionL = position;
   vPositionW = vec3(world * vec4(position, 1.0));
   vNormalW = normalize(vec3(world * vec4(normal, 0.0)));
   vColor = color;

@@ -6,9 +6,12 @@ uniform vec3 terrainColors[13];
 uniform vec3 lightInvDirW;
 uniform int level;
 uniform float blockSize_m;
+uniform float blockHeight_m;
 uniform sampler2D noiseTexture;
 uniform sampler3D lightTexture;
+uniform vec3 debugColor;
 
+in vec3 vPositionL;
 in vec3 vPositionW;
 in vec3 vNormalW;
 in vec2 vUv;
@@ -195,14 +198,16 @@ void main() {
    }
    */
 
-   float dy = vPositionW.y / blockSize_m - floor(vPositionW.y / blockSize_m) + noise * 0.15;
+   float dy = vPositionW.y / blockHeight_m - floor(vPositionW.y / blockHeight_m) + noise * 0.15;
    if ((dy > 0.15 && dy < 0.85)) {
       lightFactor *= 0.7;
    }
    
-   vec3 gi = texture(lightTexture, vPositionW / 32.).rgb;
-   lightFactor = lightFactor * gi.r;
+   vec3 uvr = vec3(vPositionL.x / 25. / 0.375, vPositionL.z / 25. / 0.375, vPositionL.y / 257. / 0.45);
+   float gi = texture(lightTexture, uvr).r;
+   lightFactor = lightFactor * gi;
    lightFactor = round(lightFactor * 12.) / 12.;
+   lightFactor = gi;
 
    /*
    if (dx < 0.02 || dx > 0.98) {
@@ -214,5 +219,5 @@ void main() {
    */
 
    
-   outColor = vec4(color * lightFactor, 1.);
+   outColor = vec4(color * debugColor * lightFactor, 1.);
 }
