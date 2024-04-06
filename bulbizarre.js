@@ -396,7 +396,7 @@ class Game {
         else {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#87CEEBFF");
         }
-        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 1, -3)).normalize(), this.scene);
+        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(1, 2, -3)).normalize(), this.scene);
         /*
         this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 / Math.sqrt(3) }, this.scene);
         let skyboxMaterial: BABYLON.StandardMaterial = new BABYLON.StandardMaterial("skyBox", this.scene);
@@ -642,9 +642,11 @@ class Game {
         mat.setLightInvDir(this.light.direction);
         this.terrain.materials = [mat];
         this.terrain.customChunckMaterialSet = (chunck) => {
-            let mat = new TerrainMaterial("terrain", this.scene);
-            mat.setLightInvDir(this.light.direction);
-            chunck.mesh.material = mat;
+            if (!(chunck.mesh.material instanceof TerrainMaterial)) {
+                let mat = new TerrainMaterial("terrain", this.scene);
+                mat.setLightInvDir(this.light.direction);
+                chunck.mesh.material = mat;
+            }
             chunck.startGlobalLight3DTextureComputation();
         };
         this.configuration.getElement("renderDist").forceInit();
@@ -2934,14 +2936,15 @@ class Mushroom {
                 }
                 if (this.age < this.maxAge) {
                     if (this.age > 0) {
-                        this.headCone.draw(this.chunck, Kulla.BlockType.Ice, Kulla.TerrainEditionMode.Erase);
+                        this.headCone.draw(this.chunck, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.Erase);
                     }
                     this.age++;
                     this.currentHeadPos.k++;
                     this.headCone.props.position = this.currentHeadPos;
-                    this.headCone.props.sBase = Math.floor(1 + (this.age / 2));
-                    this.headCone.props.sTop = 1;
-                    this.headCone.props.length = Math.floor(2 + (this.age / 4));
+                    this.headCone.props.rFunc = (f) => {
+                        return 1 + Math.cos(Math.PI * 0.4 * f) * (1 + Math.floor(this.age / 2));
+                    };
+                    this.headCone.props.length = 2 + Math.floor(this.age / 4);
                     if (Math.random() < 0.3) {
                         if (Math.random() < 0.5) {
                             this.currentHeadPos.i++;
@@ -2950,7 +2953,7 @@ class Mushroom {
                             this.currentHeadPos.i--;
                         }
                     }
-                    if (Math.random() < 0.3) {
+                    else if (Math.random() < 0.3) {
                         if (Math.random() < 0.5) {
                             this.currentHeadPos.j++;
                         }
@@ -2958,8 +2961,8 @@ class Mushroom {
                             this.currentHeadPos.j--;
                         }
                     }
-                    this.headCone.draw(this.chunck, Kulla.BlockType.Ice, Kulla.TerrainEditionMode.AddIfEmpty);
-                    this.game.terrainEditor.doAction(this.chunck, this.currentHeadPos, { brushBlock: Kulla.BlockType.Rock, brushSize: 2, mode: Kulla.TerrainEditionMode.Add });
+                    this.headCone.draw(this.chunck, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                    this.game.terrainEditor.doAction(this.chunck, this.currentHeadPos, { brushBlock: Kulla.BlockType.Wood, brushSize: 3, mode: Kulla.TerrainEditionMode.Add, saveToLocalStorage: true });
                 }
                 else {
                     clearInterval(this._debugStepInterval);

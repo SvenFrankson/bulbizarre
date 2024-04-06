@@ -198,9 +198,11 @@ void main() {
    }
    */
 
-   float dy = vPositionW.y / blockHeight_m - floor(vPositionW.y / blockHeight_m) + noise * 0.15;
-   if ((dy > 0.15 && dy < 0.85)) {
-      lightFactor *= 0.7;
+   if (colorIndex == 2 || colorIndex == 3) {
+      float dy = vPositionW.y / blockHeight_m - floor(vPositionW.y / blockHeight_m) + noise * 0.15;
+      if ((dy > 0.15 && dy < 0.85)) {
+         lightFactor *= 0.7;
+      }
    }
    
    vec3 uvr = vec3(vPositionL.x / 25. / 0.375, vPositionL.z / 25. / 0.375, vPositionL.y / 257. / 0.45);

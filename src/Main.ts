@@ -79,7 +79,7 @@ class Game {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#87CEEBFF");
         }
 
-        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(2, 1, - 3)).normalize(), this.scene);
+        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(1, 2, - 3)).normalize(), this.scene);
 
         /*
         this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 / Math.sqrt(3) }, this.scene);
@@ -368,9 +368,11 @@ class Game {
         mat.setLightInvDir(this.light.direction);
         this.terrain.materials = [mat];
         this.terrain.customChunckMaterialSet = (chunck: Kulla.Chunck) => {
-            let mat = new TerrainMaterial("terrain", this.scene);
-            mat.setLightInvDir(this.light.direction);
-            chunck.mesh.material = mat;
+            if (!(chunck.mesh.material instanceof TerrainMaterial)) {
+                let mat = new TerrainMaterial("terrain", this.scene);
+                mat.setLightInvDir(this.light.direction);
+                chunck.mesh.material = mat;
+            }
             chunck.startGlobalLight3DTextureComputation();
         }
 

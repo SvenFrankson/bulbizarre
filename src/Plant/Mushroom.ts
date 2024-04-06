@@ -32,15 +32,16 @@ class Mushroom {
             }
             if (this.age < this.maxAge) {
                 if (this.age > 0) {
-                    this.headCone.draw(this.chunck ,Kulla.BlockType.Ice, Kulla.TerrainEditionMode.Erase);
+                    this.headCone.draw(this.chunck, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.Erase);
                 }
 
                 this.age++;
                 this.currentHeadPos.k++;
                 this.headCone.props.position = this.currentHeadPos;
-                this.headCone.props.sBase = Math.floor(1 + (this.age / 2));
-                this.headCone.props.sTop = 1;
-                this.headCone.props.length = Math.floor(2 + (this.age / 4));
+                this.headCone.props.rFunc = (f: number) => { 
+                    return 1 + Math.cos(Math.PI * 0.4 * f) * (1 + Math.floor(this.age / 2));
+                }
+                this.headCone.props.length = 2 + Math.floor(this.age / 4);
     
                 if (Math.random() < 0.3) {
                     if (Math.random() < 0.5) {
@@ -50,7 +51,7 @@ class Mushroom {
                         this.currentHeadPos.i--;
                     }
                 }
-                if (Math.random() < 0.3) {
+                else if (Math.random() < 0.3) {
                     if (Math.random() < 0.5) {
                         this.currentHeadPos.j++;
                     }
@@ -59,8 +60,8 @@ class Mushroom {
                     }
                 }
 
-                this.headCone.draw(this.chunck, Kulla.BlockType.Ice, Kulla.TerrainEditionMode.AddIfEmpty);
-                this.game.terrainEditor.doAction(this.chunck, this.currentHeadPos, { brushBlock: Kulla.BlockType.Rock, brushSize: 2, mode: Kulla.TerrainEditionMode.Add });
+                this.headCone.draw(this.chunck, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                this.game.terrainEditor.doAction(this.chunck, this.currentHeadPos, { brushBlock: Kulla.BlockType.Wood, brushSize: 3, mode: Kulla.TerrainEditionMode.Add, saveToLocalStorage: true });
             }
             else {
                 clearInterval(this._debugStepInterval);
