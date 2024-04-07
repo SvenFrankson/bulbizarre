@@ -647,7 +647,12 @@ class Game {
                 mat.setLightInvDir(this.light.direction);
                 chunck.mesh.material = mat;
             }
-            chunck.startGlobalLight3DTextureComputation();
+            this.terrain.chunckManager.requestGlobalLightUpdate(chunck);
+            chunck.adjacents.forEach(adj => {
+                if (adj) {
+                    this.terrain.chunckManager.requestGlobalLightUpdate(adj);
+                }
+            });
         };
         this.configuration.getElement("renderDist").forceInit();
         this.configuration.getElement("showRenderDistDebug").forceInit();
