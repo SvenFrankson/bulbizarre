@@ -4608,7 +4608,7 @@ class PlayerActionTemplate {
         let lastI;
         let lastJ;
         let lastK;
-        let size = 2;
+        let size = 1;
         action.onUpdate = () => {
             let terrain = player.game.terrain;
             if (player.controler.playMode === PlayMode.Playing) {
@@ -4686,11 +4686,15 @@ class PlayerActionTemplate {
                     let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
+                        /*
                         player.game.terrainEditor.doAction(chunckIJK.chunck, chunckIJK.ijk, {
                             brushSize: size,
                             brushBlock: blockType,
                             saveToLocalStorage: true
                         });
+                        */
+                        let box = new Kulla.Box(player.game.terrain, { width: 5, height: 5, length: 1, position: chunckIJK.ijk });
+                        box.draw(chunckIJK.chunck, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
                     }
                 }
             }
