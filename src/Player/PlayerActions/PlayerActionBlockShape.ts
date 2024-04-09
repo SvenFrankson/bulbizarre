@@ -13,6 +13,7 @@ class PlayerActionBlockShape {
         action.iconUrl = undefined;
 
         let size = 1;
+        let dir = 0;
 
         action.onUpdate = () => {
             if (player.controler.playMode === PlayMode.Playing) {
@@ -39,14 +40,15 @@ class PlayerActionBlockShape {
                     if (chunckIJK) {
                         if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(1, 0, 0, 1) });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(1, 0, 0, 1), offset: previewOffset });
                             }
                             else {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1) });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1), offset: previewOffset });
                             }
                         }
                         
-                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * player.game.terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * player.game.terrain.blockSizeK_m, (chunckIJK.ijk.j) * player.game.terrain.blockSizeIJ_m).addInPlace(previewOffset);
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * player.game.terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5) * player.game.terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * player.game.terrain.blockSizeIJ_m);
+                        previewMesh.rotationQuaternion = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, dir * Math.PI / 2);
                         previewMesh.parent = chunckIJK.chunck.mesh;
 
                         return;
@@ -83,9 +85,17 @@ class PlayerActionBlockShape {
                     let n =  hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? - 0.2 : 0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
-                        shape.draw(chunckIJK.chunck, chunckIJK.ijk, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                        shape.draw(chunckIJK.chunck, chunckIJK.ijk, dir, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
                     }
                 }
+            }
+        }
+
+        let rotateBrick = () => {
+            dir = (dir + 1) % 4;
+            let quat = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, dir * Math.PI / 2);
+            if (previewMesh) {
+                previewMesh.rotationQuaternion = quat;
             }
         }
 
@@ -95,16 +105,18 @@ class PlayerActionBlockShape {
                 previewW = terrain.blockSizeIJ_m;
                 previewH = 5 * terrain.blockSizeK_m;
                 previewD = terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(0.5 * terrain.blockSizeIJ_m, 2.5 * terrain.blockSizeK_m, 0.5 * terrain.blockSizeIJ_m);
+                previewOffset.copyFromFloats(0, 2 * terrain.blockSizeK_m, 0);
                 shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 1 });
             }
             if (shapeName === "tile") {
                 previewW = 5 * terrain.blockSizeIJ_m;
                 previewH = 1 * terrain.blockSizeK_m;
                 previewD = 5 * terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(2.5 * terrain.blockSizeIJ_m, 0.5 * terrain.blockSizeK_m, 2.5 * terrain.blockSizeIJ_m);
+                previewOffset.copyFromFloats(2 * terrain.blockSizeIJ_m, 0, 2 * terrain.blockSizeIJ_m);
                 shape = new Kulla.Box(player.game.terrain, { width: 5, height: 1, length: 5 });
             }
+            dir = 0;
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick)
         }
 
         action.onUnequip = () => {
@@ -112,6 +124,7 @@ class PlayerActionBlockShape {
                 previewMesh.dispose();
                 previewMesh = undefined;
             }
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick)
         }
         
         return action;

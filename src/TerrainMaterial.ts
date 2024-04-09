@@ -40,8 +40,8 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
 
         this.setLightInvDir(BABYLON.Vector3.One().normalize());
         
-        this.setFloat("blockSize_m", 0.375);
-        this.setFloat("blockHeight_m", 0.45);
+        this.setFloat("blockSize_m", 0.4);
+        this.setFloat("blockHeight_m", 0.4);
         this.setTexture("noiseTexture", new BABYLON.Texture("./datas/textures/test-noise.png"));
         
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);

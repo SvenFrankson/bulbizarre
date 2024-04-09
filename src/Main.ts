@@ -349,8 +349,8 @@ class Game {
                     blockType: Kulla.BlockType.Dirt
                 },
                 maxDisplayedLevel: 0,
-                blockSizeIJ_m: 0.375,
-                blockSizeK_m: 0.45,
+                blockSizeIJ_m: 0.4,
+                blockSizeK_m: 0.4,
                 chunckLengthIJ: 24,
                 chunckLengthK: 256,
                 chunckCountIJ: 512,

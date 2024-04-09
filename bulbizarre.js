@@ -626,8 +626,8 @@ class Game {
                     blockType: Kulla.BlockType.Dirt
                 },
                 maxDisplayedLevel: 0,
-                blockSizeIJ_m: 0.375,
-                blockSizeK_m: 0.45,
+                blockSizeIJ_m: 0.4,
+                blockSizeK_m: 0.4,
                 chunckLengthIJ: 24,
                 chunckLengthK: 256,
                 chunckCountIJ: 512,
@@ -1656,8 +1656,8 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
         myTestRaw3DTexture.wrapR = 1;
         this.setTexture("lightTexture", myTestRaw3DTexture);
         this.setLightInvDir(BABYLON.Vector3.One().normalize());
-        this.setFloat("blockSize_m", 0.375);
-        this.setFloat("blockHeight_m", 0.45);
+        this.setFloat("blockSize_m", 0.4);
+        this.setFloat("blockHeight_m", 0.4);
         this.setTexture("noiseTexture", new BABYLON.Texture("./datas/textures/test-noise.png"));
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
         this.updateDebugColor();
@@ -2942,7 +2942,7 @@ class Mushroom {
                 }
                 if (this.age < this.maxAge) {
                     if (this.age > 0) {
-                        this.headCone.draw(this.chunck, this.currentHeadPos, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.Erase);
+                        this.headCone.draw(this.chunck, this.currentHeadPos, 0, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.Erase);
                     }
                     this.age++;
                     this.currentHeadPos.k++;
@@ -2966,7 +2966,7 @@ class Mushroom {
                             this.currentHeadPos.j--;
                         }
                     }
-                    this.headCone.draw(this.chunck, this.currentHeadPos, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                    this.headCone.draw(this.chunck, this.currentHeadPos, 0, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.AddIfEmpty, true);
                     this.game.terrainEditor.doAction(this.chunck, this.currentHeadPos, { brushBlock: Kulla.BlockType.Wood, brushSize: 3, mode: Kulla.TerrainEditionMode.Add, saveToLocalStorage: true });
                 }
                 else {
@@ -4284,6 +4284,7 @@ class PlayerActionBlockShape {
         let previewMesh;
         action.iconUrl = undefined;
         let size = 1;
+        let dir = 0;
         action.onUpdate = () => {
             if (player.controler.playMode === PlayMode.Playing) {
                 let x;
@@ -4305,13 +4306,14 @@ class PlayerActionBlockShape {
                     if (chunckIJK) {
                         if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(1, 0, 0, 1) });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(1, 0, 0, 1), offset: previewOffset });
                             }
                             else {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1) });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1), offset: previewOffset });
                             }
                         }
-                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * player.game.terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * player.game.terrain.blockSizeK_m, (chunckIJK.ijk.j) * player.game.terrain.blockSizeIJ_m).addInPlace(previewOffset);
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * player.game.terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5) * player.game.terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * player.game.terrain.blockSizeIJ_m);
+                        previewMesh.rotationQuaternion = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, dir * Math.PI / 2);
                         previewMesh.parent = chunckIJK.chunck.mesh;
                         return;
                     }
@@ -4341,9 +4343,16 @@ class PlayerActionBlockShape {
                     let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
-                        shape.draw(chunckIJK.chunck, chunckIJK.ijk, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                        shape.draw(chunckIJK.chunck, chunckIJK.ijk, dir, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
                     }
                 }
+            }
+        };
+        let rotateBrick = () => {
+            dir = (dir + 1) % 4;
+            let quat = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, dir * Math.PI / 2);
+            if (previewMesh) {
+                previewMesh.rotationQuaternion = quat;
             }
         };
         action.onEquip = () => {
@@ -4352,22 +4361,25 @@ class PlayerActionBlockShape {
                 previewW = terrain.blockSizeIJ_m;
                 previewH = 5 * terrain.blockSizeK_m;
                 previewD = terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(0.5 * terrain.blockSizeIJ_m, 2.5 * terrain.blockSizeK_m, 0.5 * terrain.blockSizeIJ_m);
+                previewOffset.copyFromFloats(0, 2 * terrain.blockSizeK_m, 0);
                 shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 1 });
             }
             if (shapeName === "tile") {
                 previewW = 5 * terrain.blockSizeIJ_m;
                 previewH = 1 * terrain.blockSizeK_m;
                 previewD = 5 * terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(2.5 * terrain.blockSizeIJ_m, 0.5 * terrain.blockSizeK_m, 2.5 * terrain.blockSizeIJ_m);
+                previewOffset.copyFromFloats(2 * terrain.blockSizeIJ_m, 0, 2 * terrain.blockSizeIJ_m);
                 shape = new Kulla.Box(player.game.terrain, { width: 5, height: 1, length: 5 });
             }
+            dir = 0;
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
         };
         action.onUnequip = () => {
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;
             }
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
         };
         return action;
     }

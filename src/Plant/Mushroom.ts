@@ -32,7 +32,7 @@ class Mushroom {
             }
             if (this.age < this.maxAge) {
                 if (this.age > 0) {
-                    this.headCone.draw(this.chunck, this.currentHeadPos, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.Erase);
+                    this.headCone.draw(this.chunck, this.currentHeadPos, 0, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.Erase);
                 }
 
                 this.age++;
@@ -59,7 +59,7 @@ class Mushroom {
                     }
                 }
 
-                this.headCone.draw(this.chunck, this.currentHeadPos, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                this.headCone.draw(this.chunck, this.currentHeadPos, 0, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.AddIfEmpty, true);
                 this.game.terrainEditor.doAction(this.chunck, this.currentHeadPos, { brushBlock: Kulla.BlockType.Wood, brushSize: 3, mode: Kulla.TerrainEditionMode.Add, saveToLocalStorage: true });
             }
             else {

@@ -205,7 +205,7 @@ void main() {
       }
    }
    
-   vec3 uvr = vec3(vPositionL.x / 26. / 0.375, vPositionL.z / 26. / 0.375, vPositionL.y / 257. / 0.45);
+   vec3 uvr = vec3(vPositionL.x / 26. / blockSize_m, vPositionL.z / 26. / blockSize_m, vPositionL.y / 257. / blockHeight_m);
    float gi = texture(lightTexture, uvr).r;
    gi = round(gi * 3.) / 3. + 0.25;
    lightFactor = lightFactor * gi;
