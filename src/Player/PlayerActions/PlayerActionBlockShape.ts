@@ -10,13 +10,7 @@ class PlayerActionBlockShape {
         let action = new PlayerAction(shapeName + "_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh: BABYLON.Mesh;
-        let previewBox: BABYLON.Mesh;
         action.iconUrl = undefined;
-
-        let lastSize: number;
-        let lastI: number;
-        let lastJ: number;
-        let lastK: number;
 
         let size = 1;
 
@@ -52,20 +46,6 @@ class PlayerActionBlockShape {
                             }
                         }
                         
-                        let needRedrawMesh: boolean = false;
-                        if (lastI != chunckIJK.ijk.i) {
-                            lastI = chunckIJK.ijk.i;
-                            needRedrawMesh = true;
-                        }
-                        if (lastJ != chunckIJK.ijk.j) {
-                            lastJ = chunckIJK.ijk.j;
-                            needRedrawMesh = true;
-                        }
-                        if (lastK != chunckIJK.ijk.k) {
-                            lastK = chunckIJK.ijk.k;
-                            needRedrawMesh = true;
-                        }
-                        
                         previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * player.game.terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * player.game.terrain.blockSizeK_m, (chunckIJK.ijk.j) * player.game.terrain.blockSizeIJ_m).addInPlace(previewOffset);
                         previewMesh.parent = chunckIJK.chunck.mesh;
 
@@ -77,10 +57,6 @@ class PlayerActionBlockShape {
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;
-            }
-            if (previewBox) {
-                previewBox.dispose();
-                previewBox = undefined;
             }
         }
 
@@ -107,8 +83,7 @@ class PlayerActionBlockShape {
                     let n =  hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? - 0.2 : 0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
-                        shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 1, position: chunckIJK.ijk });
-                        shape.draw(chunckIJK.chunck, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                        shape.draw(chunckIJK.chunck, chunckIJK.ijk, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
                     }
                 }
             }
@@ -121,6 +96,14 @@ class PlayerActionBlockShape {
                 previewH = 5 * terrain.blockSizeK_m;
                 previewD = terrain.blockSizeIJ_m;
                 previewOffset.copyFromFloats(0.5 * terrain.blockSizeIJ_m, 2.5 * terrain.blockSizeK_m, 0.5 * terrain.blockSizeIJ_m);
+                shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 1 });
+            }
+            if (shapeName === "tile") {
+                previewW = 5 * terrain.blockSizeIJ_m;
+                previewH = 1 * terrain.blockSizeK_m;
+                previewD = 5 * terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(2.5 * terrain.blockSizeIJ_m, 0.5 * terrain.blockSizeK_m, 2.5 * terrain.blockSizeIJ_m);
+                shape = new Kulla.Box(player.game.terrain, { width: 5, height: 1, length: 5 });
             }
         }
 
@@ -129,14 +112,6 @@ class PlayerActionBlockShape {
                 previewMesh.dispose();
                 previewMesh = undefined;
             }
-            if (previewBox) {
-                previewBox.dispose();
-                previewBox = undefined;
-            }
-            lastSize = undefined;
-            lastI = undefined;
-            lastJ = undefined;
-            lastK = undefined;
         }
         
         return action;

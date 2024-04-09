@@ -163,6 +163,13 @@ class PlayerActionManager {
                             this.linkAction(PlayerActionBlockShape.Create(this.player, "pole", blockType), i);
                         }
                     }
+                    else if (linkedItemName.startsWith("tile_")) {
+                        let blockName = linkedItemName.replace("tile_", "");
+                        let blockType = Kulla.BlockTypeNames.indexOf(blockName);
+                        if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
+                            this.linkAction(PlayerActionBlockShape.Create(this.player, "tile", blockType), i);
+                        }
+                    }
                     else if (linkedItemName === "mushroom") {
                         this.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), i);
                     }

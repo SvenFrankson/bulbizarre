@@ -511,7 +511,8 @@ class Game {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_COLORS[i].name, InventoryCategory.Paint));
             }
             this.player.playerActionManager.loadFromLocalStorage();
-            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "pole", Kulla.BlockType.Ice), 0);
+            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "pole", Kulla.BlockType.Ice), 1);
+            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "tile", Kulla.BlockType.Rock), 2);
             this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
             window.addEventListener("keydown", (event) => {
@@ -2941,11 +2942,10 @@ class Mushroom {
                 }
                 if (this.age < this.maxAge) {
                     if (this.age > 0) {
-                        this.headCone.draw(this.chunck, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.Erase);
+                        this.headCone.draw(this.chunck, this.currentHeadPos, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.Erase);
                     }
                     this.age++;
                     this.currentHeadPos.k++;
-                    this.headCone.props.position = this.currentHeadPos;
                     this.headCone.props.rFunc = (f) => {
                         return 1 + Math.cos(Math.PI * 0.4 * f) * (1 + Math.floor(this.age / 2));
                     };
@@ -2966,7 +2966,7 @@ class Mushroom {
                             this.currentHeadPos.j--;
                         }
                     }
-                    this.headCone.draw(this.chunck, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                    this.headCone.draw(this.chunck, this.currentHeadPos, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.AddIfEmpty, true);
                     this.game.terrainEditor.doAction(this.chunck, this.currentHeadPos, { brushBlock: Kulla.BlockType.Wood, brushSize: 3, mode: Kulla.TerrainEditionMode.Add, saveToLocalStorage: true });
                 }
                 else {
@@ -3486,6 +3486,13 @@ class PlayerActionManager {
                         let blockType = Kulla.BlockTypeNames.indexOf(blockName);
                         if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
                             this.linkAction(PlayerActionBlockShape.Create(this.player, "pole", blockType), i);
+                        }
+                    }
+                    else if (linkedItemName.startsWith("tile_")) {
+                        let blockName = linkedItemName.replace("tile_", "");
+                        let blockType = Kulla.BlockTypeNames.indexOf(blockName);
+                        if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
+                            this.linkAction(PlayerActionBlockShape.Create(this.player, "tile", blockType), i);
                         }
                     }
                     else if (linkedItemName === "mushroom") {
@@ -4275,12 +4282,7 @@ class PlayerActionBlockShape {
         let action = new PlayerAction(shapeName + "_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh;
-        let previewBox;
         action.iconUrl = undefined;
-        let lastSize;
-        let lastI;
-        let lastJ;
-        let lastK;
         let size = 1;
         action.onUpdate = () => {
             if (player.controler.playMode === PlayMode.Playing) {
@@ -4309,19 +4311,6 @@ class PlayerActionBlockShape {
                                 previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1) });
                             }
                         }
-                        let needRedrawMesh = false;
-                        if (lastI != chunckIJK.ijk.i) {
-                            lastI = chunckIJK.ijk.i;
-                            needRedrawMesh = true;
-                        }
-                        if (lastJ != chunckIJK.ijk.j) {
-                            lastJ = chunckIJK.ijk.j;
-                            needRedrawMesh = true;
-                        }
-                        if (lastK != chunckIJK.ijk.k) {
-                            lastK = chunckIJK.ijk.k;
-                            needRedrawMesh = true;
-                        }
                         previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * player.game.terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * player.game.terrain.blockSizeK_m, (chunckIJK.ijk.j) * player.game.terrain.blockSizeIJ_m).addInPlace(previewOffset);
                         previewMesh.parent = chunckIJK.chunck.mesh;
                         return;
@@ -4331,10 +4320,6 @@ class PlayerActionBlockShape {
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;
-            }
-            if (previewBox) {
-                previewBox.dispose();
-                previewBox = undefined;
             }
         };
         action.onPointerDown = () => {
@@ -4356,8 +4341,7 @@ class PlayerActionBlockShape {
                     let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
-                        shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 1, position: chunckIJK.ijk });
-                        shape.draw(chunckIJK.chunck, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                        shape.draw(chunckIJK.chunck, chunckIJK.ijk, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
                     }
                 }
             }
@@ -4369,6 +4353,14 @@ class PlayerActionBlockShape {
                 previewH = 5 * terrain.blockSizeK_m;
                 previewD = terrain.blockSizeIJ_m;
                 previewOffset.copyFromFloats(0.5 * terrain.blockSizeIJ_m, 2.5 * terrain.blockSizeK_m, 0.5 * terrain.blockSizeIJ_m);
+                shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 1 });
+            }
+            if (shapeName === "tile") {
+                previewW = 5 * terrain.blockSizeIJ_m;
+                previewH = 1 * terrain.blockSizeK_m;
+                previewD = 5 * terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(2.5 * terrain.blockSizeIJ_m, 0.5 * terrain.blockSizeK_m, 2.5 * terrain.blockSizeIJ_m);
+                shape = new Kulla.Box(player.game.terrain, { width: 5, height: 1, length: 5 });
             }
         };
         action.onUnequip = () => {
@@ -4376,14 +4368,6 @@ class PlayerActionBlockShape {
                 previewMesh.dispose();
                 previewMesh = undefined;
             }
-            if (previewBox) {
-                previewBox.dispose();
-                previewBox = undefined;
-            }
-            lastSize = undefined;
-            lastI = undefined;
-            lastJ = undefined;
-            lastK = undefined;
         };
         return action;
     }

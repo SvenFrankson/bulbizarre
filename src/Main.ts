@@ -216,7 +216,8 @@ class Game {
             }
 
             this.player.playerActionManager.loadFromLocalStorage();
-            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "pole", Kulla.BlockType.Ice), 0);
+            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "pole", Kulla.BlockType.Ice), 1);
+            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "tile", Kulla.BlockType.Rock), 2);
 
             this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
