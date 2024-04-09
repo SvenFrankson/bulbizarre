@@ -81,7 +81,7 @@ class GameConfiguration extends Nabu.Configuration {
                 "canLockPointer",
                 Nabu.ConfigurationElementType.Boolean,
                 0,
-                Nabu.ConfigurationElementCategory.Command,
+                Nabu.ConfigurationElementCategory.Control,
                 {
                     displayName: "Can Lock Pointer"
                 }

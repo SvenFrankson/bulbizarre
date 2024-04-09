@@ -156,6 +156,13 @@ class PlayerActionManager {
                         let paintIndex = BRICK_COLORS.findIndex(c => { return c.name === paintName; });
                         this.linkAction(PlayerActionTemplate.CreatePaintAction(this.player, paintIndex), i);
                     }
+                    else if (linkedItemName.startsWith("pole_")) {
+                        let blockName = linkedItemName.replace("pole_", "");
+                        let blockType = Kulla.BlockTypeNames.indexOf(blockName);
+                        if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
+                            this.linkAction(PlayerActionBlockShape.Create(this.player, "pole", blockType), i);
+                        }
+                    }
                     else if (linkedItemName === "mushroom") {
                         this.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), i);
                     }

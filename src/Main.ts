@@ -216,7 +216,7 @@ class Game {
             }
 
             this.player.playerActionManager.loadFromLocalStorage();
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), 0);
+            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "pole", Kulla.BlockType.Ice), 0);
 
             this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();

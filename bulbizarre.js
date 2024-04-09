@@ -306,7 +306,7 @@ class GameConfiguration extends Nabu.Configuration {
             }, (newValue) => {
                 this.game.terrain.chunckManager.setDistance(newValue * this.game.terrain.chunckLengthIJ);
             }),
-            new Nabu.ConfigurationElement("canLockPointer", Nabu.ConfigurationElementType.Boolean, 0, Nabu.ConfigurationElementCategory.Command, {
+            new Nabu.ConfigurationElement("canLockPointer", Nabu.ConfigurationElementType.Boolean, 0, Nabu.ConfigurationElementCategory.Control, {
                 displayName: "Can Lock Pointer"
             }),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION", KeyInput.PLAYER_ACTION, "GamepadBtn0"),
@@ -511,7 +511,7 @@ class Game {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_COLORS[i].name, InventoryCategory.Paint));
             }
             this.player.playerActionManager.loadFromLocalStorage();
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), 0);
+            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "pole", Kulla.BlockType.Ice), 0);
             this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
             window.addEventListener("keydown", (event) => {
@@ -3481,6 +3481,13 @@ class PlayerActionManager {
                         let paintIndex = BRICK_COLORS.findIndex(c => { return c.name === paintName; });
                         this.linkAction(PlayerActionTemplate.CreatePaintAction(this.player, paintIndex), i);
                     }
+                    else if (linkedItemName.startsWith("pole_")) {
+                        let blockName = linkedItemName.replace("pole_", "");
+                        let blockType = Kulla.BlockTypeNames.indexOf(blockName);
+                        if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
+                            this.linkAction(PlayerActionBlockShape.Create(this.player, "pole", blockType), i);
+                        }
+                    }
                     else if (linkedItemName === "mushroom") {
                         this.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), i);
                     }
@@ -4258,6 +4265,129 @@ class PlayerInventoryView extends HTMLElement {
     }
 }
 customElements.define("inventory-page", PlayerInventoryView);
+class PlayerActionBlockShape {
+    static Create(player, shapeName, blockType) {
+        let shape;
+        let previewW = 1;
+        let previewH = 1;
+        let previewD = 1;
+        let previewOffset = BABYLON.Vector3.Zero();
+        let action = new PlayerAction(shapeName + "_" + Kulla.BlockTypeNames[blockType], player);
+        action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
+        let previewMesh;
+        let previewBox;
+        action.iconUrl = undefined;
+        let lastSize;
+        let lastI;
+        let lastJ;
+        let lastK;
+        let size = 1;
+        action.onUpdate = () => {
+            if (player.controler.playMode === PlayMode.Playing) {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                });
+                if (hit && hit.pickedPoint) {
+                    let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
+                    if (chunckIJK) {
+                        if (!previewMesh) {
+                            if (blockType === Kulla.BlockType.None) {
+                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(1, 0, 0, 1) });
+                            }
+                            else {
+                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1) });
+                            }
+                        }
+                        let needRedrawMesh = false;
+                        if (lastI != chunckIJK.ijk.i) {
+                            lastI = chunckIJK.ijk.i;
+                            needRedrawMesh = true;
+                        }
+                        if (lastJ != chunckIJK.ijk.j) {
+                            lastJ = chunckIJK.ijk.j;
+                            needRedrawMesh = true;
+                        }
+                        if (lastK != chunckIJK.ijk.k) {
+                            lastK = chunckIJK.ijk.k;
+                            needRedrawMesh = true;
+                        }
+                        previewMesh.position.copyFromFloats((chunckIJK.ijk.i) * player.game.terrain.blockSizeIJ_m, (chunckIJK.ijk.k) * player.game.terrain.blockSizeK_m, (chunckIJK.ijk.j) * player.game.terrain.blockSizeIJ_m).addInPlace(previewOffset);
+                        previewMesh.parent = chunckIJK.chunck.mesh;
+                        return;
+                    }
+                }
+            }
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+        };
+        action.onPointerDown = () => {
+            if (player.controler.playMode === PlayMode.Playing) {
+                let x;
+                let y;
+                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
+                    x = player.game.canvas.clientWidth * 0.5;
+                    y = player.game.canvas.clientHeight * 0.5;
+                }
+                else {
+                    x = player._scene.pointerX;
+                    y = player._scene.pointerY;
+                }
+                let hit = player.game.scene.pick(x, y, (mesh) => {
+                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                });
+                if (hit && hit.pickedPoint) {
+                    let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
+                    if (chunckIJK) {
+                        shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 1, position: chunckIJK.ijk });
+                        shape.draw(chunckIJK.chunck, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                    }
+                }
+            }
+        };
+        action.onEquip = () => {
+            let terrain = player.game.terrain;
+            if (shapeName === "pole") {
+                previewW = terrain.blockSizeIJ_m;
+                previewH = 5 * terrain.blockSizeK_m;
+                previewD = terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(0.5 * terrain.blockSizeIJ_m, 2.5 * terrain.blockSizeK_m, 0.5 * terrain.blockSizeIJ_m);
+            }
+        };
+        action.onUnequip = () => {
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+            if (previewBox) {
+                previewBox.dispose();
+                previewBox = undefined;
+            }
+            lastSize = undefined;
+            lastI = undefined;
+            lastJ = undefined;
+            lastK = undefined;
+        };
+        return action;
+    }
+}
 class PlayerActionDefault {
     static Create(player) {
         let brickAction = new PlayerAction("default-action", player);
@@ -4686,15 +4816,11 @@ class PlayerActionTemplate {
                     let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
-                        /*
                         player.game.terrainEditor.doAction(chunckIJK.chunck, chunckIJK.ijk, {
                             brushSize: size,
                             brushBlock: blockType,
                             saveToLocalStorage: true
                         });
-                        */
-                        let box = new Kulla.Box(player.game.terrain, { width: 5, height: 5, length: 1, position: chunckIJK.ijk });
-                        box.draw(chunckIJK.chunck, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
                     }
                 }
             }
