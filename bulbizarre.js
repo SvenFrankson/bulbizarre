@@ -513,6 +513,7 @@ class Game {
             this.player.playerActionManager.loadFromLocalStorage();
             this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "pole", Kulla.BlockType.Ice), 1);
             this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "tile", Kulla.BlockType.Rock), 2);
+            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "wall", Kulla.BlockType.Basalt), 3);
             this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
             window.addEventListener("keydown", (event) => {
@@ -4343,7 +4344,7 @@ class PlayerActionBlockShape {
                     let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
-                        shape.draw(chunckIJK.chunck, chunckIJK.ijk, dir, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                        shape.draw(chunckIJK.chunck, chunckIJK.ijk, dir, blockType, Kulla.TerrainEditionMode.AddIfEmpty, true);
                     }
                 }
             }
@@ -4370,6 +4371,13 @@ class PlayerActionBlockShape {
                 previewD = 5 * terrain.blockSizeIJ_m;
                 previewOffset.copyFromFloats(2 * terrain.blockSizeIJ_m, 0, 2 * terrain.blockSizeIJ_m);
                 shape = new Kulla.Box(player.game.terrain, { width: 5, height: 1, length: 5 });
+            }
+            if (shapeName === "wall") {
+                previewW = 5 * terrain.blockSizeIJ_m;
+                previewH = 5 * terrain.blockSizeK_m;
+                previewD = 1 * terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(2 * terrain.blockSizeIJ_m, 2 * terrain.blockSizeK_m, 0);
+                shape = new Kulla.Box(player.game.terrain, { width: 5, height: 5, length: 1 });
             }
             dir = 0;
             player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
