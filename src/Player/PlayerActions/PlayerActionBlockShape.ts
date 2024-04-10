@@ -11,7 +11,7 @@ class PlayerActionBlockShape {
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh: BABYLON.Mesh;
         let previewGrid: BABYLON.Mesh;
-        action.iconUrl = undefined;
+        action.iconUrl = "/datas/icons/shapes/" + shapeName + ".png";;
 
         let size = 1;
         let dir = 0;
@@ -44,10 +44,10 @@ class PlayerActionBlockShape {
                     if (chunckIJK) {
                         if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(1, 0, 0, 1), offset: previewOffset });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(1, 0, 0, 1), offset: previewOffset, grid: player.game.terrain.blockSizeIJ_m });
                             }
                             else {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1), offset: previewOffset });
+                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1), offset: previewOffset, grid: player.game.terrain.blockSizeIJ_m });
                             }
                         }
                         if (!previewGrid) {
@@ -139,11 +139,11 @@ class PlayerActionBlockShape {
                 shape = new Kulla.Box(player.game.terrain, { width: 5, height: 1, length: 5 });
             }
             if (shapeName === "wall") {
-                previewW = 5 * terrain.blockSizeIJ_m;
+                previewW = 1 * terrain.blockSizeIJ_m;
                 previewH = 5 * terrain.blockSizeK_m;
-                previewD = 1 * terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(2 * terrain.blockSizeIJ_m, 2 * terrain.blockSizeK_m, 0);
-                shape = new Kulla.Box(player.game.terrain, { width: 5, height: 5, length: 1 });
+                previewD = 5 * terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(0, 2 * terrain.blockSizeK_m, 2 * terrain.blockSizeIJ_m);
+                shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 5 });
             }
             dir = 0;
             player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick)

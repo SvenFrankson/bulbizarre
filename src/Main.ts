@@ -539,6 +539,111 @@ class Game {
         });
     }
 
+    public generateBlockShapeMiniatures(): void {
+        if (this.terrain) {
+            this.terrain.dispose();
+        }
+    
+        this.light.direction = (new BABYLON.Vector3(3, 1, - 2)).normalize();
+
+        this.uiCamera.parent = this.orthoCamera;
+        this.freeCamera.detachControl();
+        this.scene.activeCameras = [this.orthoCamera];
+        this.orthoCamera.attachControl();
+        
+        this.canvas.style.top = "calc((100vh - min(100vh, 100vw)) * 0.5)";
+        this.canvas.style.left = "calc((100vw - min(100vh, 100vw)) * 0.5)";
+        this.canvas.style.width = "min(100vh, 100vw)";
+        this.canvas.style.height = "min(100vh, 100vw)";
+
+        requestAnimationFrame(async () => {
+            this.engine.resize();
+            this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
+    
+            this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
+            
+            await this.makeShapeScreenshot("pole");
+            await this.makeShapeScreenshot("wall");
+            await this.makeShapeScreenshot("tile");
+        })
+    }
+
+    public async makeShapeScreenshot(shapeName: string, debugNoDelete: boolean = false): Promise<void> {
+        this.scene.clearColor.copyFromFloats(0, 0, 0, 0);
+        
+        return new Promise<void>(resolve => {
+            requestAnimationFrame(async () => {
+                let previewW = 1;
+                let previewH = 1;
+                let previewD = 1;
+                if (shapeName === "pole") {
+                    previewH = 5;
+                }
+                else if (shapeName === "wall") {
+                    previewD = 5;
+                    previewH = 5;
+                }
+                else if (shapeName === "tile") {
+                    previewW = 5;
+                    previewD = 5;
+                }
+
+                let previewMesh = new BABYLON.Mesh("preview");
+                let w = previewW;
+                let h = previewH;
+                let d = previewD;
+                
+                let bboxMax = new BABYLON.Vector3(previewW - 0.5, previewH - 0.5, previewD - 0.5);
+                let bboxMin = new BABYLON.Vector3(- 0.5, - 0.5, - 0.5);
+
+                let mat = new BABYLON.StandardMaterial("mat");
+                mat.specularColor.copyFromFloats(0, 0, 0);
+
+                for (let x = 0; x < previewW; x++) {
+                    for (let y = 0; y < previewH; y++) {
+                        for (let z = 0; z < previewD; z++) {
+                            let cube = BABYLON.MeshBuilder.CreateBox("box", { size: 0.8 });
+                            cube.position.copyFromFloats(x, y, z);
+                            cube.parent = previewMesh;
+                            cube.material = mat;
+                        }
+                    }
+                }
+
+                this.orthoCamera.setTarget(bboxMax.add(bboxMin).scaleInPlace(0.5));
+                this.orthoCamera.radius = 20;
+                this.orthoCamera.alpha = - Math.PI / 6;
+                this.orthoCamera.beta = Math.PI / 3;
+
+                let hAngle = Math.PI * 0.5 + this.orthoCamera.alpha;
+                let vAngle = Math.PI * 0.5 - this.orthoCamera.beta;
+                let halfCamMinW = d * 0.5 * Math.sin(hAngle) + w * 0.5 * Math.cos(hAngle);
+                let halfCamMinH = h * 0.5 * Math.cos(vAngle) + d * 0.5 * Math.cos(hAngle) * Math.sin(vAngle) + w * 0.5 * Math.sin(hAngle) * Math.sin(vAngle);
+
+                let f = 1.1;
+                if (halfCamMinW >= halfCamMinH) {
+                    this.orthoCamera.orthoTop = halfCamMinW * f;
+                    this.orthoCamera.orthoBottom = - halfCamMinW * f;
+                    this.orthoCamera.orthoLeft = - halfCamMinW * f;
+                    this.orthoCamera.orthoRight = halfCamMinW * f;
+                }
+                else {
+                    this.orthoCamera.orthoTop = halfCamMinH * f;
+                    this.orthoCamera.orthoBottom = - halfCamMinH * f;
+                    this.orthoCamera.orthoLeft = - halfCamMinH * f;
+                    this.orthoCamera.orthoRight = halfCamMinH * f;
+                }
+
+                setTimeout(async () => {
+                    await Mummu.MakeScreenshot({ miniatureName: shapeName, size: 256, outlineWidth: 1 });
+                    if (!debugNoDelete) {
+                        previewMesh.dispose();
+                    }
+                    resolve();
+                }, 300);
+            });
+        });
+    }
 }
 
 window.addEventListener("DOMContentLoaded", () => {
