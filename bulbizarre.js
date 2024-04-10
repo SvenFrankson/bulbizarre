@@ -76,6 +76,38 @@ class Arrow extends BABYLON.Mesh {
         //this.game.scene.onBeforeRenderObservable.removeCallback(this._update);
     }
 }
+class ChunckGridMaterial extends BABYLON.ShaderMaterial {
+    constructor(name, scene) {
+        super(name, scene, {
+            vertex: "chunckGrid",
+            fragment: "chunckGrid",
+        }, {
+            attributes: ["position", "normal", "uv", "color"],
+            uniforms: [
+                "world", "worldView", "worldViewProjection", "view", "projection",
+                "lightInvDirW",
+                "alpha",
+            ]
+        });
+        this._update = () => {
+            let lights = this.getScene().lights;
+            for (let i = 0; i < lights.length; i++) {
+                let light = lights[i];
+                if (light instanceof BABYLON.HemisphericLight) {
+                    this.setVector3("lightInvDirW", light.direction);
+                }
+            }
+        };
+        this.alpha = 0.99;
+        this.alphaMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+        this.setVector3("lightInvDirW", BABYLON.Vector3.Up());
+        this.getScene().onBeforeRenderObservable.add(this._update);
+    }
+    dispose(forceDisposeEffect, forceDisposeTextures, notBoundToMesh) {
+        super.dispose(forceDisposeEffect, forceDisposeTextures, notBoundToMesh);
+        this.getScene().onBeforeRenderObservable.removeCallback(this._update);
+    }
+}
 class DebugTerrainPerf {
     constructor(main, _showLayer = false) {
         this.main = main;
@@ -4316,14 +4348,13 @@ class PlayerActionBlockShape {
                         }
                         if (!previewGrid) {
                             previewGrid = new BABYLON.Mesh("grid");
-                            let gridMat = new BABYLON.StandardMaterial("grid-mat");
-                            gridMat.alpha = 0.5;
+                            let gridMat = new ChunckGridMaterial("grid-mat", player._scene);
                             previewGrid.material = gridMat;
                         }
                         previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * player.game.terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5) * player.game.terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * player.game.terrain.blockSizeIJ_m);
                         previewMesh.rotationQuaternion = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, dir * Math.PI / 2);
                         previewMesh.parent = chunckIJK.chunck.mesh;
-                        let data = player.game.terrain.chunckBuilder.BuildGridMesh(chunckIJK.chunck, chunckIJK.ijk, 5, BABYLON.Color3.Red());
+                        let data = player.game.terrain.chunckBuilder.BuildGridMesh(chunckIJK.chunck, chunckIJK.ijk, 7, new BABYLON.Color3(0, 1, 1));
                         if (data) {
                             data.applyToMesh(previewGrid);
                         }

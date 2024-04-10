@@ -49,8 +49,7 @@ class PlayerActionBlockShape {
                         }
                         if (!previewGrid) {
                             previewGrid = new BABYLON.Mesh("grid");
-                            let gridMat = new BABYLON.StandardMaterial("grid-mat");
-                            gridMat.alpha = 0.5;
+                            let gridMat = new ChunckGridMaterial("grid-mat", player._scene);
                             previewGrid.material = gridMat;
                         }
                         
@@ -58,7 +57,7 @@ class PlayerActionBlockShape {
                         previewMesh.rotationQuaternion = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, dir * Math.PI / 2);
                         previewMesh.parent = chunckIJK.chunck.mesh;
 
-                        let data = player.game.terrain.chunckBuilder.BuildGridMesh(chunckIJK.chunck, chunckIJK.ijk, 5, BABYLON.Color3.Red());
+                        let data = player.game.terrain.chunckBuilder.BuildGridMesh(chunckIJK.chunck, chunckIJK.ijk, 7, new BABYLON.Color3(0, 1, 1));
                         if (data) {
                             data.applyToMesh(previewGrid);
                         }
