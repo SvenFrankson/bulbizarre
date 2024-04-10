@@ -4332,6 +4332,9 @@ class PlayerActionBlockShape {
                     y = player._scene.pointerY;
                 }
                 let hit = player.game.scene.pick(x, y, (mesh) => {
+                    if (mesh === previewGrid) {
+                        return true;
+                    }
                     return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
                 });
                 if (hit && hit.pickedPoint) {
@@ -4385,6 +4388,9 @@ class PlayerActionBlockShape {
                     y = player._scene.pointerY;
                 }
                 let hit = player.game.scene.pick(x, y, (mesh) => {
+                    if (mesh === previewGrid) {
+                        return true;
+                    }
                     return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
                 });
                 if (hit && hit.pickedPoint) {

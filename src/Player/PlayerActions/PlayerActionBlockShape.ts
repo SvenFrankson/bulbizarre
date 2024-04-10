@@ -32,6 +32,9 @@ class PlayerActionBlockShape {
                     x,
                     y,
                     (mesh) => {
+                        if (mesh === previewGrid) {
+                            return true;
+                        }
                         return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
                     }
                 )
@@ -95,6 +98,9 @@ class PlayerActionBlockShape {
                     x,
                     y,
                     (mesh) => {
+                        if (mesh === previewGrid) {
+                            return true;
+                        }
                         return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
                     }
                 )
