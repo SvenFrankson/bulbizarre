@@ -15,6 +15,8 @@ class PlayerActionBlockShape {
 
         let size = 1;
         let dir = 0;
+        let targetIJK: Nabu.IJK = { i: 0, j: 0, k: 0 };
+        let targetChunck: Kulla.Chunck;
 
         action.onUpdate = () => {
             if (player.controler.playMode === PlayMode.Playing) {
@@ -50,6 +52,7 @@ class PlayerActionBlockShape {
                                 previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1), offset: previewOffset, grid: player.game.terrain.blockSizeIJ_m });
                             }
                         }
+
                         if (!previewGrid) {
                             previewGrid = new BABYLON.Mesh("grid");
                             let gridMat = new ChunckGridMaterial("grid-mat", player._scene);
@@ -60,9 +63,15 @@ class PlayerActionBlockShape {
                         previewMesh.rotationQuaternion = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, dir * Math.PI / 2);
                         previewMesh.parent = chunckIJK.chunck.mesh;
 
-                        let data = player.game.terrain.chunckBuilder.BuildGridMesh(chunckIJK.chunck, chunckIJK.ijk, 7, new BABYLON.Color3(0, 1, 1));
-                        if (data) {
-                            data.applyToMesh(previewGrid);
+                        if (chunckIJK.chunck != targetChunck || chunckIJK.ijk.i != targetIJK.i || chunckIJK.ijk.j != targetIJK.j || chunckIJK.ijk.k != targetIJK.k) {
+                            targetChunck = chunckIJK.chunck;
+                            targetIJK.i = chunckIJK.ijk.i;
+                            targetIJK.j = chunckIJK.ijk.j;
+                            targetIJK.k = chunckIJK.ijk.k;
+                            let data = player.game.terrain.chunckBuilder.BuildGridMesh(chunckIJK.chunck, chunckIJK.ijk, 7, new BABYLON.Color3(0, 1, 1));
+                            if (data) {
+                                data.applyToMesh(previewGrid);
+                            }
                         }
                         previewGrid.parent = chunckIJK.chunck.mesh;
 
@@ -70,6 +79,8 @@ class PlayerActionBlockShape {
                     }
                 }
             }
+
+            targetChunck = undefined;
             
             if (previewMesh) {
                 previewMesh.dispose();
@@ -84,32 +95,8 @@ class PlayerActionBlockShape {
 
         action.onPointerDown = () => {
             if (player.controler.playMode === PlayMode.Playing) {
-                let x: number;
-                let y: number;
-                if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
-                    x = player.game.canvas.clientWidth * 0.5;
-                    y = player.game.canvas.clientHeight * 0.5;
-                }
-                else {
-                    x = player._scene.pointerX;
-                    y = player._scene.pointerY;
-                }
-                let hit = player.game.scene.pick(
-                    x,
-                    y,
-                    (mesh) => {
-                        if (mesh === previewGrid) {
-                            return true;
-                        }
-                        return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
-                    }
-                )
-                if (hit && hit.pickedPoint) {
-                    let n =  hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? - 0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
-                    if (chunckIJK) {
-                        shape.draw(chunckIJK.chunck, chunckIJK.ijk, dir, blockType, Kulla.TerrainEditionMode.AddIfEmpty, true);
-                    }
+                if (targetChunck) {
+                    shape.draw(targetChunck, targetIJK, dir, blockType, Kulla.TerrainEditionMode.AddIfEmpty, true);
                 }
             }
         }
@@ -158,7 +145,8 @@ class PlayerActionBlockShape {
                 previewGrid.dispose();
                 previewGrid = undefined;
             }
-            player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick)
+            targetChunck = undefined;
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
         }
         
         return action;
