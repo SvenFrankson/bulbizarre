@@ -4283,6 +4283,7 @@ class PlayerActionBlockShape {
         let action = new PlayerAction(shapeName + "_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh;
+        let previewGrid;
         action.iconUrl = undefined;
         let size = 1;
         let dir = 0;
@@ -4313,9 +4314,20 @@ class PlayerActionBlockShape {
                                 previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1), offset: previewOffset });
                             }
                         }
+                        if (!previewGrid) {
+                            previewGrid = new BABYLON.Mesh("grid");
+                            let gridMat = new BABYLON.StandardMaterial("grid-mat");
+                            gridMat.alpha = 0.5;
+                            previewGrid.material = gridMat;
+                        }
                         previewMesh.position.copyFromFloats((chunckIJK.ijk.i + 0.5) * player.game.terrain.blockSizeIJ_m, (chunckIJK.ijk.k + 0.5) * player.game.terrain.blockSizeK_m, (chunckIJK.ijk.j + 0.5) * player.game.terrain.blockSizeIJ_m);
                         previewMesh.rotationQuaternion = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, dir * Math.PI / 2);
                         previewMesh.parent = chunckIJK.chunck.mesh;
+                        let data = player.game.terrain.chunckBuilder.BuildGridMesh(chunckIJK.chunck, chunckIJK.ijk, 5, BABYLON.Color3.Red());
+                        if (data) {
+                            data.applyToMesh(previewGrid);
+                        }
+                        previewGrid.parent = chunckIJK.chunck.mesh;
                         return;
                     }
                 }
@@ -4323,6 +4335,10 @@ class PlayerActionBlockShape {
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;
+            }
+            if (previewGrid) {
+                previewGrid.dispose();
+                previewGrid = undefined;
             }
         };
         action.onPointerDown = () => {
@@ -4386,6 +4402,10 @@ class PlayerActionBlockShape {
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;
+            }
+            if (previewGrid) {
+                previewGrid.dispose();
+                previewGrid = undefined;
             }
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
         };
