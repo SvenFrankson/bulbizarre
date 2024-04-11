@@ -3594,10 +3594,14 @@ class PlayerActionManager {
                 let linkedItemName = data.linkedItemNames[i];
                 if (linkedItemName) {
                     if (linkedItemName.startsWith("block_")) {
-                        let blockName = linkedItemName.replace("block_", "");
+                        // "block_" + Kulla.BlockTypeNames[blockType] + "_" + shapeName + "_" + size
+                        let props = linkedItemName.replace("block_", "");
+                        let blockName = props.split("_")[0];
                         let blockType = Kulla.BlockTypeNames.indexOf(blockName);
                         if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
-                            this.linkAction(PlayerActionBlockShape.Create(this.player, blockType), i);
+                            let shape = props.split("_")[1];
+                            let size = parseInt(props.split("_")[2]);
+                            this.linkAction(PlayerActionBlockShape.Create(this.player, blockType, shape, size), i);
                         }
                     }
                     else if (linkedItemName.startsWith("paint_")) {
@@ -4400,18 +4404,16 @@ class PlayerInventoryView extends HTMLElement {
 }
 customElements.define("inventory-page", PlayerInventoryView);
 class PlayerActionBlockShape {
-    static Create(player, blockType) {
+    static Create(player, blockType, shapeName = "pole", size = 1) {
         let shape;
         let previewW = 1;
         let previewH = 1;
         let previewD = 1;
         let previewOffset = BABYLON.Vector3.Zero();
-        let shapeName = "pole";
-        let size = 1;
         let dir = 0;
         let targetIJK = { i: 0, j: 0, k: 0 };
         let targetChunck;
-        let action = new PlayerAction(shapeName + "_" + Kulla.BlockTypeNames[blockType], player);
+        let action = new PlayerAction("block_" + Kulla.BlockTypeNames[blockType] + "_" + shapeName + "_" + size, player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh;
         let previewGrid;
@@ -4530,10 +4532,12 @@ class PlayerActionBlockShape {
                 shape = new Kulla.Box(player.game.terrain, { width: 1, height: size, length: size });
             }
             action.iconUrl = "/datas/icons/shapes/" + shapeName + "_" + size.toFixed(0) + ".png";
+            action.name = "block_" + Kulla.BlockTypeNames[blockType] + "_" + shapeName + "_" + size;
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;
             }
+            player.playerActionManager.saveToLocalStorage();
         };
         action.onEquip = () => {
             onShapeUpdate();

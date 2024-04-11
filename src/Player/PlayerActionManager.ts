@@ -146,10 +146,14 @@ class PlayerActionManager {
                 let linkedItemName = data.linkedItemNames[i];
                 if (linkedItemName) {
                     if (linkedItemName.startsWith("block_")) {
-                        let blockName = linkedItemName.replace("block_", "");
+                        // "block_" + Kulla.BlockTypeNames[blockType] + "_" + shapeName + "_" + size
+                        let props = linkedItemName.replace("block_", "");
+                        let blockName = props.split("_")[0];
                         let blockType = Kulla.BlockTypeNames.indexOf(blockName);
                         if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
-                            this.linkAction(PlayerActionBlockShape.Create(this.player, blockType), i);
+                            let shape = props.split("_")[1];
+                            let size = parseInt(props.split("_")[2]);
+                            this.linkAction(PlayerActionBlockShape.Create(this.player, blockType, shape, size), i);
                         }
                     }
                     else if (linkedItemName.startsWith("paint_")) {

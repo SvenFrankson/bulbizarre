@@ -1,19 +1,17 @@
 class PlayerActionBlockShape {
 
-    public static Create(player: Player, blockType: Kulla.BlockType): PlayerAction {
+    public static Create(player: Player, blockType: Kulla.BlockType, shapeName: string = "pole", size: number = 1): PlayerAction {
         let shape: Kulla.Shape;
         let previewW: number = 1;
         let previewH: number = 1;
         let previewD: number = 1;
         let previewOffset: BABYLON.Vector3 = BABYLON.Vector3.Zero();
 
-        let shapeName = "pole";
-        let size = 1;
         let dir = 0;
         let targetIJK: Nabu.IJK = { i: 0, j: 0, k: 0 };
         let targetChunck: Kulla.Chunck;
 
-        let action = new PlayerAction(shapeName + "_" + Kulla.BlockTypeNames[blockType], player);
+        let action = new PlayerAction("block_" + Kulla.BlockTypeNames[blockType] + "_" + shapeName + "_" + size, player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh: BABYLON.Mesh;
         let previewGrid: BABYLON.Mesh;
@@ -151,10 +149,13 @@ class PlayerActionBlockShape {
             }
 
             action.iconUrl = "/datas/icons/shapes/" + shapeName + "_" + size.toFixed(0) + ".png";
+            action.name = "block_" + Kulla.BlockTypeNames[blockType] + "_" + shapeName + "_" + size;
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;
             }
+
+            player.playerActionManager.saveToLocalStorage();
         }
 
         action.onEquip = () => {
