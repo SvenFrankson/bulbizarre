@@ -130,6 +130,7 @@ class PlayerActionTemplate {
         return action;
     }
 
+    /*
     public static CreateBlockAction(player: Player, blockType: Kulla.BlockType): PlayerAction {
         let action = new PlayerAction("block_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
@@ -261,6 +262,7 @@ class PlayerActionTemplate {
         
         return action;
     }
+    */
 
     public static CreateBrickAction(player: Player, brickId: number | string, colorIndex?: number): PlayerAction {
         let brickIndex = Brick.BrickIdToIndex(brickId);

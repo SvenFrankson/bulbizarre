@@ -1,21 +1,22 @@
 class PlayerActionBlockShape {
 
-    public static Create(player: Player, shapeName: string, blockType: Kulla.BlockType): PlayerAction {
+    public static Create(player: Player, blockType: Kulla.BlockType): PlayerAction {
         let shape: Kulla.Shape;
         let previewW: number = 1;
         let previewH: number = 1;
         let previewD: number = 1;
         let previewOffset: BABYLON.Vector3 = BABYLON.Vector3.Zero();
 
+        let shapeName = "pole";
+        let size = 1;
+        let dir = 0;
+        let targetIJK: Nabu.IJK = { i: 0, j: 0, k: 0 };
+        let targetChunck: Kulla.Chunck;
+
         let action = new PlayerAction(shapeName + "_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh: BABYLON.Mesh;
         let previewGrid: BABYLON.Mesh;
-
-        let size = 3;
-        let dir = 0;
-        let targetIJK: Nabu.IJK = { i: 0, j: 0, k: 0 };
-        let targetChunck: Kulla.Chunck;
 
         action.iconUrl = "/datas/icons/shapes/" + shapeName + "_" + size.toFixed(0) + ".png";
 

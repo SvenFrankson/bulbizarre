@@ -26,7 +26,7 @@ class PlayerInventoryItem {
         if (this.category === InventoryCategory.Block) {
             let block = Kulla.BlockTypeNames.indexOf(this.name);
             if (block >= Kulla.BlockType.None && block < Kulla.BlockType.Unknown) {
-                return PlayerActionTemplate.CreateBlockAction(player, block);
+                return PlayerActionBlockShape.Create(player, block);
             }
         }
         else if (this.category === InventoryCategory.Brick) {

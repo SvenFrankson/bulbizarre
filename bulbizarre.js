@@ -545,9 +545,6 @@ class Game {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_COLORS[i].name, InventoryCategory.Paint));
             }
             this.player.playerActionManager.loadFromLocalStorage();
-            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "pole", Kulla.BlockType.Ice), 1);
-            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "tile", Kulla.BlockType.Rock), 2);
-            this.player.playerActionManager.linkAction(PlayerActionBlockShape.Create(this.player, "wall", Kulla.BlockType.Basalt), 3);
             this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
             window.addEventListener("keydown", (event) => {
@@ -3600,27 +3597,13 @@ class PlayerActionManager {
                         let blockName = linkedItemName.replace("block_", "");
                         let blockType = Kulla.BlockTypeNames.indexOf(blockName);
                         if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
-                            this.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, blockType), i);
+                            this.linkAction(PlayerActionBlockShape.Create(this.player, blockType), i);
                         }
                     }
                     else if (linkedItemName.startsWith("paint_")) {
                         let paintName = linkedItemName.replace("paint_", "");
                         let paintIndex = BRICK_COLORS.findIndex(c => { return c.name === paintName; });
                         this.linkAction(PlayerActionTemplate.CreatePaintAction(this.player, paintIndex), i);
-                    }
-                    else if (linkedItemName.startsWith("pole_")) {
-                        let blockName = linkedItemName.replace("pole_", "");
-                        let blockType = Kulla.BlockTypeNames.indexOf(blockName);
-                        if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
-                            this.linkAction(PlayerActionBlockShape.Create(this.player, "pole", blockType), i);
-                        }
-                    }
-                    else if (linkedItemName.startsWith("tile_")) {
-                        let blockName = linkedItemName.replace("tile_", "");
-                        let blockType = Kulla.BlockTypeNames.indexOf(blockName);
-                        if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
-                            this.linkAction(PlayerActionBlockShape.Create(this.player, "tile", blockType), i);
-                        }
                     }
                     else if (linkedItemName === "mushroom") {
                         this.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), i);
@@ -4061,7 +4044,7 @@ class PlayerInventoryItem {
         if (this.category === InventoryCategory.Block) {
             let block = Kulla.BlockTypeNames.indexOf(this.name);
             if (block >= Kulla.BlockType.None && block < Kulla.BlockType.Unknown) {
-                return PlayerActionTemplate.CreateBlockAction(player, block);
+                return PlayerActionBlockShape.Create(player, block);
             }
         }
         else if (this.category === InventoryCategory.Brick) {
@@ -4417,20 +4400,21 @@ class PlayerInventoryView extends HTMLElement {
 }
 customElements.define("inventory-page", PlayerInventoryView);
 class PlayerActionBlockShape {
-    static Create(player, shapeName, blockType) {
+    static Create(player, blockType) {
         let shape;
         let previewW = 1;
         let previewH = 1;
         let previewD = 1;
         let previewOffset = BABYLON.Vector3.Zero();
+        let shapeName = "pole";
+        let size = 1;
+        let dir = 0;
+        let targetIJK = { i: 0, j: 0, k: 0 };
+        let targetChunck;
         let action = new PlayerAction(shapeName + "_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh;
         let previewGrid;
-        let size = 3;
-        let dir = 0;
-        let targetIJK = { i: 0, j: 0, k: 0 };
-        let targetChunck;
         action.iconUrl = "/datas/icons/shapes/" + shapeName + "_" + size.toFixed(0) + ".png";
         action.onUpdate = () => {
             if (player.controler.playMode === PlayMode.Playing) {
@@ -4923,22 +4907,26 @@ class PlayerActionTemplate {
         };
         return action;
     }
-    static CreateBlockAction(player, blockType) {
+    /*
+    public static CreateBlockAction(player: Player, blockType: Kulla.BlockType): PlayerAction {
         let action = new PlayerAction("block_" + Kulla.BlockTypeNames[blockType], player);
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
-        let previewMesh;
-        let previewBox;
+        let previewMesh: BABYLON.Mesh;
+        let previewBox: BABYLON.Mesh;
         action.iconUrl = undefined;
-        let lastSize;
-        let lastI;
-        let lastJ;
-        let lastK;
+
+        let lastSize: number;
+        let lastI: number;
+        let lastJ: number;
+        let lastK: number;
+
         let size = 1;
+
         action.onUpdate = () => {
             let terrain = player.game.terrain;
             if (player.controler.playMode === PlayMode.Playing) {
-                let x;
-                let y;
+                let x: number;
+                let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
                     x = player.game.canvas.clientWidth * 0.5;
                     y = player.game.canvas.clientHeight * 0.5;
@@ -4947,11 +4935,15 @@ class PlayerActionTemplate {
                     x = player._scene.pointerX;
                     y = player._scene.pointerY;
                 }
-                let hit = player.game.scene.pick(x, y, (mesh) => {
-                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
-                });
+                let hit = player.game.scene.pick(
+                    x,
+                    y,
+                    (mesh) => {
+                        return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                    }
+                )
                 if (hit && hit.pickedPoint) {
-                    let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
+                    let n =  hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? - 0.2 : 0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
                         // Redraw block preview
@@ -4963,7 +4955,8 @@ class PlayerActionTemplate {
                                 previewMesh = Mummu.CreateLineBox("preview", { width: size * terrain.blockSizeIJ_m, height: size * terrain.blockSizeK_m, depth: size * terrain.blockSizeIJ_m, color: new BABYLON.Color4(0, 1, 0, 1) });
                             }
                         }
-                        let needRedrawMesh = false;
+                        
+                        let needRedrawMesh: boolean = false;
                         if (lastI != chunckIJK.ijk.i) {
                             lastI = chunckIJK.ijk.i;
                             needRedrawMesh = true;
@@ -4976,13 +4969,16 @@ class PlayerActionTemplate {
                             lastK = chunckIJK.ijk.k;
                             needRedrawMesh = true;
                         }
+                        
                         let offset = (size % 2) * 0.5;
                         previewMesh.position.copyFromFloats((chunckIJK.ijk.i + offset) * terrain.blockSizeIJ_m, (chunckIJK.ijk.k + offset) * terrain.blockSizeK_m, (chunckIJK.ijk.j + offset) * terrain.blockSizeIJ_m);
                         previewMesh.parent = chunckIJK.chunck.mesh;
+
                         return;
                     }
                 }
             }
+            
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;
@@ -4991,11 +4987,12 @@ class PlayerActionTemplate {
                 previewBox.dispose();
                 previewBox = undefined;
             }
-        };
+        }
+
         action.onPointerDown = () => {
             if (player.controler.playMode === PlayMode.Playing) {
-                let x;
-                let y;
+                let x: number;
+                let y: number;
                 if (player.controler.gamepadInControl || player.game.inputManager.isPointerLocked) {
                     x = player.game.canvas.clientWidth * 0.5;
                     y = player.game.canvas.clientHeight * 0.5;
@@ -5004,11 +5001,15 @@ class PlayerActionTemplate {
                     x = player._scene.pointerX;
                     y = player._scene.pointerY;
                 }
-                let hit = player.game.scene.pick(x, y, (mesh) => {
-                    return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
-                });
+                let hit = player.game.scene.pick(
+                    x,
+                    y,
+                    (mesh) => {
+                        return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
+                    }
+                )
                 if (hit && hit.pickedPoint) {
-                    let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
+                    let n =  hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? - 0.2 : 0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
                         player.game.terrainEditor.doAction(chunckIJK.chunck, chunckIJK.ijk, {
@@ -5019,7 +5020,8 @@ class PlayerActionTemplate {
                     }
                 }
             }
-        };
+        }
+
         action.onUnequip = () => {
             if (previewMesh) {
                 previewMesh.dispose();
@@ -5033,9 +5035,11 @@ class PlayerActionTemplate {
             lastI = undefined;
             lastJ = undefined;
             lastK = undefined;
-        };
+        }
+        
         return action;
     }
+    */
     static CreateBrickAction(player, brickId, colorIndex) {
         let brickIndex = Brick.BrickIdToIndex(brickId);
         let brickAction = new PlayerAction(Brick.BrickIdToName(brickId), player);

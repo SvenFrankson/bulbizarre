@@ -149,27 +149,13 @@ class PlayerActionManager {
                         let blockName = linkedItemName.replace("block_", "");
                         let blockType = Kulla.BlockTypeNames.indexOf(blockName);
                         if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
-                            this.linkAction(PlayerActionTemplate.CreateBlockAction(this.player, blockType), i);
+                            this.linkAction(PlayerActionBlockShape.Create(this.player, blockType), i);
                         }
                     }
                     else if (linkedItemName.startsWith("paint_")) {
                         let paintName = linkedItemName.replace("paint_", "");
                         let paintIndex = BRICK_COLORS.findIndex(c => { return c.name === paintName; });
                         this.linkAction(PlayerActionTemplate.CreatePaintAction(this.player, paintIndex), i);
-                    }
-                    else if (linkedItemName.startsWith("pole_")) {
-                        let blockName = linkedItemName.replace("pole_", "");
-                        let blockType = Kulla.BlockTypeNames.indexOf(blockName);
-                        if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
-                            this.linkAction(PlayerActionBlockShape.Create(this.player, "pole", blockType), i);
-                        }
-                    }
-                    else if (linkedItemName.startsWith("tile_")) {
-                        let blockName = linkedItemName.replace("tile_", "");
-                        let blockType = Kulla.BlockTypeNames.indexOf(blockName);
-                        if (blockType >= Kulla.BlockType.None && blockType < Kulla.BlockType.Unknown) {
-                            this.linkAction(PlayerActionBlockShape.Create(this.player, "tile", blockType), i);
-                        }
                     }
                     else if (linkedItemName === "mushroom") {
                         this.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), i);
