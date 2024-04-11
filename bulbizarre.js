@@ -4442,7 +4442,16 @@ class PlayerActionBlockShape {
                     if (chunckIJK) {
                         if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
-                                previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(1, 0, 0, 1), offset: previewOffset, grid: player.game.terrain.blockSizeIJ_m });
+                                previewMesh = new BABYLON.Mesh("preview");
+                                let boxData = BABYLON.CreateBoxVertexData({ width: previewW + 0.05, height: previewH + 0.05, depth: previewD + 0.05 });
+                                Mummu.TranslateVertexDataInPlace(boxData, previewOffset);
+                                let eraseMat = new BABYLON.StandardMaterial("erase-material");
+                                eraseMat.diffuseColor.copyFromFloats(1, 0, 0);
+                                eraseMat.emissiveColor.copyFromFloats(0.5, 0.5, 0.5);
+                                eraseMat.specularColor.copyFromFloats(0, 0, 0);
+                                eraseMat.alpha = 0.5;
+                                previewMesh.material = eraseMat;
+                                boxData.applyToMesh(previewMesh);
                             }
                             else {
                                 previewMesh = Mummu.CreateLineBox("preview", { width: previewW, height: previewH, depth: previewD, color: new BABYLON.Color4(0, 1, 0, 1), offset: previewOffset, grid: player.game.terrain.blockSizeIJ_m });
@@ -4450,6 +4459,7 @@ class PlayerActionBlockShape {
                         }
                         if (!previewGrid) {
                             previewGrid = new BABYLON.Mesh("grid");
+                            previewGrid.alphaIndex = 0;
                             let gridMat = new ChunckGridMaterial("grid-mat", player._scene);
                             previewGrid.material = gridMat;
                         }
@@ -4484,7 +4494,16 @@ class PlayerActionBlockShape {
         action.onPointerDown = () => {
             if (player.controler.playMode === PlayMode.Playing) {
                 if (targetChunck) {
-                    shape.draw(targetChunck, targetIJK, dir, blockType, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                    if (blockType === Kulla.BlockType.None) {
+                        shape.draw(targetChunck, targetIJK, dir, Kulla.BlockType.None, Kulla.TerrainEditionMode.Erase, true);
+                    }
+                    else {
+                        shape.draw(targetChunck, targetIJK, dir, blockType, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                    }
+                    if (previewGrid) {
+                        previewGrid.dispose();
+                        previewGrid = undefined;
+                    }
                 }
             }
         };
