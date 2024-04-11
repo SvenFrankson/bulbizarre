@@ -11,12 +11,13 @@ class PlayerActionBlockShape {
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh: BABYLON.Mesh;
         let previewGrid: BABYLON.Mesh;
-        action.iconUrl = "/datas/icons/shapes/" + shapeName + ".png";;
 
-        let size = 5;
+        let size = 3;
         let dir = 0;
         let targetIJK: Nabu.IJK = { i: 0, j: 0, k: 0 };
         let targetChunck: Kulla.Chunck;
+
+        action.iconUrl = "/datas/icons/shapes/" + shapeName + "_" + size.toFixed(0) + ".png";
 
         action.onUpdate = () => {
             if (player.controler.playMode === PlayMode.Playing) {
@@ -148,7 +149,7 @@ class PlayerActionBlockShape {
                 shape = new Kulla.Box(player.game.terrain, { width: 1, height: size, length: size });
             }
 
-            console.log(shapeName);
+            action.iconUrl = "/datas/icons/shapes/" + shapeName + "_" + size.toFixed(0) + ".png";
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;

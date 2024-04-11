@@ -562,13 +562,15 @@ class Game {
     
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
             
-            await this.makeShapeScreenshot("pole");
-            await this.makeShapeScreenshot("wall");
-            await this.makeShapeScreenshot("tile");
+            for (let i = 0; i <= 10; i++) {
+                await this.makeShapeScreenshot("pole", i);
+                await this.makeShapeScreenshot("wall", i);
+                await this.makeShapeScreenshot("tile", i);
+            }
         })
     }
 
-    public async makeShapeScreenshot(shapeName: string, debugNoDelete: boolean = false): Promise<void> {
+    public async makeShapeScreenshot(shapeName: string, size: number, debugNoDelete: boolean = false): Promise<void> {
         this.scene.clearColor.copyFromFloats(0, 0, 0, 0);
         
         return new Promise<void>(resolve => {
@@ -577,15 +579,15 @@ class Game {
                 let previewH = 1;
                 let previewD = 1;
                 if (shapeName === "pole") {
-                    previewH = 5;
+                    previewH = size;
                 }
                 else if (shapeName === "wall") {
-                    previewD = 5;
-                    previewH = 5;
+                    previewD = size;
+                    previewH = size;
                 }
                 else if (shapeName === "tile") {
-                    previewW = 5;
-                    previewD = 5;
+                    previewW = size;
+                    previewD = size;
                 }
 
                 let previewMesh = new BABYLON.Mesh("preview");
@@ -635,7 +637,7 @@ class Game {
                 }
 
                 setTimeout(async () => {
-                    await Mummu.MakeScreenshot({ miniatureName: shapeName, size: 256, outlineWidth: 1 });
+                    await Mummu.MakeScreenshot({ miniatureName: shapeName + "_" + size.toFixed(0), size: 256, outlineWidth: 1 });
                     if (!debugNoDelete) {
                         previewMesh.dispose();
                     }

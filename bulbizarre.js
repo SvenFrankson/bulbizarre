@@ -837,12 +837,14 @@ class Game {
             this.engine.resize();
             this.screenRatio = this.engine.getRenderWidth() / this.engine.getRenderHeight();
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
-            await this.makeShapeScreenshot("pole");
-            await this.makeShapeScreenshot("wall");
-            await this.makeShapeScreenshot("tile");
+            for (let i = 0; i <= 10; i++) {
+                await this.makeShapeScreenshot("pole", i);
+                await this.makeShapeScreenshot("wall", i);
+                await this.makeShapeScreenshot("tile", i);
+            }
         });
     }
-    async makeShapeScreenshot(shapeName, debugNoDelete = false) {
+    async makeShapeScreenshot(shapeName, size, debugNoDelete = false) {
         this.scene.clearColor.copyFromFloats(0, 0, 0, 0);
         return new Promise(resolve => {
             requestAnimationFrame(async () => {
@@ -850,15 +852,15 @@ class Game {
                 let previewH = 1;
                 let previewD = 1;
                 if (shapeName === "pole") {
-                    previewH = 5;
+                    previewH = size;
                 }
                 else if (shapeName === "wall") {
-                    previewD = 5;
-                    previewH = 5;
+                    previewD = size;
+                    previewH = size;
                 }
                 else if (shapeName === "tile") {
-                    previewW = 5;
-                    previewD = 5;
+                    previewW = size;
+                    previewD = size;
                 }
                 let previewMesh = new BABYLON.Mesh("preview");
                 let w = previewW;
@@ -900,7 +902,7 @@ class Game {
                     this.orthoCamera.orthoRight = halfCamMinH * f;
                 }
                 setTimeout(async () => {
-                    await Mummu.MakeScreenshot({ miniatureName: shapeName, size: 256, outlineWidth: 1 });
+                    await Mummu.MakeScreenshot({ miniatureName: shapeName + "_" + size.toFixed(0), size: 256, outlineWidth: 1 });
                     if (!debugNoDelete) {
                         previewMesh.dispose();
                     }
@@ -3518,6 +3520,7 @@ class PlayerActionManager {
         this.game.scene.onBeforeRenderObservable.add(this.update);
     }
     linkAction(action, slotIndex) {
+        this.unlinkAction(slotIndex);
         if (slotIndex >= 0 && slotIndex <= 9) {
             this.linkedActions[slotIndex] = action;
             this.playerActionView.onActionLinked(action, slotIndex);
@@ -3720,6 +3723,14 @@ class PlayerActionView {
                     tile.style.background = undefined;
                     tile.style.backgroundColor = action.backgroundColor;
                 }
+                action._onIconUrlChanged = () => {
+                    console.log(action.iconUrl);
+                    tile.style.background = "url(" + action.iconUrl + ")";
+                    tile.style.backgroundSize = "contain";
+                    tile.style.backgroundRepeat = "no-repeat";
+                    tile.style.backgroundPosition = "center";
+                    tile.style.backgroundColor = action.backgroundColor;
+                };
             }
         }
     }
@@ -3739,6 +3750,15 @@ class PlayerAction {
         this.player = player;
         this.backgroundColor = "#ffffff";
         this.r = 0;
+    }
+    get iconUrl() {
+        return this._iconUrl;
+    }
+    set iconUrl(url) {
+        this._iconUrl = url;
+        if (this._onIconUrlChanged) {
+            this._onIconUrlChanged();
+        }
     }
 }
 var PlayMode;
@@ -4407,12 +4427,11 @@ class PlayerActionBlockShape {
         action.backgroundColor = Kulla.BlockTypeColors[blockType].toHexString();
         let previewMesh;
         let previewGrid;
-        action.iconUrl = "/datas/icons/shapes/" + shapeName + ".png";
-        ;
-        let size = 5;
+        let size = 3;
         let dir = 0;
         let targetIJK = { i: 0, j: 0, k: 0 };
         let targetChunck;
+        action.iconUrl = "/datas/icons/shapes/" + shapeName + "_" + size.toFixed(0) + ".png";
         action.onUpdate = () => {
             if (player.controler.playMode === PlayMode.Playing) {
                 let x;
@@ -4526,7 +4545,7 @@ class PlayerActionBlockShape {
                 previewOffset.copyFromFloats(0, l, l);
                 shape = new Kulla.Box(player.game.terrain, { width: 1, height: size, length: size });
             }
-            console.log(shapeName);
+            action.iconUrl = "/datas/icons/shapes/" + shapeName + "_" + size.toFixed(0) + ".png";
             if (previewMesh) {
                 previewMesh.dispose();
                 previewMesh = undefined;

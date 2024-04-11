@@ -104,6 +104,15 @@ class PlayerActionView {
                     tile.style.background = undefined;
                     tile.style.backgroundColor = action.backgroundColor;
                 }
+
+                action._onIconUrlChanged = () => {
+                    console.log(action.iconUrl);
+                    tile.style.background = "url(" + action.iconUrl + ")";
+                    tile.style.backgroundSize = "contain";
+                    tile.style.backgroundRepeat = "no-repeat";
+                    tile.style.backgroundPosition = "center";
+                    tile.style.backgroundColor = action.backgroundColor;
+                }
             }
         }
     }
