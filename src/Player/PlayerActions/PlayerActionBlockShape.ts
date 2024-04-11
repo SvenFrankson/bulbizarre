@@ -13,7 +13,7 @@ class PlayerActionBlockShape {
         let previewGrid: BABYLON.Mesh;
         action.iconUrl = "/datas/icons/shapes/" + shapeName + ".png";;
 
-        let size = 1;
+        let size = 5;
         let dir = 0;
         let targetIJK: Nabu.IJK = { i: 0, j: 0, k: 0 };
         let targetChunck: Kulla.Chunck;
@@ -42,7 +42,7 @@ class PlayerActionBlockShape {
                 )
                 if (hit && hit.pickedPoint) {
                     let n =  hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? - 0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                     if (chunckIJK) {
                         if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
@@ -109,31 +109,57 @@ class PlayerActionBlockShape {
             }
         }
 
-        action.onEquip = () => {
+        let nextShape = () => {
+            if (shapeName === "pole") {
+                shapeName = "tile";
+            }
+            else if (shapeName === "tile") {
+                shapeName = "wall";
+            }
+            else if (shapeName === "wall") {
+                shapeName = "pole";
+            }
+            onShapeUpdate();
+        }
+
+
+        let onShapeUpdate = () => {
             let terrain = player.game.terrain;
+            let l = (size / 2 - 0.5) * player.game.terrain.blockSizeIJ_m;
             if (shapeName === "pole") {
                 previewW = terrain.blockSizeIJ_m;
-                previewH = 5 * terrain.blockSizeK_m;
+                previewH = size * terrain.blockSizeK_m;
                 previewD = terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(0, 2 * terrain.blockSizeK_m, 0);
-                shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 1 });
+                previewOffset.copyFromFloats(0, l, 0);
+                shape = new Kulla.Box(player.game.terrain, { width: 1, height: size, length: 1 });
             }
-            if (shapeName === "tile") {
-                previewW = 5 * terrain.blockSizeIJ_m;
+            else if (shapeName === "tile") {
+                previewW = size * terrain.blockSizeIJ_m;
                 previewH = 1 * terrain.blockSizeK_m;
-                previewD = 5 * terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(2 * terrain.blockSizeIJ_m, 0, 2 * terrain.blockSizeIJ_m);
-                shape = new Kulla.Box(player.game.terrain, { width: 5, height: 1, length: 5 });
+                previewD = size * terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(l, 0, l);
+                shape = new Kulla.Box(player.game.terrain, { width: size, height: 1, length: size });
             }
-            if (shapeName === "wall") {
+            else if (shapeName === "wall") {
                 previewW = 1 * terrain.blockSizeIJ_m;
-                previewH = 5 * terrain.blockSizeK_m;
-                previewD = 5 * terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(0, 2 * terrain.blockSizeK_m, 2 * terrain.blockSizeIJ_m);
-                shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 5 });
+                previewH = size * terrain.blockSizeK_m;
+                previewD = size * terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(0, l, l);
+                shape = new Kulla.Box(player.game.terrain, { width: 1, height: size, length: size });
             }
+
+            console.log(shapeName);
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+        }
+
+        action.onEquip = () => {
+            onShapeUpdate();
             dir = 0;
-            player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick)
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.NEXT_SHAPE, nextShape);
         }
 
         action.onUnequip = () => {
@@ -147,6 +173,18 @@ class PlayerActionBlockShape {
             }
             targetChunck = undefined;
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.NEXT_SHAPE, nextShape);
+        }
+
+        action.onWheel = (e: WheelEvent) => {
+            if (e.deltaY > 0) {
+                size = Nabu.MinMax(size - 1, 1, 10);
+                onShapeUpdate();
+            }
+            else if (e.deltaY < 0) {
+                size = Nabu.MinMax(size + 1, 1, 10);
+                onShapeUpdate();
+            }
         }
         
         return action;

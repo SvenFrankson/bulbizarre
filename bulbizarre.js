@@ -295,15 +295,16 @@ var KeyInput;
     KeyInput[KeyInput["INVENTORY_PREV_CAT"] = 15] = "INVENTORY_PREV_CAT";
     KeyInput[KeyInput["INVENTORY_NEXT_CAT"] = 16] = "INVENTORY_NEXT_CAT";
     KeyInput[KeyInput["INVENTORY_EQUIP_ITEM"] = 17] = "INVENTORY_EQUIP_ITEM";
-    KeyInput[KeyInput["ROTATE_SELECTED"] = 18] = "ROTATE_SELECTED";
-    KeyInput[KeyInput["DELETE_SELECTED"] = 19] = "DELETE_SELECTED";
-    KeyInput[KeyInput["MOVE_FORWARD"] = 20] = "MOVE_FORWARD";
-    KeyInput[KeyInput["MOVE_LEFT"] = 21] = "MOVE_LEFT";
-    KeyInput[KeyInput["MOVE_BACK"] = 22] = "MOVE_BACK";
-    KeyInput[KeyInput["MOVE_RIGHT"] = 23] = "MOVE_RIGHT";
-    KeyInput[KeyInput["JUMP"] = 24] = "JUMP";
-    KeyInput[KeyInput["MAIN_MENU"] = 25] = "MAIN_MENU";
-    KeyInput[KeyInput["WORKBENCH"] = 26] = "WORKBENCH";
+    KeyInput[KeyInput["NEXT_SHAPE"] = 18] = "NEXT_SHAPE";
+    KeyInput[KeyInput["ROTATE_SELECTED"] = 19] = "ROTATE_SELECTED";
+    KeyInput[KeyInput["DELETE_SELECTED"] = 20] = "DELETE_SELECTED";
+    KeyInput[KeyInput["MOVE_FORWARD"] = 21] = "MOVE_FORWARD";
+    KeyInput[KeyInput["MOVE_LEFT"] = 22] = "MOVE_LEFT";
+    KeyInput[KeyInput["MOVE_BACK"] = 23] = "MOVE_BACK";
+    KeyInput[KeyInput["MOVE_RIGHT"] = 24] = "MOVE_RIGHT";
+    KeyInput[KeyInput["JUMP"] = 25] = "JUMP";
+    KeyInput[KeyInput["MAIN_MENU"] = 26] = "MAIN_MENU";
+    KeyInput[KeyInput["WORKBENCH"] = 27] = "WORKBENCH";
 })(KeyInput || (KeyInput = {}));
 class GameConfiguration extends Nabu.Configuration {
     constructor(configName, game) {
@@ -349,6 +350,7 @@ class GameConfiguration extends Nabu.Configuration {
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_PREV_CAT", KeyInput.INVENTORY_PREV_CAT, "GamepadBtn4"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_NEXT_CAT", KeyInput.INVENTORY_NEXT_CAT, "GamepadBtn5"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "INVENTORY_EQUIP_ITEM", KeyInput.INVENTORY_EQUIP_ITEM, "GamepadBtn0"),
+            Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "NEXT_SHAPE", KeyInput.NEXT_SHAPE, "KeyZ"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "ROTATE_SELECTED", KeyInput.ROTATE_SELECTED, "KeyR"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "DELETE_SELECTED", KeyInput.DELETE_SELECTED, "KeyX"),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "MOVE_FORWARD", KeyInput.MOVE_FORWARD, "KeyW"),
@@ -4407,7 +4409,7 @@ class PlayerActionBlockShape {
         let previewGrid;
         action.iconUrl = "/datas/icons/shapes/" + shapeName + ".png";
         ;
-        let size = 1;
+        let size = 5;
         let dir = 0;
         let targetIJK = { i: 0, j: 0, k: 0 };
         let targetChunck;
@@ -4431,7 +4433,7 @@ class PlayerActionBlockShape {
                 });
                 if (hit && hit.pickedPoint) {
                     let n = hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? -0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
                     if (chunckIJK) {
                         if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
@@ -4488,31 +4490,53 @@ class PlayerActionBlockShape {
                 previewMesh.rotationQuaternion = quat;
             }
         };
-        action.onEquip = () => {
+        let nextShape = () => {
+            if (shapeName === "pole") {
+                shapeName = "tile";
+            }
+            else if (shapeName === "tile") {
+                shapeName = "wall";
+            }
+            else if (shapeName === "wall") {
+                shapeName = "pole";
+            }
+            onShapeUpdate();
+        };
+        let onShapeUpdate = () => {
             let terrain = player.game.terrain;
+            let l = (size / 2 - 0.5) * player.game.terrain.blockSizeIJ_m;
             if (shapeName === "pole") {
                 previewW = terrain.blockSizeIJ_m;
-                previewH = 5 * terrain.blockSizeK_m;
+                previewH = size * terrain.blockSizeK_m;
                 previewD = terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(0, 2 * terrain.blockSizeK_m, 0);
-                shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 1 });
+                previewOffset.copyFromFloats(0, l, 0);
+                shape = new Kulla.Box(player.game.terrain, { width: 1, height: size, length: 1 });
             }
-            if (shapeName === "tile") {
-                previewW = 5 * terrain.blockSizeIJ_m;
+            else if (shapeName === "tile") {
+                previewW = size * terrain.blockSizeIJ_m;
                 previewH = 1 * terrain.blockSizeK_m;
-                previewD = 5 * terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(2 * terrain.blockSizeIJ_m, 0, 2 * terrain.blockSizeIJ_m);
-                shape = new Kulla.Box(player.game.terrain, { width: 5, height: 1, length: 5 });
+                previewD = size * terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(l, 0, l);
+                shape = new Kulla.Box(player.game.terrain, { width: size, height: 1, length: size });
             }
-            if (shapeName === "wall") {
+            else if (shapeName === "wall") {
                 previewW = 1 * terrain.blockSizeIJ_m;
-                previewH = 5 * terrain.blockSizeK_m;
-                previewD = 5 * terrain.blockSizeIJ_m;
-                previewOffset.copyFromFloats(0, 2 * terrain.blockSizeK_m, 2 * terrain.blockSizeIJ_m);
-                shape = new Kulla.Box(player.game.terrain, { width: 1, height: 5, length: 5 });
+                previewH = size * terrain.blockSizeK_m;
+                previewD = size * terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(0, l, l);
+                shape = new Kulla.Box(player.game.terrain, { width: 1, height: size, length: size });
             }
+            console.log(shapeName);
+            if (previewMesh) {
+                previewMesh.dispose();
+                previewMesh = undefined;
+            }
+        };
+        action.onEquip = () => {
+            onShapeUpdate();
             dir = 0;
             player.game.inputManager.addMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
+            player.game.inputManager.addMappedKeyDownListener(KeyInput.NEXT_SHAPE, nextShape);
         };
         action.onUnequip = () => {
             if (previewMesh) {
@@ -4525,6 +4549,17 @@ class PlayerActionBlockShape {
             }
             targetChunck = undefined;
             player.game.inputManager.removeMappedKeyDownListener(KeyInput.ROTATE_SELECTED, rotateBrick);
+            player.game.inputManager.removeMappedKeyDownListener(KeyInput.NEXT_SHAPE, nextShape);
+        };
+        action.onWheel = (e) => {
+            if (e.deltaY > 0) {
+                size = Nabu.MinMax(size - 1, 1, 10);
+                onShapeUpdate();
+            }
+            else if (e.deltaY < 0) {
+                size = Nabu.MinMax(size + 1, 1, 10);
+                onShapeUpdate();
+            }
         };
         return action;
     }
