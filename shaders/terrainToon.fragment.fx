@@ -58,6 +58,7 @@ void main() {
    float ampli = 0.1;
 
    float noise = 2. * (texture(noiseTexture, vec2(vPositionW.x * 0.1, vPositionW.z * 0.1)).r - 0.5);
+   noise = 0.;
 
    float offset = noise * 0.5;
    // case all same
@@ -140,13 +141,15 @@ void main() {
       }
    }
 
+   /*
+   // Turn Grass into Dirt on vertical surfaces
    if (colorIndex == 2) {
       if (vNormalW.y < 0.75 + noise * 0.1) {
          color = terrainColors[3];
       }
    }
+   */
 
-   /*
    // show triangles
    if (baryPos.r < 0.005) {
       color = vec3(0., 0., 0.);
@@ -159,9 +162,11 @@ void main() {
    }
 
    // show Chunck Parts
-   float dx = vPositionW.x + 0.5 - floor(vPositionW.x + 0.5);
-   float dy = vPositionW.y + 0.5 - floor(vPositionW.y + 0.5);
-   float dz = vPositionW.z + 0.5 - floor(vPositionW.z + 0.5);
+   float dh = blockSize_m * 0.5;
+   float dv = blockHeight_m * 0.5;
+   float dx = (vPositionL.x + dh) - floor((vPositionL.x + dh) / blockSize_m) * blockSize_m;
+   float dy = (vPositionL.y + dv) - floor((vPositionL.y + dv) / blockHeight_m) * blockHeight_m;
+   float dz = (vPositionL.z + dh) - floor((vPositionL.z + dh) / blockSize_m) * blockSize_m;
 
    if (dx < 0.005 || dx > 0.995) {
       color = vec3(1., 0., 1.);
@@ -174,6 +179,7 @@ void main() {
    }
 
    // show grid
+   /*
    float dx = vPositionW.x - floor(vPositionW.x);
    float dz = vPositionW.z - floor(vPositionW.z);
 
