@@ -70,8 +70,9 @@ void main() {
    else if (colorIndex1 == colorIndex2) {
       if (colorIndex1 > colorIndex3) {
          offset *= -1.;
-      }  
-      if (baryPos.b + offset > baryPos.r && baryPos.b + offset > baryPos.g) {
+      }
+
+      if (baryPos.b > 0.5) {
          color = color3;
          colorIndex = colorIndex3;
       }
@@ -83,8 +84,9 @@ void main() {
    else if (colorIndex1 == colorIndex3) {
       if (colorIndex1 > colorIndex2) {
          offset *= -1.;
-      }  
-      if (baryPos.g + offset > baryPos.r && baryPos.g + offset > baryPos.b) {
+      }
+
+      if (baryPos.g > 0.5) {
          color = color2;
          colorIndex = colorIndex2;
       }
@@ -96,8 +98,9 @@ void main() {
    else if (colorIndex2 == colorIndex3) {
       if (colorIndex1 < colorIndex2) {
          offset *= -1.;
-      }  
-      if (baryPos.r + offset > baryPos.g && baryPos.r + offset > baryPos.b) {
+      }
+
+      if (baryPos.r > 0.5) {
          color = color1;
          colorIndex = colorIndex1;
       }
