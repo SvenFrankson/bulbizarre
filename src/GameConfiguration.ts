@@ -121,7 +121,6 @@ class GameConfiguration extends Nabu.Configuration {
                     displayName: "God Mode"
                 },
                 (newValue) => {
-                    console.log(newValue);
                     this.game.player.godMode = newValue === 1 ? true : false;
                 }
             ),

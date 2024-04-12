@@ -15,7 +15,6 @@ class Arrow extends BABYLON.Mesh {
             if (Math.abs(BABYLON.Vector3.Dot(this.dir, axis)) > 0.9) {
                 axis = this.game.arcCamera.getDirection(BABYLON.Axis.Y);
             }
-            console.log(this.dir.toString() + " " + axis.toString());
             Mummu.QuaternionFromZYAxisToRef(this.dir, axis, this.propEditor.gridMesh.rotationQuaternion);
             this.propEditor.gridMesh.position.copyFrom(this.absolutePosition);
             this.propEditor.gridMesh.computeWorldMatrix(true);
@@ -370,7 +369,6 @@ class GameConfiguration extends Nabu.Configuration {
             new Nabu.ConfigurationElement("godMode", Nabu.ConfigurationElementType.Boolean, 0, Nabu.ConfigurationElementCategory.Dev, {
                 displayName: "God Mode"
             }, (newValue) => {
-                console.log(newValue);
                 this.game.player.godMode = newValue === 1 ? true : false;
             }),
             new Nabu.ConfigurationElement("showRenderDistDebug", Nabu.ConfigurationElementType.Boolean, 0, Nabu.ConfigurationElementCategory.Dev, {
@@ -463,6 +461,12 @@ class Game {
         this.uiCamera = new BABYLON.FreeCamera("background-camera", BABYLON.Vector3.Zero());
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
+        let sun = BABYLON.MeshBuilder.CreateSphere("sun", { diameter: 20 });
+        sun.position.copyFrom(this.light.direction).scaleInPlace(1000);
+        let sunMat = new BABYLON.StandardMaterial("sun-material");
+        sunMat.diffuseColor.copyFromFloats(1, 1, 1);
+        sunMat.emissiveColor.copyFromFloats(1, 1, 0);
+        sun.material = sunMat;
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-position")) {
@@ -545,6 +549,7 @@ class Game {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_COLORS[i].name, InventoryCategory.Paint));
             }
             this.player.playerActionManager.loadFromLocalStorage();
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), 9);
             this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
             window.addEventListener("keydown", (event) => {
@@ -1609,16 +1614,12 @@ class PropEditor {
         });
         this.loadButton = document.querySelector("#prop-editor-load");
         this.loadButton.addEventListener("change", (event) => {
-            console.log("alpha");
             let files = event.target.files;
             let file = files[0];
             if (file) {
-                console.log("bravo");
                 const reader = new FileReader();
                 reader.addEventListener('load', (event) => {
-                    console.log("charly");
                     if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
-                        console.log("delta");
                         let data = JSON.parse(event.target.result);
                         this.game.terrain.chunckDataGenerator.prop.deserialize(data);
                         this.redraw();
@@ -3358,26 +3359,12 @@ class Player extends BABYLON.Mesh {
         return this._currentAction;
     }
     set currentAction(action) {
-        if (action) {
-            console.log("set current action " + action.name);
-        }
-        else {
-            console.log("set current action undefined");
-        }
         if (this._currentAction && this._currentAction.onUnequip) {
-            console.log("unequip " + ((this._currentAction != undefined) ? this._currentAction.name : "undefined"));
             this._currentAction.onUnequip();
-        }
-        else {
-            console.log("no unequip callback");
         }
         this._currentAction = action;
         if (this._currentAction && this._currentAction.onEquip) {
-            console.log("equip " + ((this._currentAction != undefined) ? this._currentAction.name : "undefined"));
             this._currentAction.onEquip();
-        }
-        else {
-            console.log("no equip callback");
         }
     }
     update(dt) {
@@ -3711,7 +3698,6 @@ class PlayerActionView {
                     tile.style.backgroundColor = action.backgroundColor;
                 }
                 action._onIconUrlChanged = () => {
-                    console.log(action.iconUrl);
                     tile.style.background = "url(" + action.iconUrl + ")";
                     tile.style.backgroundSize = "contain";
                     tile.style.backgroundRepeat = "no-repeat";

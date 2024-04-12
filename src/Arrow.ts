@@ -57,7 +57,6 @@ class Arrow extends BABYLON.Mesh {
         if (Math.abs(BABYLON.Vector3.Dot(this.dir, axis)) > 0.9) {
             axis = this.game.arcCamera.getDirection(BABYLON.Axis.Y);
         }
-        console.log(this.dir.toString() + " " + axis.toString());
         Mummu.QuaternionFromZYAxisToRef(this.dir, axis, this.propEditor.gridMesh.rotationQuaternion);
         this.propEditor.gridMesh.position.copyFrom(this.absolutePosition);
         this.propEditor.gridMesh.computeWorldMatrix(true);

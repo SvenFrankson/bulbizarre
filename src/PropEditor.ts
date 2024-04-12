@@ -527,16 +527,12 @@ class PropEditor {
 
         this.loadButton = document.querySelector("#prop-editor-load");
         this.loadButton.addEventListener("change", (event: Event) => {
-            console.log("alpha");
             let files = (event.target as HTMLInputElement).files;
             let file = files[0];
             if (file) {
-                console.log("bravo");
                 const reader = new FileReader();
                 reader.addEventListener('load', (event) => {
-                    console.log("charly");
                     if (this.game.terrain.chunckDataGenerator instanceof Kulla.ChunckDataGeneratorFlat) {
-                        console.log("delta");
                         let data = JSON.parse(event.target.result as string);
                         this.game.terrain.chunckDataGenerator.prop.deserialize(data);
                         this.redraw();

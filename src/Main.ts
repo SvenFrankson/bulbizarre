@@ -118,6 +118,13 @@ class Game {
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
 
+        let sun = BABYLON.MeshBuilder.CreateSphere("sun", { diameter: 20 });
+        sun.position.copyFrom(this.light.direction).scaleInPlace(1000);
+        let sunMat = new BABYLON.StandardMaterial("sun-material");
+        sunMat.diffuseColor.copyFromFloats(1, 1, 1);
+        sunMat.emissiveColor.copyFromFloats(1, 1, 0);
+        sun.material = sunMat;
+
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
 
         if (this.DEBUG_MODE) {
@@ -216,6 +223,8 @@ class Game {
             }
 
             this.player.playerActionManager.loadFromLocalStorage();
+
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), 9);
 
             this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();

@@ -208,8 +208,8 @@ void main() {
    vec3 uvr = vec3(vPositionL.x / 26. / blockSize_m, vPositionL.z / 26. / blockSize_m, vPositionL.y / 257. / blockHeight_m);
    float gi = texture(lightTexture, uvr).r;
    gi = round(gi * 3.) / 3. + 0.25;
-   lightFactor = lightFactor * gi;
    lightFactor = round(lightFactor * 12.) / 12.;
+   lightFactor = lightFactor * gi;
 
    /*
    if (dx < 0.02 || dx > 0.98) {
