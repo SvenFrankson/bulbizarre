@@ -372,6 +372,20 @@ class Game {
             //this.brickMenuView.show(0.1);
         }
 
+        let noiseTexture = new CubicNoiseTexture(this.scene);
+        noiseTexture.double();
+        noiseTexture.double();
+        noiseTexture.double();
+        noiseTexture.double();
+        noiseTexture.double();
+        noiseTexture.double();
+        noiseTexture.double();
+        noiseTexture.double();
+        noiseTexture.randomize();
+        noiseTexture.smooth();
+
+        let cubicTex = noiseTexture.get3DTexture();
+
         let mat = new TerrainMaterial("terrain", this.scene);
         mat.setLightInvDir(this.light.direction);
         this.terrain.materials = [mat];
@@ -379,6 +393,7 @@ class Game {
             if (!(chunck.mesh.material instanceof TerrainMaterial)) {
                 let mat = new TerrainMaterial("terrain", this.scene);
                 mat.setLightInvDir(this.light.direction);
+                mat.setTexture("noiseTexture", cubicTex);
                 chunck.mesh.material = mat;
             }
             this.terrain.chunckManager.requestGlobalLightUpdate(chunck);

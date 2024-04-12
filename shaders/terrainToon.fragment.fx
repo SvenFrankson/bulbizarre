@@ -7,7 +7,7 @@ uniform vec3 lightInvDirW;
 uniform int level;
 uniform float blockSize_m;
 uniform float blockHeight_m;
-uniform sampler2D noiseTexture;
+uniform sampler3D noiseTexture;
 uniform sampler3D lightTexture;
 uniform vec3 debugColor;
 
@@ -57,10 +57,10 @@ void main() {
    float period = 1.;
    float ampli = 0.1;
 
-   float noise = 2. * (texture(noiseTexture, vec2(vPositionW.x * 0.1, vPositionW.z * 0.1)).r - 0.5);
-   noise = 0.;
+   vec3 uvrNoise = vec3(vPositionW.x * 0.1, vPositionW.z * 0.1, vPositionW.y * 0.1);
+   float noise = 2. * (texture(noiseTexture, uvrNoise).r - 0.5);
 
-   float offset = noise * 0.5;
+   float offset = noise * 0.2;
    // case all same
    if (colorIndex1 == colorIndex2 && colorIndex2 == colorIndex3) {
       color = color1;
@@ -72,7 +72,7 @@ void main() {
          offset *= -1.;
       }
 
-      if (baryPos.b > 0.5) {
+      if (baryPos.b > 0.5 + offset) {
          color = color3;
          colorIndex = colorIndex3;
       }
@@ -86,7 +86,7 @@ void main() {
          offset *= -1.;
       }
 
-      if (baryPos.g > 0.5) {
+      if (baryPos.g > 0.5 + offset) {
          color = color2;
          colorIndex = colorIndex2;
       }
@@ -100,7 +100,7 @@ void main() {
          offset *= -1.;
       }
 
-      if (baryPos.r > 0.5) {
+      if (baryPos.r > 0.5 + offset) {
          color = color1;
          colorIndex = colorIndex1;
       }
