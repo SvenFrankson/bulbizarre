@@ -102,11 +102,10 @@ class CubicNoiseTexture {
     }
 
     public noise() {
-        let amplitude = Math.pow(0.5, this.size - 1);
         for (let i = 0; i < this.size; i++) {
             for (let j = 0; j < this.size; j++) {
                 for (let k = 0; k < this.size; k++) {
-                    this._data[i][j][k] += amplitude * (Math.random() - 0.5)
+                    this._data[i][j][k] = (this._data[i][j][k] + Math.random()) * 0.5 ;
                 }
             }
         }

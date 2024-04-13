@@ -199,11 +199,10 @@ class CubicNoiseTexture {
         }
     }
     noise() {
-        let amplitude = Math.pow(0.5, this.size - 1);
         for (let i = 0; i < this.size; i++) {
             for (let j = 0; j < this.size; j++) {
                 for (let k = 0; k < this.size; k++) {
-                    this._data[i][j][k] += amplitude * (Math.random() - 0.5);
+                    this._data[i][j][k] = (this._data[i][j][k] + Math.random()) * 0.5;
                 }
             }
         }
@@ -815,9 +814,9 @@ class Game {
         noiseTexture.double();
         noiseTexture.double();
         noiseTexture.double();
-        noiseTexture.double();
         noiseTexture.randomize();
         noiseTexture.smooth();
+        console.log(noiseTexture.size);
         let cubicTex = noiseTexture.get3DTexture();
         let mat = new TerrainMaterial("terrain", this.scene);
         mat.setLightInvDir(this.light.direction);
@@ -1927,6 +1926,7 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
         this.setFloat("blockSize_m", 0.4);
         this.setFloat("blockHeight_m", 0.4);
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
+        this.setTexture("diffuseTexture", new BABYLON.Texture("./datas/textures/test-dirt.png"));
         this.updateDebugColor();
     }
     getLightInvDir() {

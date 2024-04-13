@@ -380,10 +380,10 @@ class Game {
         noiseTexture.double();
         noiseTexture.double();
         noiseTexture.double();
-        noiseTexture.double();
         noiseTexture.randomize();
         noiseTexture.smooth();
 
+        console.log(noiseTexture.size);
         let cubicTex = noiseTexture.get3DTexture();
 
         let mat = new TerrainMaterial("terrain", this.scene);

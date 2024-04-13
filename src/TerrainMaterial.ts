@@ -44,6 +44,8 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
         this.setFloat("blockHeight_m", 0.4);
         
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
+        
+        this.setTexture("diffuseTexture", new BABYLON.Texture("./datas/textures/test-dirt.png"));
 
         this.updateDebugColor();
     }
