@@ -65,6 +65,10 @@ class Player extends BABYLON.Mesh {
             this.updateCurrentChuncks();
         }
 
+        if (!this.currentChunck) {
+            return;
+        }
+
         if (this.currentAction) {
             this.currentAction.onUpdate(this.currentChuncks);
         }

@@ -7,7 +7,14 @@ uniform vec3 lightInvDirW;
 uniform int level;
 uniform float blockSize_m;
 uniform float blockHeight_m;
-uniform sampler2D diffuseTexture;
+// keep testing with https://www.cgtrader.com/3d-models/textures/natural-textures/ground-texture-hand-painted
+uniform sampler2D grassTexture;
+uniform sampler2D dirtTexture;
+uniform sampler2D barkTexture;
+uniform sampler2D leavesTexture;
+uniform sampler2D iceTexture;
+uniform sampler2D steelTexture;
+uniform sampler2D rockTexture;
 uniform sampler3D noiseTexture;
 uniform sampler3D lightTexture;
 uniform vec3 debugColor;
@@ -57,58 +64,95 @@ void main() {
 
    float period = 1.;
    float ampli = 0.1;
+   float outlineThreshold = 0.;
 
-   vec3 uvrNoise = vec3(vPositionW.x * 0.4, vPositionW.z * 0.4, vPositionW.y * 0.4);
+   vec3 uvrNoise = vec3(vPositionW.x * 0.2, vPositionW.z * 0.2, vPositionW.y * 0.2);
    float noise = 2. * (texture(noiseTexture, uvrNoise).r - 0.5);
 
-   float offset = noise * 0.2;
-   offset = 0.;
+   int cIndex1 = colorIndex1;
+   int cIndex2 = colorIndex2;
+   int cIndex3 = colorIndex3;
+
+   // Turn Grass into Dirt on vertical surfaces
+   float diff = vNormalW.y - (0.85 + noise * 0.1);
+   if (cIndex1 == 2) {
+      if (diff < 0.) {
+         cIndex1 = 3;
+      }
+   }
+   if (cIndex2 == 2) {
+      if (diff < 0.) {
+         cIndex2 = 3;
+      }
+   }
+   if (cIndex3 == 2) {
+      if (diff < 0.) {
+         cIndex3 = 3;
+      }
+   }
+
+   float offset = noise * 0.25;
    // case all same
-   if (colorIndex1 == colorIndex2 && colorIndex2 == colorIndex3) {
+   if (cIndex1 == cIndex2 && cIndex2 == cIndex3) {
       color = color1;
-      colorIndex = colorIndex1;
+      colorIndex = cIndex1;
    }
    // case one pair
-   else if (colorIndex1 == colorIndex2) {
-      if (colorIndex1 > colorIndex3) {
+   else if (cIndex1 == cIndex2) {
+      if (cIndex1 > cIndex3) {
          offset *= -1.;
       }
 
-      if (baryPos.b > 0.5 + offset) {
+      float diff = baryPos.b - 0.5 - offset;
+      if (diff > outlineThreshold) {
          color = color3;
-         colorIndex = colorIndex3;
+         colorIndex = cIndex3;
+      }
+      else if (diff < - outlineThreshold) {
+         color = color1;
+         colorIndex = cIndex1;
       }
       else {
-         color = color1;
-         colorIndex = colorIndex1;
+         color = vec3(0., 0., 0.);
+         colorIndex = 0;
       }
    }
-   else if (colorIndex1 == colorIndex3) {
-      if (colorIndex1 > colorIndex2) {
+   else if (cIndex1 == cIndex3) {
+      if (cIndex1 > cIndex2) {
          offset *= -1.;
       }
 
-      if (baryPos.g > 0.5 + offset) {
+      float diff = baryPos.g - 0.5 - offset;
+      if (diff > outlineThreshold) {
          color = color2;
-         colorIndex = colorIndex2;
+         colorIndex = cIndex2;
+      }
+      else if (diff < - outlineThreshold) {
+         color = color1;
+         colorIndex = cIndex1;
       }
       else {
-         color = color1;
-         colorIndex = colorIndex1;
+         color = vec3(0., 0., 0.);
+         colorIndex = 0;
       }
    }
-   else if (colorIndex2 == colorIndex3) {
-      if (colorIndex1 < colorIndex2) {
+   else if (cIndex2 == cIndex3) {
+      if (cIndex1 < cIndex2) {
          offset *= -1.;
       }
 
-      if (baryPos.r > 0.5 + offset) {
+      float diff = baryPos.r - 0.5 - offset;
+      if (diff > outlineThreshold) {
          color = color1;
-         colorIndex = colorIndex1;
+         colorIndex = cIndex1;
+      }
+      else if (diff < - outlineThreshold) {
+         color = color2;
+         colorIndex = cIndex2;
       }
       else {
-         color = color2;
-         colorIndex = colorIndex2;
+         color = vec3(0., 0., 0.);
+         colorIndex = 0;
       }
    }
    // case all different
@@ -122,46 +166,37 @@ void main() {
       //float offset3 = (cos(vPositionW.x * factor3 + vPositionW.y * factor3 * 0.5) + cos(vPositionW.y * factor3 + vPositionW.z * factor3 * 0.5) + cos(vPositionW.z * factor3 + vPositionW.x * factor3 * 0.5)) * 0.1;
 
       float offsetRG = offset;
-      if (colorIndex1 > colorIndex2) {
+      if (cIndex1 > cIndex2) {
          offsetRG *= -1.;
       }
 
       float offsetRB = offset;
-      if (colorIndex1 > colorIndex3) {
+      if (cIndex1 > cIndex3) {
          offsetRB *= -1.;
       }
 
       float offsetGB = offset;
-      if (colorIndex2 > colorIndex3) {
+      if (cIndex2 > cIndex3) {
          offsetGB *= -1.;
       }
 
       if (baryPos.r + offsetRG >= baryPos.g && baryPos.r + offsetRB >= baryPos.b) {
          color = color1;
-         colorIndex = colorIndex1;
+         colorIndex = cIndex1;
       }
       else if (baryPos.g - offsetRG >= baryPos.r && baryPos.g + offsetGB >= baryPos.b) {
          color = color2;
-         colorIndex = colorIndex2;
+         colorIndex = cIndex2;
       }
       else if (baryPos.b - offsetRB >= baryPos.r && baryPos.b - offsetGB >= baryPos.g) {
          color = color3;
-         colorIndex = colorIndex3;
+         colorIndex = cIndex3;
       }
       else {
          color = color1;
-         colorIndex = colorIndex1;
+         colorIndex = cIndex1;
       }
    }
-
-   /*
-   // Turn Grass into Dirt on vertical surfaces
-   if (colorIndex == 2) {
-      if (vNormalW.y < 0.75 + noise * 0.1) {
-         color = terrainColors[3];
-      }
-   }
-   */
 
    // show triangles
    /*
@@ -223,19 +258,36 @@ void main() {
 
    vec2 diffuseUV = vec2(0., 0.);
    if (abs(vNormalW.x) >= abs(vNormalW.y) && abs(vNormalW.x) >= abs(vNormalW.z)) {
-      diffuseUV.x = vPositionW.z * 0.5;
-      diffuseUV.y = vPositionW.y * 0.5;
+      diffuseUV.x = vPositionW.z * 1.;
+      diffuseUV.y = vPositionW.y * 1.;
    }
    else if (abs(vNormalW.y) >= abs(vNormalW.z)) {
-      diffuseUV.x = vPositionW.x * 0.5;
-      diffuseUV.y = vPositionW.z * 0.5;
+      diffuseUV.x = vPositionW.x * 1.;
+      diffuseUV.y = vPositionW.z * 1.;
    }
    else {
-      diffuseUV.x = vPositionW.x * 0.5;
-      diffuseUV.y = vPositionW.y * 0.5;
+      diffuseUV.x = vPositionW.x * 1.;
+      diffuseUV.y = vPositionW.y * 1.;
    }
 
-   color *= texture(diffuseTexture, diffuseUV).rgb;
+   if (colorIndex == 2) {
+      color = texture(grassTexture, diffuseUV * 0.3).rgb;
+   }
+   else if (colorIndex == 3) {
+      color = texture(dirtTexture, diffuseUV * 0.6).rgb;
+   }
+   else if (colorIndex == 11) {
+      color = texture(iceTexture, diffuseUV * 0.5).rgb;
+   }
+   else if (colorIndex == 5) {
+      color = texture(rockTexture, diffuseUV * 0.3).rgb;
+   }
+   else if (colorIndex == 6) {
+      color = texture(barkTexture, diffuseUV * 1.3).rgb;
+   }
+   else if (colorIndex == 7) {
+      color = texture(grassTexture, diffuseUV * 0.7).rgb * vec3(0.9, 1.2, 0.9);
+   }
 
    if (colorIndex == 2 || colorIndex == 3) {
       // Case dirt and grass > no tall flat surfaces
@@ -245,9 +297,9 @@ void main() {
       }
    }
    else {
-      // Case dirt with potential tall flat surfaces
+      // Case with potential tall flat surfaces
       float dy = vPositionW.y / blockHeight_m - floor(vPositionW.y / blockHeight_m);
-      if ((dy < 0.01 || dy > 0.99) && abs(vNormalW.y) > 0.5) {
+      if ((dy < 0.01 || dy > 0.99) && abs(vNormalW.y) > 0.7) {
          lightFactor *= 1.1;
       }
       else {
@@ -258,6 +310,7 @@ void main() {
    vec3 uvr = vec3(vPositionL.x / 26. / blockSize_m, vPositionL.z / 26. / blockSize_m, vPositionL.y / 257. / blockHeight_m);
    float gi = texture(lightTexture, uvr).r;
    gi = round(gi * 3.) / 3. + 0.25;
+   //gi = floor(gi);
    lightFactor = round(lightFactor * 12.) / 12.;
    lightFactor = lightFactor * gi;
 

@@ -671,6 +671,7 @@ class Game {
             this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Rock", InventoryCategory.Block));
             this.configuration.getElement("godMode").forceInit();
             for (let i = 0; i < BRICK_LIST.length; i++) {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_LIST[i], InventoryCategory.Brick));
@@ -1926,7 +1927,12 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
         this.setFloat("blockSize_m", 0.4);
         this.setFloat("blockHeight_m", 0.4);
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
-        this.setTexture("diffuseTexture", new BABYLON.Texture("./datas/textures/test-dirt.png"));
+        this.setTexture("barkTexture", new BABYLON.Texture("./datas/textures/bark.png"));
+        this.setTexture("leavesTexture", new BABYLON.Texture("./datas/textures/leaves.png"));
+        this.setTexture("dirtTexture", new BABYLON.Texture("./datas/textures/dirt.png"));
+        this.setTexture("grassTexture", new BABYLON.Texture("./datas/textures/grass.png"));
+        this.setTexture("rockTexture", new BABYLON.Texture("./datas/textures/rock.png"));
+        this.setTexture("iceTexture", new BABYLON.Texture("./datas/textures/ice.png"));
         this.updateDebugColor();
     }
     getLightInvDir() {
@@ -3518,6 +3524,9 @@ class Player extends BABYLON.Mesh {
         if (currentChunck != this.currentChunck) {
             this.currentChunck = currentChunck;
             this.updateCurrentChuncks();
+        }
+        if (!this.currentChunck) {
+            return;
         }
         if (this.currentAction) {
             this.currentAction.onUpdate(this.currentChuncks);

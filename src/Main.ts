@@ -211,6 +211,7 @@ class Game {
             this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
             this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
+            this.player.inventory.addItem(new PlayerInventoryItem("Rock", InventoryCategory.Block));
 
             this.configuration.getElement("godMode").forceInit();
 
