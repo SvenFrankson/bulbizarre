@@ -42,7 +42,7 @@ class PlayerActionBlockShape {
                 )
                 if (hit && hit.pickedPoint) {
                     let n =  hit.getNormal(true).scaleInPlace(blockType === Kulla.BlockType.None ? - 0.2 : 0.2);
-                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0);
+                    let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, shape instanceof Kulla.Sphere && size % 2 === 0);
                     if (chunckIJK) {
                         if (!previewMesh) {
                             if (blockType === Kulla.BlockType.None) {
@@ -140,6 +140,9 @@ class PlayerActionBlockShape {
                 shapeName = "wall";
             }
             else if (shapeName === "wall") {
+                shapeName = "sphere";
+            }
+            else if (shapeName === "sphere") {
                 shapeName = "pole";
             }
             onShapeUpdate();
@@ -169,6 +172,14 @@ class PlayerActionBlockShape {
                 previewD = size * terrain.blockSizeIJ_m;
                 previewOffset.copyFromFloats(0, l, l);
                 shape = new Kulla.Box(player.game.terrain, { width: 1, height: size, length: size });
+            }
+            else if (shapeName === "sphere") {
+                previewW = size * terrain.blockSizeIJ_m;
+                previewH = size * terrain.blockSizeK_m;
+                previewD = size * terrain.blockSizeIJ_m;
+                let o = size % 2 === 0 ? 0.5 * player.game.terrain.blockSizeIJ_m : 0;
+                previewOffset.copyFromFloats(0 - o, - o, 0 - o);
+                shape = new Kulla.Sphere(player.game.terrain, { diameter: size });
             }
 
             action.iconUrl = "/datas/icons/shapes/" + shapeName + "_" + size.toFixed(0) + ".png";
