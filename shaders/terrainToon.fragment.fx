@@ -2,19 +2,22 @@
 precision highp float;
 precision mediump sampler3D;
  
-uniform vec3 terrainColors[13];
+uniform vec3 terrainColors[14];
 uniform vec3 lightInvDirW;
 uniform int level;
 uniform float blockSize_m;
 uniform float blockHeight_m;
 // keep testing with https://www.cgtrader.com/3d-models/textures/natural-textures/ground-texture-hand-painted
 uniform sampler2D grassTexture;
+uniform sampler2D grassSparseTexture;
 uniform sampler2D dirtTexture;
 uniform sampler2D barkTexture;
 uniform sampler2D leavesTexture;
 uniform sampler2D iceTexture;
 uniform sampler2D steelTexture;
 uniform sampler2D rockTexture;
+uniform sampler2D asphaltTexture;
+uniform sampler2D rustTexture;
 uniform sampler3D noiseTexture;
 uniform sampler3D lightTexture;
 uniform vec3 debugColor;
@@ -75,19 +78,19 @@ void main() {
 
    // Turn Grass into Dirt on vertical surfaces
    float diff = vNormalW.y - (0.85 + noise * 0.1);
-   if (cIndex1 == 2) {
+   if (cIndex1 >= 2 && cIndex1 <= 3) {
       if (diff < 0.) {
-         cIndex1 = 3;
+         cIndex1 = 4;
       }
    }
-   if (cIndex2 == 2) {
+   if (cIndex2 >= 2 && cIndex2 <= 3) {
       if (diff < 0.) {
-         cIndex2 = 3;
+         cIndex2 = 4;
       }
    }
-   if (cIndex3 == 2) {
+   if (cIndex3 >= 2 && cIndex3 <= 3) {
       if (diff < 0.) {
-         cIndex3 = 3;
+         cIndex3 = 4;
       }
    }
 
@@ -274,22 +277,31 @@ void main() {
       color = texture(grassTexture, diffuseUV * 0.3).rgb;
    }
    else if (colorIndex == 3) {
+      color = texture(grassSparseTexture, diffuseUV * 0.6).rgb;
+   }
+   else if (colorIndex == 4) {
       color = texture(dirtTexture, diffuseUV * 0.6).rgb;
    }
-   else if (colorIndex == 11) {
+   else if (colorIndex == 12) {
       color = texture(iceTexture, diffuseUV * 0.5).rgb;
    }
-   else if (colorIndex == 5) {
-      color = texture(rockTexture, diffuseUV * 0.3).rgb;
-   }
    else if (colorIndex == 6) {
-      color = texture(barkTexture, diffuseUV * 1.3).rgb;
+      color = texture(rockTexture, diffuseUV * 0.4).rgb;
    }
    else if (colorIndex == 7) {
+      color = texture(barkTexture, diffuseUV * 1.3).rgb;
+   }
+   else if (colorIndex == 8) {
       color = texture(grassTexture, diffuseUV * 0.7).rgb * vec3(0.9, 1.2, 0.9);
    }
+   else if (colorIndex == 14) {
+      color = texture(asphaltTexture, diffuseUV * 0.4).rgb;
+   }
+   else if (colorIndex == 15) {
+      color = texture(rustTexture, diffuseUV * 0.4).rgb;
+   }
 
-   if (colorIndex == 2 || colorIndex == 3) {
+   if (colorIndex >= 2 && colorIndex <= 4) {
       // Case dirt and grass > no tall flat surfaces
       float dy = vPositionW.y / blockHeight_m - floor(vPositionW.y / blockHeight_m) + noise * 0.15;
       if ((dy > 0.15 && dy < 0.85)) {

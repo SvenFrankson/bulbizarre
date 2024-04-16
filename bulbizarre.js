@@ -458,7 +458,7 @@ class GameConfiguration extends Nabu.Configuration {
                     }
                 }
             }),
-            new Nabu.ConfigurationElement("renderDist", Nabu.ConfigurationElementType.Number, 8, Nabu.ConfigurationElementCategory.Graphic, {
+            new Nabu.ConfigurationElement("renderDist", Nabu.ConfigurationElementType.Number, 4, Nabu.ConfigurationElementCategory.Graphic, {
                 displayName: "Render Distance",
                 min: 1,
                 max: 15,
@@ -468,7 +468,7 @@ class GameConfiguration extends Nabu.Configuration {
             }, (newValue) => {
                 this.game.terrain.chunckManager.setDistance(newValue * this.game.terrain.chunckLengthIJ);
             }),
-            new Nabu.ConfigurationElement("canLockPointer", Nabu.ConfigurationElementType.Boolean, 0, Nabu.ConfigurationElementCategory.Control, {
+            new Nabu.ConfigurationElement("canLockPointer", Nabu.ConfigurationElementType.Boolean, 1, Nabu.ConfigurationElementCategory.Control, {
                 displayName: "Can Lock Pointer"
             }),
             Nabu.ConfigurationElement.SimpleInput(this.game.inputManager, "PLAYER_ACTION", KeyInput.PLAYER_ACTION, "GamepadBtn0"),
@@ -574,6 +574,15 @@ class Game {
         this.skybox.material = skyboxMaterial;
         this.skybox.rotation.y = 0.16 * Math.PI;
         */
+        this.skybox = BABYLON.MeshBuilder.CreateSphere("skyBox", { diameter: 1000, sideOrientation: BABYLON.Mesh.BACKSIDE }, this.scene);
+        let skyboxMaterial = new BABYLON.StandardMaterial("skyBox", this.scene);
+        skyboxMaterial.backFaceCulling = false;
+        let skyTexture = new BABYLON.Texture("./datas/skyboxes/blue.jpeg");
+        skyboxMaterial.diffuseTexture = skyTexture;
+        skyboxMaterial.emissiveColor = BABYLON.Color3.White();
+        skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+        this.skybox.material = skyboxMaterial;
+        this.skybox.rotation.y = -2.142477796076939;
         this.freeCamera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero());
         this.freeCamera.speed = 0.2;
         let godMode = this.configuration.getValue("godMode");
@@ -591,12 +600,14 @@ class Game {
         this.uiCamera = new BABYLON.FreeCamera("background-camera", BABYLON.Vector3.Zero());
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
+        /*
         let sun = BABYLON.MeshBuilder.CreateSphere("sun", { diameter: 20 });
-        sun.position.copyFrom(this.light.direction).scaleInPlace(1000);
+        sun.position.copyFrom(this.light.direction).scaleInPlace(500);
         let sunMat = new BABYLON.StandardMaterial("sun-material");
         sunMat.diffuseColor.copyFromFloats(1, 1, 1);
         sunMat.emissiveColor.copyFromFloats(1, 1, 0);
         sun.material = sunMat;
+        */
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-position")) {
@@ -668,10 +679,9 @@ class Game {
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
             this.player.inventory.addItem(new PlayerInventoryItem("None", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Grass", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Dirt", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Ice", InventoryCategory.Block));
-            this.player.inventory.addItem(new PlayerInventoryItem("Rock", InventoryCategory.Block));
+            for (let b = Kulla.BlockType.Grass; b < Kulla.BlockType.Unknown; b++) {
+                this.player.inventory.addItem(new PlayerInventoryItem(Kulla.BlockTypeNames[b], InventoryCategory.Block));
+            }
             this.configuration.getElement("godMode").forceInit();
             for (let i = 0; i < BRICK_LIST.length; i++) {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_LIST[i], InventoryCategory.Brick));
@@ -985,6 +995,7 @@ class Game {
             this.orthoCamera.setTarget(BABYLON.Vector3.Zero());
             for (let i = 0; i <= 10; i++) {
                 await this.makeShapeScreenshot("pole", i);
+                await this.makeShapeScreenshot("bar", i);
                 await this.makeShapeScreenshot("wall", i);
                 await this.makeShapeScreenshot("tile", i);
             }
@@ -999,6 +1010,9 @@ class Game {
                 let previewD = 1;
                 if (shapeName === "pole") {
                     previewH = size;
+                }
+                else if (shapeName === "bar") {
+                    previewD = size;
                 }
                 else if (shapeName === "wall") {
                     previewD = size;
@@ -1931,8 +1945,11 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
         this.setTexture("leavesTexture", new BABYLON.Texture("./datas/textures/leaves.png"));
         this.setTexture("dirtTexture", new BABYLON.Texture("./datas/textures/dirt.png"));
         this.setTexture("grassTexture", new BABYLON.Texture("./datas/textures/grass.png"));
+        this.setTexture("grassSparseTexture", new BABYLON.Texture("./datas/textures/grassSparse.png"));
         this.setTexture("rockTexture", new BABYLON.Texture("./datas/textures/rock.png"));
         this.setTexture("iceTexture", new BABYLON.Texture("./datas/textures/ice.png"));
+        this.setTexture("asphaltTexture", new BABYLON.Texture("./datas/textures/asphalt.png"));
+        this.setTexture("rustTexture", new BABYLON.Texture("./datas/textures/rust.png"));
         this.updateDebugColor();
     }
     getLightInvDir() {
@@ -4654,6 +4671,9 @@ class PlayerActionBlockShape {
         };
         let nextShape = () => {
             if (shapeName === "pole") {
+                shapeName = "bar";
+            }
+            else if (shapeName === "bar") {
                 shapeName = "tile";
             }
             else if (shapeName === "tile") {
@@ -4676,6 +4696,13 @@ class PlayerActionBlockShape {
                 previewD = terrain.blockSizeIJ_m;
                 previewOffset.copyFromFloats(0, l, 0);
                 shape = new Kulla.Box(player.game.terrain, { width: 1, height: size, length: 1 });
+            }
+            else if (shapeName === "bar") {
+                previewW = terrain.blockSizeIJ_m;
+                previewH = terrain.blockSizeK_m;
+                previewD = size * terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(0, 0, l);
+                shape = new Kulla.Box(player.game.terrain, { width: 1, height: 1, length: size });
             }
             else if (shapeName === "tile") {
                 previewW = size * terrain.blockSizeIJ_m;

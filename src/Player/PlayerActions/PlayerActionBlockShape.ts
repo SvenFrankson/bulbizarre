@@ -134,6 +134,9 @@ class PlayerActionBlockShape {
 
         let nextShape = () => {
             if (shapeName === "pole") {
+                shapeName = "bar";
+            }
+            else if (shapeName === "bar") {
                 shapeName = "tile";
             }
             else if (shapeName === "tile") {
@@ -158,6 +161,13 @@ class PlayerActionBlockShape {
                 previewD = terrain.blockSizeIJ_m;
                 previewOffset.copyFromFloats(0, l, 0);
                 shape = new Kulla.Box(player.game.terrain, { width: 1, height: size, length: 1 });
+            }
+            else if (shapeName === "bar") {
+                previewW = terrain.blockSizeIJ_m;
+                previewH = terrain.blockSizeK_m;
+                previewD = size * terrain.blockSizeIJ_m;
+                previewOffset.copyFromFloats(0, 0, l);
+                shape = new Kulla.Box(player.game.terrain, { width: 1, height: 1, length: size });
             }
             else if (shapeName === "tile") {
                 previewW = size * terrain.blockSizeIJ_m;

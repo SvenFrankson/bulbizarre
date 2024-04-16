@@ -64,7 +64,7 @@ class GameConfiguration extends Nabu.Configuration {
             new Nabu.ConfigurationElement(
                 "renderDist",
                 Nabu.ConfigurationElementType.Number,
-                8,
+                4,
                 Nabu.ConfigurationElementCategory.Graphic,
                 {
                     displayName: "Render Distance",
@@ -81,7 +81,7 @@ class GameConfiguration extends Nabu.Configuration {
             new Nabu.ConfigurationElement(
                 "canLockPointer",
                 Nabu.ConfigurationElementType.Boolean,
-                0,
+                1,
                 Nabu.ConfigurationElementCategory.Control,
                 {
                     displayName: "Can Lock Pointer"
