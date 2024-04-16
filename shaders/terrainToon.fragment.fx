@@ -300,6 +300,13 @@ void main() {
    else if (colorIndex == 15) {
       color = texture(rustTexture, diffuseUV * 0.4).rgb;
    }
+   
+   vec3 uvr = vec3(vPositionL.x / 26. / blockSize_m, vPositionL.z / 26. / blockSize_m, vPositionL.y / 257. / blockHeight_m);
+   float gi = texture(lightTexture, uvr).r;
+   gi = round(gi * 3.) / 3. * 0.7 + 0.3;
+   //gi = floor(gi);
+   lightFactor = round(lightFactor * 12.) / 12.;
+   lightFactor = min(lightFactor, gi);
 
    if (colorIndex >= 2 && colorIndex <= 4) {
       // Case dirt and grass > no tall flat surfaces
@@ -311,20 +318,13 @@ void main() {
    else {
       // Case with potential tall flat surfaces
       float dy = vPositionW.y / blockHeight_m - floor(vPositionW.y / blockHeight_m);
-      if ((dy < 0.01 || dy > 0.99) && abs(vNormalW.y) > 0.7) {
+      if ((dy < 0.1 || dy > 0.9) && abs(vNormalW.y) > 0.6) {
          lightFactor *= 1.1;
       }
       else {
          lightFactor *= 0.9;
       }
    }
-   
-   vec3 uvr = vec3(vPositionL.x / 26. / blockSize_m, vPositionL.z / 26. / blockSize_m, vPositionL.y / 257. / blockHeight_m);
-   float gi = texture(lightTexture, uvr).r;
-   gi = round(gi * 3.) / 3. + 0.25;
-   //gi = floor(gi);
-   lightFactor = round(lightFactor * 12.) / 12.;
-   lightFactor = lightFactor * gi;
 
    /*
    if (dx < 0.02 || dx > 0.98) {

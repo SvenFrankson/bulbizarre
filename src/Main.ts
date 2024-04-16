@@ -79,10 +79,9 @@ class Game {
             this.scene.clearColor = BABYLON.Color4.FromHexString("#87CEEBFF");
         }
 
-        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(1, 2, - 3)).normalize(), this.scene);
+        this.light = new BABYLON.HemisphericLight("light", (new BABYLON.Vector3(1, 3, - 2)).normalize(), this.scene);
 
-        /*
-        this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 / Math.sqrt(3) }, this.scene);
+        this.skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1500 }, this.scene);
         let skyboxMaterial: BABYLON.StandardMaterial = new BABYLON.StandardMaterial("skyBox", this.scene);
         skyboxMaterial.backFaceCulling = false;
         let skyTexture = new BABYLON.CubeTexture(
@@ -94,9 +93,9 @@ class Game {
         skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
         skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
         this.skybox.material = skyboxMaterial;
-        this.skybox.rotation.y = 0.16 * Math.PI;
-        */
+        this.skybox.rotation.y = 0.252654824574367;
        
+        /*
         this.skybox = BABYLON.MeshBuilder.CreateSphere("skyBox", { diameter: 1000, sideOrientation: BABYLON.Mesh.BACKSIDE }, this.scene);
         let skyboxMaterial: BABYLON.StandardMaterial = new BABYLON.StandardMaterial("skyBox", this.scene);
         skyboxMaterial.backFaceCulling = false;
@@ -106,6 +105,7 @@ class Game {
         skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
         this.skybox.material = skyboxMaterial;
         this.skybox.rotation.y = -2.142477796076939;
+        */
 
         this.freeCamera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero());
         this.freeCamera.speed = 0.2;
@@ -128,14 +128,12 @@ class Game {
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
 
-        /*
         let sun = BABYLON.MeshBuilder.CreateSphere("sun", { diameter: 20 });
         sun.position.copyFrom(this.light.direction).scaleInPlace(500);
         let sunMat = new BABYLON.StandardMaterial("sun-material");
         sunMat.diffuseColor.copyFromFloats(1, 1, 1);
         sunMat.emissiveColor.copyFromFloats(1, 1, 0);
         sun.material = sunMat;
-        */
 
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
 
