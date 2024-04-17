@@ -597,12 +597,14 @@ class Game {
         this.uiCamera = new BABYLON.FreeCamera("background-camera", BABYLON.Vector3.Zero());
         this.uiCamera.parent = this.freeCamera;
         this.uiCamera.layerMask = 0x10000000;
+        /*
         let sun = BABYLON.MeshBuilder.CreateSphere("sun", { diameter: 20 });
         sun.position.copyFrom(this.light.direction).scaleInPlace(500);
         let sunMat = new BABYLON.StandardMaterial("sun-material");
         sunMat.diffuseColor.copyFromFloats(1, 1, 1);
         sunMat.emissiveColor.copyFromFloats(1, 1, 0);
         sun.material = sunMat;
+        */
         this.scene.activeCameras = [this.freeCamera, this.uiCamera];
         if (this.DEBUG_MODE) {
             if (window.localStorage.getItem("camera-position")) {
@@ -3264,6 +3266,128 @@ class Mushroom {
         this._debugStepInterval = setInterval(this.doStep, 2000);
     }
 }
+class TreeBranch {
+    constructor(terrain, pos) {
+        this.pos = pos;
+        this.age = 0;
+        this.currentPos = { i: pos.i, j: pos.j, k: pos.k };
+        let a = Math.random() * Math.PI * 2;
+        this.dir = new BABYLON.Vector3(Math.cos(a), 3 * (Math.random() - 0.5), Math.sin(a));
+        this.dir.normalize();
+        console.log(this.dir);
+        let stepCount = 10;
+        let tests = [];
+        this.sequence = [0, 0, 0];
+        if (this.dir.x != 0) {
+            tests.push(new BABYLON.Vector3(Math.sign(this.dir.x), 0, 0));
+            this.sequence[0] = tests[0].x;
+        }
+        if (this.dir.y != 0) {
+            tests.push(new BABYLON.Vector3(0, Math.sign(this.dir.y), 0));
+            this.sequence[1] = tests[1].y;
+        }
+        if (this.dir.z != 0) {
+            tests.push(new BABYLON.Vector3(0, 0, Math.sign(this.dir.z)));
+            this.sequence[2] = tests[2].z;
+        }
+        let tmpV = BABYLON.Vector3.Zero();
+        for (let n = 1; n < stepCount; n++) {
+            let bestAngle = Infinity;
+            for (let t = 0; t < tests.length; t++) {
+                tmpV.x = this.sequence[3 * (n - 1)];
+                tmpV.y = this.sequence[3 * (n - 1) + 1];
+                tmpV.z = this.sequence[3 * (n - 1) + 2];
+                tmpV.addInPlace(tests[t]);
+                let a = Mummu.Angle(this.dir, tmpV);
+                if (a < bestAngle) {
+                    this.sequence[3 * n] = tmpV.x;
+                    this.sequence[3 * n + 1] = tmpV.y;
+                    this.sequence[3 * n + 2] = tmpV.z;
+                    bestAngle = a;
+                }
+            }
+        }
+        console.log(this.sequence);
+        this.leaves = new Kulla.Sphere(terrain, { diameter: 3 });
+    }
+    incAge() {
+        if (this.age < this.sequence.length / 3) {
+            this.currentPos.i = this.pos.i + this.sequence[3 * this.age];
+            this.currentPos.j = this.pos.j + this.sequence[3 * this.age + 2];
+            this.currentPos.k = this.pos.k + this.sequence[3 * this.age + 1];
+        }
+        this.age++;
+    }
+}
+class Tree {
+    constructor(game) {
+        this.game = game;
+        this.height = 10;
+        this.radius = 5;
+        this.age = 0;
+        this.maxAge = 15;
+        this.branches = [];
+        this.doStep = () => {
+            if (this.ijk && this.chunck) {
+                if (!this.currentHeadPos) {
+                    this.currentHeadPos = { i: this.ijk.i, j: this.ijk.j, k: this.ijk.k - 1 };
+                }
+                if (!this.headCone) {
+                    this.headCone = new Kulla.Cone(this.chunck.terrain, {});
+                }
+                if (this.age < this.maxAge) {
+                    if (this.age > 0) {
+                        this.headCone.draw(this.chunck, this.currentHeadPos, 0, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.Erase);
+                        this.branches.forEach(branch => {
+                            branch.leaves.draw(this.chunck, branch.currentPos, 0, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.Erase);
+                        });
+                    }
+                    this.age++;
+                    this.branches.forEach(branch => {
+                        branch.incAge();
+                    });
+                    this.currentHeadPos.k++;
+                    this.headCone.props.rFunc = (f) => {
+                        return 1 + Math.cos(Math.PI * 0.5 * f - Math.PI * 0.15) * (1 + Math.floor(this.age / 2));
+                    };
+                    this.headCone.props.length = 2 + Math.floor(this.age / 4);
+                    if (Math.random() < 0.3) {
+                        if (Math.random() < 0.5) {
+                            this.currentHeadPos.i++;
+                        }
+                        else {
+                            this.currentHeadPos.i--;
+                        }
+                    }
+                    else if (Math.random() < 0.2) {
+                        if (Math.random() < 0.5) {
+                            this.currentHeadPos.j++;
+                        }
+                        else {
+                            this.currentHeadPos.j--;
+                        }
+                    }
+                    if (Math.random() < 0.3) {
+                        let branch = new TreeBranch(this.game.terrain, { i: this.currentHeadPos.i, j: this.currentHeadPos.j, k: this.currentHeadPos.k });
+                        this.branches.push(branch);
+                    }
+                    this.headCone.draw(this.chunck, this.currentHeadPos, 0, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                    this.game.terrainEditor.doAction(this.chunck, this.currentHeadPos, { brushBlock: Kulla.BlockType.Wood, brushSize: 2, mode: Kulla.TerrainEditionMode.Add, saveToLocalStorage: true });
+                    this.branches.forEach(branch => {
+                        branch.leaves.draw(this.chunck, branch.currentPos, 0, Kulla.BlockType.Leaf, Kulla.TerrainEditionMode.AddIfEmpty, true);
+                        this.game.terrainEditor.doAction(this.chunck, branch.currentPos, { brushBlock: Kulla.BlockType.Wood, brushSize: 1, mode: Kulla.TerrainEditionMode.Add, saveToLocalStorage: true });
+                    });
+                }
+                else {
+                    clearInterval(this._debugStepInterval);
+                }
+            }
+        };
+    }
+    instantiate() {
+        this._debugStepInterval = setInterval(this.doStep, 2000);
+    }
+}
 class BrickMenuView extends HTMLElement {
     constructor() {
         super(...arguments);
@@ -5077,7 +5201,7 @@ class PlayerActionTemplate {
                     let n = hit.getNormal(true).scaleInPlace(0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
-                        let mushroom = new Mushroom(player.game);
+                        let mushroom = new Tree(player.game);
                         mushroom.chunck = chunckIJK.chunck;
                         mushroom.ijk = chunckIJK.ijk;
                         mushroom.instantiate();

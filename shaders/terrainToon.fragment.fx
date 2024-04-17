@@ -295,7 +295,7 @@ void main() {
       color = texture(grassTexture, diffuseUV * 0.7).rgb * vec3(0.9, 1.2, 0.9);
    }
    else if (colorIndex == 14) {
-      color = texture(asphaltTexture, diffuseUV * 0.4).rgb;
+      color = texture(asphaltTexture, diffuseUV * 0.6).rgb;
    }
    else if (colorIndex == 15) {
       color = texture(rustTexture, diffuseUV * 0.4).rgb;
