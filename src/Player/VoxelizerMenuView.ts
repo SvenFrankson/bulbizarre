@@ -20,6 +20,7 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
     private _rotX: HTMLInputElement;
     private _rotY: HTMLInputElement;
     private _rotZ: HTMLInputElement;
+    private _size: HTMLInputElement;
     private _goBtn: HTMLButtonElement;
     private _cancelBtn: HTMLButtonElement;
     private _options: HTMLButtonElement[];
@@ -103,7 +104,6 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
         categoriesContainer = document.createElement("div");
         this.appendChild(categoriesContainer);
 
-        
         this._urlInput = document.createElement("input");
         categoriesContainer.appendChild(this._urlInput);
 
@@ -154,6 +154,15 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
             this._voxelizer.meshInner.rotation.z = parseFloat(this._rotZ.value);
         })
         categoriesContainer.appendChild(this._rotZ);
+
+        this._size = document.createElement("input");
+        this._size.setAttribute("type", "number");
+        this._size.setAttribute("step", "0.05");
+        this._size.addEventListener("input", (ev: Event) => {
+            let s = parseFloat(this._size.value);
+            this._voxelizer.meshInner.scaling.copyFromFloats(s, s, s);
+        })
+        categoriesContainer.appendChild(this._size);
         
         this._goBtn = document.createElement("button");
         this._goBtn.innerHTML = "GO";
@@ -250,6 +259,10 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
         this._posX.value = voxelizer.meshInner.position.x.toFixed(2);
         this._posY.value = voxelizer.meshInner.position.y.toFixed(2);
         this._posZ.value = voxelizer.meshInner.position.z.toFixed(2);
+        this._rotX.value = voxelizer.meshInner.rotation.x.toFixed(2);
+        this._rotY.value = voxelizer.meshInner.rotation.y.toFixed(2);
+        this._rotZ.value = voxelizer.meshInner.rotation.z.toFixed(2);
+        this._size.value = voxelizer.meshInner.scaling.x.toFixed(2);
     }
 
     private _timer: number = 0;

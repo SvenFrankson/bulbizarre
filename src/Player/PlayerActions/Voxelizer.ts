@@ -7,7 +7,7 @@ class Voxelizer extends BABYLON.Mesh {
         super("voxelizer");
         BABYLON.CreateSphereVertexData({ diameter: 0.8 }).applyToMesh(this);
         this.meshInner = new BABYLON.Mesh("voxelizer-inner");
-        this.meshInner.scaling.copyFromFloats(40, 40, 40);
+        this.meshInner.scaling.copyFromFloats(10, 10, 10);
         this.meshInner.parent = this;
         this.meshOuter = new BABYLON.Mesh("voxelizer-shell");
         this.meshOuter.parent = this.meshInner;

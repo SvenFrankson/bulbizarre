@@ -5175,6 +5175,14 @@ class VoxelizerMenuView extends HTMLElement {
             this._voxelizer.meshInner.rotation.z = parseFloat(this._rotZ.value);
         });
         categoriesContainer.appendChild(this._rotZ);
+        this._size = document.createElement("input");
+        this._size.setAttribute("type", "number");
+        this._size.setAttribute("step", "0.05");
+        this._size.addEventListener("input", (ev) => {
+            let s = parseFloat(this._size.value);
+            this._voxelizer.meshInner.scaling.copyFromFloats(s, s, s);
+        });
+        categoriesContainer.appendChild(this._size);
         this._goBtn = document.createElement("button");
         this._goBtn.innerHTML = "GO";
         categoriesContainer.appendChild(this._goBtn);
@@ -5264,6 +5272,10 @@ class VoxelizerMenuView extends HTMLElement {
         this._posX.value = voxelizer.meshInner.position.x.toFixed(2);
         this._posY.value = voxelizer.meshInner.position.y.toFixed(2);
         this._posZ.value = voxelizer.meshInner.position.z.toFixed(2);
+        this._rotX.value = voxelizer.meshInner.rotation.x.toFixed(2);
+        this._rotY.value = voxelizer.meshInner.rotation.y.toFixed(2);
+        this._rotZ.value = voxelizer.meshInner.rotation.z.toFixed(2);
+        this._size.value = voxelizer.meshInner.scaling.x.toFixed(2);
     }
     update(dt) {
         if (this._timer > 0) {
@@ -6263,7 +6275,7 @@ class PlayerActionVoxelizer {
                     return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
                 });
                 if (hit && hit.pickedPoint) {
-                    let voxelizer = new Voxelizer("./datas/meshes/skull.babylon", player.game);
+                    let voxelizer = new Voxelizer("./datas/meshes/moai.babylon", player.game);
                     voxelizer.initialize();
                     voxelizer.position.copyFrom(hit.pickedPoint);
                     voxelizer.position.y += 1.2;
@@ -6290,7 +6302,7 @@ class Voxelizer extends BABYLON.Mesh {
         this.game = game;
         BABYLON.CreateSphereVertexData({ diameter: 0.8 }).applyToMesh(this);
         this.meshInner = new BABYLON.Mesh("voxelizer-inner");
-        this.meshInner.scaling.copyFromFloats(40, 40, 40);
+        this.meshInner.scaling.copyFromFloats(10, 10, 10);
         this.meshInner.parent = this;
         this.meshOuter = new BABYLON.Mesh("voxelizer-shell");
         this.meshOuter.parent = this.meshInner;
