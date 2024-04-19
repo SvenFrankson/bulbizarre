@@ -105,64 +105,128 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
         this.appendChild(categoriesContainer);
 
         this._urlInput = document.createElement("input");
+        this._urlInput.setAttribute("type", "file");
         categoriesContainer.appendChild(this._urlInput);
 
+        let divX = document.createElement("div");
+        categoriesContainer.appendChild(divX);
+        
+        let posXLabel = document.createElement("label");
+        posXLabel.setAttribute("for", "posX");
+        posXLabel.innerHTML = "X";
+        divX.appendChild(posXLabel);
+
         this._posX = document.createElement("input");
+        this._posX.id = "posX";
         this._posX.setAttribute("type", "number");
         this._posX.setAttribute("step", "0.1");
         this._posX.addEventListener("input", (ev: Event) => {
             this._voxelizer.meshInner.position.x = parseFloat(this._posX.value);
         })
-        categoriesContainer.appendChild(this._posX);
+        divX.appendChild(this._posX);
+
+        let divY = document.createElement("div");
+        categoriesContainer.appendChild(divY);
+
+        let posYLabel = document.createElement("label");
+        posYLabel.setAttribute("for", "posY");
+        posYLabel.innerHTML = "Y";
+        divY.appendChild(posYLabel);
 
         this._posY = document.createElement("input");
+        this._posY.id = "posY";
         this._posY.setAttribute("type", "number");
         this._posY.setAttribute("step", "0.1");
         this._posY.addEventListener("input", (ev: Event) => {
             this._voxelizer.meshInner.position.y = parseFloat(this._posY.value);
         })
-        categoriesContainer.appendChild(this._posY);
+        divY.appendChild(this._posY);
+
+        let divZ = document.createElement("div");
+        categoriesContainer.appendChild(divZ);
+
+        let posZLabel = document.createElement("label");
+        posZLabel.setAttribute("for", "posZ");
+        posZLabel.innerHTML = "Z";
+        divZ.appendChild(posZLabel);
 
         this._posZ = document.createElement("input");
+        this._posZ.id = "posZ";
         this._posZ.setAttribute("type", "number");
         this._posZ.setAttribute("step", "0.1");
         this._posZ.addEventListener("input", (ev: Event) => {
             this._voxelizer.meshInner.position.z = parseFloat(this._posZ.value);
         })
-        categoriesContainer.appendChild(this._posZ);
+        divZ.appendChild(this._posZ);
+
+        let divRX = document.createElement("div");
+        categoriesContainer.appendChild(divRX);
+
+        let rotXLabel = document.createElement("label");
+        rotXLabel.setAttribute("for", "rotX");
+        rotXLabel.innerHTML = "RX";
+        divRX.appendChild(rotXLabel);
 
         this._rotX = document.createElement("input");
+        this._rotX.id = "rotX";
         this._rotX.setAttribute("type", "number");
         this._rotX.setAttribute("step", "0.05");
         this._rotX.addEventListener("input", (ev: Event) => {
             this._voxelizer.meshInner.rotation.x = parseFloat(this._rotX.value);
         })
-        categoriesContainer.appendChild(this._rotX);
+        divRX.appendChild(this._rotX);
+
+        let divRY = document.createElement("div");
+        categoriesContainer.appendChild(divRY);
+
+        let rotYLabel = document.createElement("label");
+        rotYLabel.setAttribute("for", "rotY");
+        rotYLabel.innerHTML = "RY";
+        divRY.appendChild(rotYLabel);
 
         this._rotY = document.createElement("input");
+        this._rotY.id = "rotY";
         this._rotY.setAttribute("type", "number");
         this._rotY.setAttribute("step", "0.05");
         this._rotY.addEventListener("input", (ev: Event) => {
             this._voxelizer.meshInner.rotation.y = parseFloat(this._rotY.value);
         })
-        categoriesContainer.appendChild(this._rotY);
+        divRY.appendChild(this._rotY);
+
+        let divRZ = document.createElement("div");
+        categoriesContainer.appendChild(divRZ);
+
+        let rotZLabel = document.createElement("label");
+        rotZLabel.setAttribute("for", "rotZ");
+        rotZLabel.innerHTML = "RZ";
+        divRZ.appendChild(rotZLabel);
 
         this._rotZ = document.createElement("input");
+        this._rotZ.id = "rotZ";
         this._rotZ.setAttribute("type", "number");
         this._rotZ.setAttribute("step", "0.05");
         this._rotZ.addEventListener("input", (ev: Event) => {
             this._voxelizer.meshInner.rotation.z = parseFloat(this._rotZ.value);
         })
-        categoriesContainer.appendChild(this._rotZ);
+        divRZ.appendChild(this._rotZ);
+
+        let divSize = document.createElement("div");
+        categoriesContainer.appendChild(divSize);
+
+        let sizeLabel = document.createElement("label");
+        sizeLabel.setAttribute("for", "size");
+        sizeLabel.innerHTML = "Size";
+        divSize.appendChild(sizeLabel);
 
         this._size = document.createElement("input");
+        this._size.id = "size";
         this._size.setAttribute("type", "number");
-        this._size.setAttribute("step", "0.05");
+        this._size.setAttribute("step", "0.5");
         this._size.addEventListener("input", (ev: Event) => {
             let s = parseFloat(this._size.value);
             this._voxelizer.meshInner.scaling.copyFromFloats(s, s, s);
         })
-        categoriesContainer.appendChild(this._size);
+        divSize.appendChild(this._size);
         
         this._goBtn = document.createElement("button");
         this._goBtn.innerHTML = "GO";
@@ -255,7 +319,6 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
 
     public setVoxelizer(voxelizer: Voxelizer): void {
         this._voxelizer = voxelizer;
-        this._urlInput.value = voxelizer.url;
         this._posX.value = voxelizer.meshInner.position.x.toFixed(2);
         this._posY.value = voxelizer.meshInner.position.y.toFixed(2);
         this._posZ.value = voxelizer.meshInner.position.z.toFixed(2);

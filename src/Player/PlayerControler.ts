@@ -13,6 +13,9 @@ class PlayerControler {
         if (this.player.game.brickMenuView.shown) {
             return PlayMode.Menu;
         }
+        if (this.player.game.voxelizerMenuView.shown) {
+            return PlayMode.Menu;
+        }
         if (this.player.game.router.inPlayMode) {
             return PlayMode.Playing;
         }
