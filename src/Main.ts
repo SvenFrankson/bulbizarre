@@ -220,13 +220,14 @@ class Game {
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
 
-
+            /*
             setTimeout(async () => {
                 let phasm = await Drone.CreateDrone(this);
                 phasm.initialize();
                 phasm.instantiate();
                 phasm.setPosition(this.player.absolutePosition);
             }, 6000);
+            */
 
             this.player.inventory.addItem(new PlayerInventoryItem("None", InventoryCategory.Block));
             for (let b = Kulla.BlockType.Grass; b < Kulla.BlockType.Unknown; b++) {
@@ -245,7 +246,7 @@ class Game {
 
             this.player.playerActionManager.loadFromLocalStorage();
 
-            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), 9);
+            this.player.playerActionManager.linkAction(PlayerActionVoxelizer.Create(this.player), 9);
 
             this.brickMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();

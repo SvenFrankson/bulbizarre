@@ -164,6 +164,9 @@ class PlayerActionManager {
                     else if (linkedItemName === "mushroom") {
                         this.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), i);
                     }
+                    else if (linkedItemName === "voxelizer") {
+                        this.linkAction(PlayerActionVoxelizer.Create(this.player), i);
+                    }
                     else if (linkedItemName) {
                         this.linkAction(PlayerActionTemplate.CreateBrickAction(this.player, linkedItemName), i);
                     }

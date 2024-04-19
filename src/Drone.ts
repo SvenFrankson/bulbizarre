@@ -44,21 +44,21 @@ class DroneController {
 
         let dirDestination = this.destination.subtract(this.drone.position);
         let distDestination = dirDestination.length();
-        if (distDestination < 0.4) {
+        if (distDestination < 2) {
             if (this.updateExplorerDestination()) {
                 this.timer = 0;
                 if (Math.random() > 0.5) {
                     this.stop = true;
                     setTimeout(() => {
                         this.stop = false;
-                    }, Math.random() * 15000);
+                    }, Math.random() * 1000);
                 }
                 return;
             }
         }
         
-        this.drone.speed = distDestination * 0.5;
-        this.drone.speed = Math.max(Math.min(this.drone.speed, 0.5), 0);
+        this.drone.speed = distDestination * 1;
+        this.drone.speed = Math.max(Math.min(this.drone.speed, 2), 0);
         let alphaDestination = Mummu.AngleFromToAround(dirDestination, this.drone.forward, this.drone.up);
         this.drone.rotationSpeed = 0;
         if (alphaDestination > Math.PI / 64) {
@@ -89,19 +89,23 @@ class Drone extends Sumuqan.Polypode {
                 infos[0].position,
             ],
             footTargets: [
-                new BABYLON.Vector3(0.25, -.2, 0.1),
+                new BABYLON.Vector3(0.25, -0.3, 0),
             ],
-            footThickness: 0,
+            footThickness: 0.2,
             upperLegLength: upperLegLength,
             lowerLegLength: lowerLegLength,
-            stepHeight: 0.15,
-            stepDuration: 0.8,
-            bodyWorldOffset: new BABYLON.Vector3(0, - 0.05, 0)
+            stepHeight: 0.1,
+            stepDuration: 1.3,
+            bodyWorldOffset: new BABYLON.Vector3(0, 0.15, 0)
         };
 
         let drone = new Drone(game, props);
-        drone.rightLegs[0].kneeMode = Sumuqan.KneeMode.Backward;
-        drone.leftLegs[0].kneeMode = Sumuqan.KneeMode.Backward;
+        drone.povRadiusMax = 2;
+        drone.povOffset = new BABYLON.Vector3(0, 0, - 0.1);
+        drone.povAlpha = 2 * Math.PI
+        drone.rightLegs[0].kneeMode = Sumuqan.KneeMode.Walker;
+        drone.leftLegs[0].kneeMode = Sumuqan.KneeMode.Walker;
+        drone.showPOVDebug = true;
         return drone;
     }
 
@@ -177,18 +181,15 @@ class Drone extends Sumuqan.Polypode {
         let datas = await Game.Instance.vertexDataLoader.get("./datas/meshes/drone.babylon");
 
         let droneMaterial = new ToonMaterial("drone-material", this.getScene());
-        let color = BABYLON.Color3.FromHexString("#9e6120");
-        color.r *= 0.7 + 0.6 * Math.random();
-        color.g *= 0.7 + 0.6 * Math.random();
-        color.b *= 0.7 + 0.6 * Math.random();
-        droneMaterial.setDiffuse(color);
-        droneMaterial.setUseVertexColor(false);
+        droneMaterial.setUseVertexColor(true);
 
         this.legs.forEach(leg => {
             datas[0].applyToMesh(leg.upperLeg);
             datas[1].applyToMesh(leg.lowerLeg);
+            datas[2].applyToMesh(leg.foot);
             leg.upperLeg.material = droneMaterial;
             leg.lowerLeg.material = droneMaterial;
+            leg.foot.material = droneMaterial;
         })
 
         datas[3].applyToMesh(this.body);
