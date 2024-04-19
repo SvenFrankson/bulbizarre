@@ -11,8 +11,6 @@ class TreeBranch {
         this.dir = new BABYLON.Vector3(Math.cos(a), 3 * (Math.random() - 0.5), Math.sin(a));
         this.dir.normalize();
 
-        console.log(this.dir);
-
         let stepCount: number = 10;
         let tests: BABYLON.Vector3[] = []
         this.sequence = [0, 0, 0];

@@ -1,6 +1,7 @@
 /// <reference path="../lib/babylon.d.ts"/>
 /// <reference path="../lib/nabu/nabu.d.ts"/>
 /// <reference path="../lib/mummu/mummu.d.ts"/>
+/// <reference path="../lib/sumuqan/sumuqan.d.ts"/>
 /// <reference path="../lib/kulla-grid/kulla-grid.d.ts"/>
 
 import Kulla = KullaGrid;
@@ -218,6 +219,14 @@ class Game {
             this.inputManager.initialize();
             this.inputManager.initializeInputs(this.configuration);
             playerControler.initialize();
+
+
+            setTimeout(async () => {
+                let phasm = await Drone.CreateDrone(this);
+                phasm.initialize();
+                phasm.instantiate();
+                phasm.setPosition(this.player.absolutePosition);
+            }, 6000);
 
             this.player.inventory.addItem(new PlayerInventoryItem("None", InventoryCategory.Block));
             for (let b = Kulla.BlockType.Grass; b < Kulla.BlockType.Unknown; b++) {
