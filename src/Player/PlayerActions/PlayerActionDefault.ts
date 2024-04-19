@@ -1,27 +1,36 @@
+interface IAimable {
+
+    highlight: () => void;
+    unlight: () => void;
+}
+
 class PlayerActionDefault {
+
+    public static IsAimable(mesh: BABYLON.AbstractMesh): boolean {
+        if (mesh instanceof BrickMesh) {
+            return true;
+        }
+        if (mesh instanceof Voxelizer) {
+            return true;
+        }
+        return false;
+    }
 
     public static Create(player: Player): PlayerAction {
         let brickAction = new PlayerAction("default-action", player);
         brickAction.backgroundColor = "#FF00FF";
         brickAction.iconUrl = "";
 
-        let aimedBrickRoot: Brick;
-        let setAimedBrickRoot = (b: Brick) => {
-            if (b != aimedBrickRoot) {
-                if (aimedBrickRoot) {
-                    aimedBrickRoot.unlight();
+        let aimedObject: IAimable;
+        let setAimedObject = (b: IAimable) => {
+            if (b != aimedObject) {
+                if (aimedObject) {
+                    aimedObject.unlight();
                 }
-                aimedBrickRoot = b;
-                if (aimedBrickRoot) {
-                    aimedBrickRoot.highlight();
+                aimedObject = b;
+                if (aimedObject) {
+                    aimedObject.highlight();
                 }
-            }
-        }
-        
-        let aimedBrick: Brick;
-        let setAimedBrick = (b: Brick) => {
-            if (b != aimedBrick) {
-                aimedBrick = b;
             }
         }
 
@@ -41,7 +50,7 @@ class PlayerActionDefault {
                     x,
                     y,
                     (mesh) => {
-                        return mesh instanceof BrickMesh;
+                        return PlayerActionDefault.IsAimable(mesh);
                     }
                 )
 
@@ -49,18 +58,20 @@ class PlayerActionDefault {
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let brickRoot = hit.pickedMesh.brick.root;
                         if (brickRoot) {
-                            setAimedBrickRoot(brickRoot);
                             let brick = brickRoot.getBrickForFaceId(hit.faceId);
                             if (brick) {
-                                setAimedBrick(brick);
+                                setAimedObject(brick);
                             }
                             return;
                         }
                     }
+                    else if (hit.pickedMesh instanceof Voxelizer) {
+                        setAimedObject(hit.pickedMesh);
+                        return;
+                    }
                 }
             }
-            setAimedBrickRoot(undefined);
-            setAimedBrick(undefined);
+            setAimedObject(undefined);
         }
 
         brickAction.onPointerUp = (duration, distance) => {
@@ -68,8 +79,8 @@ class PlayerActionDefault {
                 return;
             }
             if (duration > 0.3) {
-                if (aimedBrick) {
-                    player.game.brickMenuView.setBrick(aimedBrick);
+                if (aimedObject instanceof Brick) {
+                    player.game.brickMenuView.setBrick(aimedObject);
                     if (player.game.inputManager.isPointerLocked) {
                         document.exitPointerLock();
                         player.game.brickMenuView.onNextHide = () => {
@@ -81,8 +92,18 @@ class PlayerActionDefault {
             }
             else {
                 if (player.controler.playMode === PlayMode.Playing) {
-                    if (aimedBrickRoot && !aimedBrickRoot.anchored) {
-                        player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+                    if ((aimedObject instanceof Brick) && !aimedObject.root.anchored) {
+                        player.currentAction = PlayerActionMoveBrick.Create(player, aimedObject.root);
+                    }
+                    else if ((aimedObject instanceof Voxelizer)) {
+                        player.game.voxelizerMenuView.setVoxelizer(aimedObject);
+                        if (player.game.inputManager.isPointerLocked) {
+                            document.exitPointerLock();
+                            player.game.voxelizerMenuView.onNextHide = () => {
+                                player.game.canvas.requestPointerLock();
+                            }
+                        }
+                        player.game.voxelizerMenuView.show(0.1);
                     }
                 }
             }
@@ -92,18 +113,18 @@ class PlayerActionDefault {
             if (distance > 4) {
                 return;
             }
-            if (aimedBrick) {
-                let prevParent = aimedBrick.parent;
+            if (aimedObject instanceof Brick) {
+                let prevParent = aimedObject.parent;
                 if (prevParent instanceof Brick) {
-                    aimedBrick.setParent(undefined);
-                    aimedBrick.updateMesh();
+                    aimedObject.setParent(undefined);
+                    aimedObject.updateMesh();
                     prevParent.updateMesh();
                 }
             }
         }
 
         brickAction.onUnequip = () => {
-            setAimedBrickRoot(undefined);
+            setAimedObject(undefined);
         }
         
         return brickAction;

@@ -51,6 +51,7 @@ class Game {
     public playerActionView: PlayerActionView;
     public playerInventoryView: PlayerInventoryView;
     public brickMenuView: BrickMenuView;
+    public voxelizerMenuView: VoxelizerMenuView;
 
     public router: GameRouter;
 
@@ -157,6 +158,7 @@ class Game {
         this.playerActionView = new PlayerActionView();
         this.playerInventoryView = document.getElementsByTagName("inventory-page")[0] as PlayerInventoryView;
         this.brickMenuView = document.getElementsByTagName("brick-menu")[0] as BrickMenuView;
+        this.voxelizerMenuView = document.getElementsByTagName("voxelizer-menu")[0] as VoxelizerMenuView;
 
         this.propEditor = new PropEditor(this);
 
@@ -249,6 +251,7 @@ class Game {
             this.player.playerActionManager.linkAction(PlayerActionVoxelizer.Create(this.player), 9);
 
             this.brickMenuView.setPlayer(this.player);
+            this.voxelizerMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {

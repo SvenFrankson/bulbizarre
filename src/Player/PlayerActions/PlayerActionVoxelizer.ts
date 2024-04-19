@@ -70,10 +70,6 @@ class PlayerActionVoxelizer {
                     voxelizer.initialize();
                     voxelizer.position.copyFrom(hit.pickedPoint);
                     voxelizer.position.y += 1.2;
-
-                    setInterval(() => {
-                        voxelizer.plouf();
-                    }, 3000);
                 }
             }
         }

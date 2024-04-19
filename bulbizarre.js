@@ -791,6 +791,7 @@ class Game {
         this.playerActionView = new PlayerActionView();
         this.playerInventoryView = document.getElementsByTagName("inventory-page")[0];
         this.brickMenuView = document.getElementsByTagName("brick-menu")[0];
+        this.voxelizerMenuView = document.getElementsByTagName("voxelizer-menu")[0];
         this.propEditor = new PropEditor(this);
         this.brickManager = new BrickManager(this);
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
@@ -866,6 +867,7 @@ class Game {
             this.player.playerActionManager.loadFromLocalStorage();
             this.player.playerActionManager.linkAction(PlayerActionVoxelizer.Create(this.player), 9);
             this.brickMenuView.setPlayer(this.player);
+            this.voxelizerMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
@@ -2690,6 +2692,9 @@ class Brick extends BABYLON.TransformNode {
         data.applyToMesh(this.mesh);
     }
     highlight() {
+        if (this != this.root) {
+            return this.root.highlight();
+        }
         if (this.mesh) {
             this.mesh.renderOutline = true;
             this.mesh.outlineColor = new BABYLON.Color3(0, 1, 1);
@@ -2697,6 +2702,9 @@ class Brick extends BABYLON.TransformNode {
         }
     }
     unlight() {
+        if (this != this.root) {
+            return this.root.unlight();
+        }
         if (this.mesh) {
             this.mesh.renderOutline = false;
         }
@@ -5040,6 +5048,250 @@ class PlayerInventoryView extends HTMLElement {
     }
 }
 customElements.define("inventory-page", PlayerInventoryView);
+class VoxelizerMenuView extends HTMLElement {
+    constructor() {
+        super(...arguments);
+        this._loaded = false;
+        this._shown = false;
+        this.currentPointers = 0;
+        this._timer = 0;
+    }
+    static get observedAttributes() {
+        return [];
+    }
+    get shown() {
+        return this._shown;
+    }
+    get onLoad() {
+        return this._onLoad;
+    }
+    set onLoad(callback) {
+        this._onLoad = callback;
+        if (this._loaded) {
+            this._onLoad();
+        }
+    }
+    currentPointerUp() {
+        if (this._options.length > 0) {
+            this.setPointer((this.currentPointers - 1 + this._options.length) % this._options.length);
+        }
+    }
+    currentPointerDown() {
+        if (this._options.length > 0) {
+            this.setPointer((this.currentPointers + 1) % this._options.length);
+        }
+    }
+    setPointer(n) {
+        if (this._options[this.currentPointers]) {
+            this._options[this.currentPointers].classList.remove("highlit");
+        }
+        this.currentPointers = n;
+        if (this._options[this.currentPointers]) {
+            this._options[this.currentPointers].classList.add("highlit");
+        }
+    }
+    _makeCategoryBtnStyle(btn) {
+        btn.style.fontSize = "min(2svh, 2vw)";
+        btn.style.display = "block";
+        btn.style.marginRight = "1%";
+        btn.style.paddingTop = "0.5%";
+        btn.style.paddingBottom = "0.5%";
+        btn.style.width = "20%";
+        btn.style.textAlign = "center";
+        btn.style.borderLeft = "2px solid white";
+        btn.style.borderTop = "2px solid white";
+        btn.style.borderRight = "2px solid white";
+        btn.style.borderTopLeftRadius = "10px";
+        btn.style.borderTopRightRadius = "10px";
+    }
+    _makeCategoryBtnActive(btn) {
+        btn.style.borderLeft = "2px solid white";
+        btn.style.borderTop = "2px solid white";
+        btn.style.borderRight = "2px solid white";
+        btn.style.color = "#272b2e";
+        btn.style.backgroundColor = "white";
+        btn.style.fontWeight = "bold";
+    }
+    _makeCategoryBtnInactive(btn) {
+        btn.style.borderLeft = "2px solid #7F7F7F";
+        btn.style.borderTop = "2px solid #7F7F7F";
+        btn.style.borderRight = "2px solid #7F7F7F";
+        btn.style.borderBottom = "";
+        btn.style.color = "#7F7F7F";
+        btn.style.backgroundColor = "";
+        btn.style.fontWeight = "";
+    }
+    connectedCallback() {
+        this.style.display = "none";
+        this.style.opacity = "0";
+        this._title = document.createElement("h1");
+        this._title.classList.add("voxelizer-menu-title");
+        this._title.innerHTML = "VOXELIZER";
+        this.appendChild(this._title);
+        let categoriesContainer;
+        categoriesContainer = document.createElement("div");
+        this.appendChild(categoriesContainer);
+        this._urlInput = document.createElement("input");
+        categoriesContainer.appendChild(this._urlInput);
+        this._posX = document.createElement("input");
+        this._posX.setAttribute("type", "number");
+        this._posX.setAttribute("step", "0.1");
+        this._posX.addEventListener("input", (ev) => {
+            this._voxelizer.meshInner.position.x = parseFloat(this._posX.value);
+        });
+        categoriesContainer.appendChild(this._posX);
+        this._posY = document.createElement("input");
+        this._posY.setAttribute("type", "number");
+        this._posY.setAttribute("step", "0.1");
+        this._posY.addEventListener("input", (ev) => {
+            this._voxelizer.meshInner.position.y = parseFloat(this._posY.value);
+        });
+        categoriesContainer.appendChild(this._posY);
+        this._posZ = document.createElement("input");
+        this._posZ.setAttribute("type", "number");
+        this._posZ.setAttribute("step", "0.1");
+        this._posZ.addEventListener("input", (ev) => {
+            this._voxelizer.meshInner.position.z = parseFloat(this._posZ.value);
+        });
+        categoriesContainer.appendChild(this._posZ);
+        this._rotX = document.createElement("input");
+        this._rotX.setAttribute("type", "number");
+        this._rotX.setAttribute("step", "0.05");
+        this._rotX.addEventListener("input", (ev) => {
+            this._voxelizer.meshInner.rotation.x = parseFloat(this._rotX.value);
+        });
+        categoriesContainer.appendChild(this._rotX);
+        this._rotY = document.createElement("input");
+        this._rotY.setAttribute("type", "number");
+        this._rotY.setAttribute("step", "0.05");
+        this._rotY.addEventListener("input", (ev) => {
+            this._voxelizer.meshInner.rotation.y = parseFloat(this._rotY.value);
+        });
+        categoriesContainer.appendChild(this._rotY);
+        this._rotZ = document.createElement("input");
+        this._rotZ.setAttribute("type", "number");
+        this._rotZ.setAttribute("step", "0.05");
+        this._rotZ.addEventListener("input", (ev) => {
+            this._voxelizer.meshInner.rotation.z = parseFloat(this._rotZ.value);
+        });
+        categoriesContainer.appendChild(this._rotZ);
+        this._goBtn = document.createElement("button");
+        this._goBtn.innerHTML = "GO";
+        categoriesContainer.appendChild(this._goBtn);
+        this._goBtn.onclick = () => {
+            this._voxelizer.plouf();
+            this.hide(0.1);
+        };
+        this._cancelBtn = document.createElement("button");
+        this._cancelBtn.innerHTML = "CANCEL";
+        categoriesContainer.appendChild(this._cancelBtn);
+        this._cancelBtn.onclick = () => {
+            this.hide(0.1);
+        };
+        this._options = [
+            this._cancelBtn,
+        ];
+    }
+    attributeChangedCallback(name, oldValue, newValue) { }
+    async show(duration = 1) {
+        return new Promise((resolve) => {
+            if (!this._shown) {
+                this._shown = true;
+                this.style.display = "block";
+                let opacity0 = parseFloat(this.style.opacity);
+                let opacity1 = 1;
+                let t0 = performance.now();
+                let step = () => {
+                    let t = performance.now();
+                    let dt = (t - t0) / 1000;
+                    if (dt >= duration) {
+                        this.style.opacity = "1";
+                        resolve();
+                    }
+                    else {
+                        let f = dt / duration;
+                        this.style.opacity = ((1 - f) * opacity0 + f * opacity1).toFixed(2);
+                        requestAnimationFrame(step);
+                    }
+                };
+                step();
+            }
+        });
+    }
+    async hide(duration = 1) {
+        if (duration === 0) {
+            this._shown = false;
+            this.style.display = "none";
+            this.style.opacity = "0";
+        }
+        else {
+            return new Promise((resolve) => {
+                if (this._shown) {
+                    this._shown = false;
+                    this.style.display = "block";
+                    let opacity0 = parseFloat(this.style.opacity);
+                    let opacity1 = 0;
+                    let t0 = performance.now();
+                    let step = () => {
+                        let t = performance.now();
+                        let dt = (t - t0) / 1000;
+                        if (dt >= duration) {
+                            this.style.display = "none";
+                            this.style.opacity = "0";
+                            if (this.onNextHide) {
+                                this.onNextHide();
+                                this.onNextHide = undefined;
+                            }
+                            resolve();
+                        }
+                        else {
+                            let f = dt / duration;
+                            this.style.opacity = ((1 - f) * opacity0 + f * opacity1).toFixed(2);
+                            requestAnimationFrame(step);
+                        }
+                    };
+                    step();
+                }
+            });
+        }
+    }
+    setPlayer(player) {
+        this._player = player;
+    }
+    setVoxelizer(voxelizer) {
+        this._voxelizer = voxelizer;
+        this._urlInput.value = voxelizer.url;
+        this._posX.value = voxelizer.meshInner.position.x.toFixed(2);
+        this._posY.value = voxelizer.meshInner.position.y.toFixed(2);
+        this._posZ.value = voxelizer.meshInner.position.z.toFixed(2);
+    }
+    update(dt) {
+        if (this._timer > 0) {
+            this._timer -= dt;
+        }
+        let gamepads = navigator.getGamepads();
+        let gamepad = gamepads[0];
+        if (gamepad) {
+            let axis1 = -Nabu.InputManager.DeadZoneAxis(gamepad.axes[1]);
+            if (axis1 > 0.5) {
+                if (this._timer <= 0) {
+                    this.currentPointerUp();
+                    this._timer = 0.5;
+                }
+            }
+            else if (axis1 < -0.5) {
+                if (this._timer <= 0) {
+                    this.currentPointerDown();
+                    this._timer = 0.5;
+                }
+            }
+            else {
+                this._timer = 0;
+            }
+        }
+    }
+}
+customElements.define("voxelizer-menu", VoxelizerMenuView);
 class PlayerActionBlockShape {
     static Create(player, blockType, shapeName = "pole", size = 1) {
         let shape;
@@ -5249,26 +5501,29 @@ class PlayerActionBlockShape {
     }
 }
 class PlayerActionDefault {
+    static IsAimable(mesh) {
+        if (mesh instanceof BrickMesh) {
+            return true;
+        }
+        if (mesh instanceof Voxelizer) {
+            return true;
+        }
+        return false;
+    }
     static Create(player) {
         let brickAction = new PlayerAction("default-action", player);
         brickAction.backgroundColor = "#FF00FF";
         brickAction.iconUrl = "";
-        let aimedBrickRoot;
-        let setAimedBrickRoot = (b) => {
-            if (b != aimedBrickRoot) {
-                if (aimedBrickRoot) {
-                    aimedBrickRoot.unlight();
+        let aimedObject;
+        let setAimedObject = (b) => {
+            if (b != aimedObject) {
+                if (aimedObject) {
+                    aimedObject.unlight();
                 }
-                aimedBrickRoot = b;
-                if (aimedBrickRoot) {
-                    aimedBrickRoot.highlight();
+                aimedObject = b;
+                if (aimedObject) {
+                    aimedObject.highlight();
                 }
-            }
-        };
-        let aimedBrick;
-        let setAimedBrick = (b) => {
-            if (b != aimedBrick) {
-                aimedBrick = b;
             }
         };
         brickAction.onUpdate = () => {
@@ -5284,32 +5539,34 @@ class PlayerActionDefault {
                     y = player._scene.pointerY;
                 }
                 let hit = player.game.scene.pick(x, y, (mesh) => {
-                    return mesh instanceof BrickMesh;
+                    return PlayerActionDefault.IsAimable(mesh);
                 });
                 if (hit.hit && hit.pickedPoint) {
                     if (hit.pickedMesh instanceof BrickMesh) {
                         let brickRoot = hit.pickedMesh.brick.root;
                         if (brickRoot) {
-                            setAimedBrickRoot(brickRoot);
                             let brick = brickRoot.getBrickForFaceId(hit.faceId);
                             if (brick) {
-                                setAimedBrick(brick);
+                                setAimedObject(brick);
                             }
                             return;
                         }
                     }
+                    else if (hit.pickedMesh instanceof Voxelizer) {
+                        setAimedObject(hit.pickedMesh);
+                        return;
+                    }
                 }
             }
-            setAimedBrickRoot(undefined);
-            setAimedBrick(undefined);
+            setAimedObject(undefined);
         };
         brickAction.onPointerUp = (duration, distance) => {
             if (distance > 4) {
                 return;
             }
             if (duration > 0.3) {
-                if (aimedBrick) {
-                    player.game.brickMenuView.setBrick(aimedBrick);
+                if (aimedObject instanceof Brick) {
+                    player.game.brickMenuView.setBrick(aimedObject);
                     if (player.game.inputManager.isPointerLocked) {
                         document.exitPointerLock();
                         player.game.brickMenuView.onNextHide = () => {
@@ -5321,8 +5578,18 @@ class PlayerActionDefault {
             }
             else {
                 if (player.controler.playMode === PlayMode.Playing) {
-                    if (aimedBrickRoot && !aimedBrickRoot.anchored) {
-                        player.currentAction = PlayerActionMoveBrick.Create(player, aimedBrickRoot);
+                    if ((aimedObject instanceof Brick) && !aimedObject.root.anchored) {
+                        player.currentAction = PlayerActionMoveBrick.Create(player, aimedObject.root);
+                    }
+                    else if ((aimedObject instanceof Voxelizer)) {
+                        player.game.voxelizerMenuView.setVoxelizer(aimedObject);
+                        if (player.game.inputManager.isPointerLocked) {
+                            document.exitPointerLock();
+                            player.game.voxelizerMenuView.onNextHide = () => {
+                                player.game.canvas.requestPointerLock();
+                            };
+                        }
+                        player.game.voxelizerMenuView.show(0.1);
                     }
                 }
             }
@@ -5331,17 +5598,17 @@ class PlayerActionDefault {
             if (distance > 4) {
                 return;
             }
-            if (aimedBrick) {
-                let prevParent = aimedBrick.parent;
+            if (aimedObject instanceof Brick) {
+                let prevParent = aimedObject.parent;
                 if (prevParent instanceof Brick) {
-                    aimedBrick.setParent(undefined);
-                    aimedBrick.updateMesh();
+                    aimedObject.setParent(undefined);
+                    aimedObject.updateMesh();
                     prevParent.updateMesh();
                 }
             }
         };
         brickAction.onUnequip = () => {
-            setAimedBrickRoot(undefined);
+            setAimedObject(undefined);
         };
         return brickAction;
     }
@@ -6000,9 +6267,6 @@ class PlayerActionVoxelizer {
                     voxelizer.initialize();
                     voxelizer.position.copyFrom(hit.pickedPoint);
                     voxelizer.position.y += 1.2;
-                    setInterval(() => {
-                        voxelizer.plouf();
-                    }, 3000);
                 }
             }
         };
@@ -6025,12 +6289,23 @@ class Voxelizer extends BABYLON.Mesh {
         this.url = url;
         this.game = game;
         BABYLON.CreateSphereVertexData({ diameter: 0.8 }).applyToMesh(this);
-        this.meshInner = new BABYLON.Mesh("voxelizer-preview");
+        this.meshInner = new BABYLON.Mesh("voxelizer-inner");
         this.meshInner.scaling.copyFromFloats(40, 40, 40);
         this.meshInner.parent = this;
-        this.meshOuter = new BABYLON.Mesh("voxelizer-preview");
-        this.meshOuter.scaling.copyFromFloats(40, 40, 40);
-        this.meshOuter.parent = this;
+        this.meshOuter = new BABYLON.Mesh("voxelizer-shell");
+        this.meshOuter.parent = this.meshInner;
+        let material = new BABYLON.StandardMaterial("voxelizer-material");
+        material.specularColor.copyFromFloats(0, 0, 0);
+        this.meshInner.material = material;
+        this.meshOuter.material = material;
+    }
+    highlight() {
+        this.renderOutline = true;
+        this.outlineColor = new BABYLON.Color3(0, 1, 1);
+        this.outlineWidth = 0.01;
+    }
+    unlight() {
+        this.renderOutline = false;
     }
     async initialize() {
         let datas = await this.game.vertexDataLoader.get(this.url);
@@ -6041,7 +6316,7 @@ class Voxelizer extends BABYLON.Mesh {
                 Mummu.TriFlipVertexDataInPlace(innerData);
                 innerData.applyToMesh(this.meshInner);
                 let outerData = Mummu.CloneVertexData(data);
-                Mummu.ShrinkVertexDataInPlace(outerData, 0.01);
+                Mummu.ShrinkVertexDataInPlace(outerData, 0.001);
                 outerData.applyToMesh(this.meshOuter);
             }
         }

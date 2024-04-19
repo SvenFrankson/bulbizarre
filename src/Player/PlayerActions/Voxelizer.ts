@@ -6,12 +6,26 @@ class Voxelizer extends BABYLON.Mesh {
     constructor(public url: string, public game: Game) {
         super("voxelizer");
         BABYLON.CreateSphereVertexData({ diameter: 0.8 }).applyToMesh(this);
-        this.meshInner = new BABYLON.Mesh("voxelizer-preview");
+        this.meshInner = new BABYLON.Mesh("voxelizer-inner");
         this.meshInner.scaling.copyFromFloats(40, 40, 40);
         this.meshInner.parent = this;
-        this.meshOuter = new BABYLON.Mesh("voxelizer-preview");
-        this.meshOuter.scaling.copyFromFloats(40, 40, 40);
-        this.meshOuter.parent = this;
+        this.meshOuter = new BABYLON.Mesh("voxelizer-shell");
+        this.meshOuter.parent = this.meshInner;
+
+        let material = new BABYLON.StandardMaterial("voxelizer-material");
+        material.specularColor.copyFromFloats(0, 0, 0);
+        this.meshInner.material = material;
+        this.meshOuter.material = material;
+    }
+    
+    public highlight(): void {
+        this.renderOutline = true;
+        this.outlineColor = new BABYLON.Color3(0, 1, 1);
+        this.outlineWidth = 0.01;
+    }
+
+    public unlight(): void {
+        this.renderOutline = false;
     }
 
     public async initialize(): Promise<void> {
@@ -24,7 +38,7 @@ class Voxelizer extends BABYLON.Mesh {
                 innerData.applyToMesh(this.meshInner);
                 
                 let outerData = Mummu.CloneVertexData(data);
-                Mummu.ShrinkVertexDataInPlace(outerData, 0.01);
+                Mummu.ShrinkVertexDataInPlace(outerData, 0.001);
                 outerData.applyToMesh(this.meshOuter);
             }
         }

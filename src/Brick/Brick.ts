@@ -171,8 +171,10 @@ class Brick extends BABYLON.TransformNode {
         data.applyToMesh(this.mesh);
     }
 
-    
     public highlight(): void {
+        if (this != this.root) {
+            return this.root.highlight();
+        }
         if (this.mesh) {
             this.mesh.renderOutline = true;
             this.mesh.outlineColor = new BABYLON.Color3(0, 1, 1);
@@ -181,6 +183,9 @@ class Brick extends BABYLON.TransformNode {
     }
 
     public unlight(): void {
+        if (this != this.root) {
+            return this.root.unlight();
+        }
         if (this.mesh) {
             this.mesh.renderOutline = false;
         }
