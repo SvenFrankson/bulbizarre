@@ -5136,6 +5136,18 @@ class VoxelizerMenuView extends HTMLElement {
         this.appendChild(categoriesContainer);
         this._urlInput = document.createElement("input");
         this._urlInput.setAttribute("type", "file");
+        this._urlInput.addEventListener("input", (event) => {
+            let files = event.target.files;
+            let file = files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.addEventListener('load', (event) => {
+                    this._voxelizer.url = "data:" + event.target.result;
+                    this._voxelizer.initialize();
+                });
+                reader.readAsText(file);
+            }
+        });
         categoriesContainer.appendChild(this._urlInput);
         let divX = document.createElement("div");
         categoriesContainer.appendChild(divX);
@@ -6327,8 +6339,7 @@ class PlayerActionVoxelizer {
                     return player.currentChuncks.find(chunck => { return chunck && chunck.mesh === mesh; }) != undefined;
                 });
                 if (hit && hit.pickedPoint) {
-                    let voxelizer = new Voxelizer("./datas/meshes/skull.babylon", player.game);
-                    voxelizer.initialize();
+                    let voxelizer = new Voxelizer("", player.game);
                     voxelizer.position.copyFrom(hit.pickedPoint);
                     voxelizer.position.y += 1.2;
                     player.currentAction = undefined;

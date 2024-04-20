@@ -66,8 +66,7 @@ class PlayerActionVoxelizer {
                     }
                 )
                 if (hit && hit.pickedPoint) {
-                    let voxelizer = new Voxelizer("./datas/meshes/skull.babylon", player.game);
-                    voxelizer.initialize();
+                    let voxelizer = new Voxelizer("", player.game);
                     voxelizer.position.copyFrom(hit.pickedPoint);
                     voxelizer.position.y += 1.2;
                     player.currentAction = undefined;

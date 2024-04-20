@@ -106,6 +106,18 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
 
         this._urlInput = document.createElement("input");
         this._urlInput.setAttribute("type", "file");
+        this._urlInput.addEventListener("input", (event: Event) => {
+            let files = (event.target as HTMLInputElement).files;
+            let file = files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.addEventListener('load', (event) => {
+                    this._voxelizer.url = "data:" + (event.target.result as string);
+                    this._voxelizer.initialize();
+                });
+                reader.readAsText(file);
+            }
+        });
         categoriesContainer.appendChild(this._urlInput);
 
         let divX = document.createElement("div");
