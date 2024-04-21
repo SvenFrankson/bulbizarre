@@ -6581,13 +6581,14 @@ class Voxelizer extends BABYLON.Mesh {
         let k0 = 0;
         let k1 = 0;
         let affectedChuncks = new Nabu.UniqueList();
-        let rebuildAffectedChuncks = () => {
+        let rebuildAffectedChuncks = async () => {
             for (let i = 0; i < affectedChuncks.length; i++) {
                 let chunck = affectedChuncks.get(i);
                 for (let k = k0; k <= k1; k++) {
                     chunck.updateIsEmptyIsFull(k);
                 }
                 chunck.redrawMesh(true);
+                await Nabu.NextFrame();
                 chunck.saveToLocalStorage();
             }
             affectedChuncks = new Nabu.UniqueList();
@@ -6596,6 +6597,26 @@ class Voxelizer extends BABYLON.Mesh {
         let data = BABYLON.VertexData.ExtractFromMesh(this.meshInner);
         let positions = data.positions;
         let indices = data.indices;
+        // sort indices
+        let triangleIndices = [];
+        for (let i = 0; i < indices.length / 3; i++) {
+            triangleIndices[i] = [indices[3 * i], indices[3 * i + 1], indices[3 * i + 2]];
+        }
+        triangleIndices = triangleIndices.sort((tri1, tri2) => {
+            let v11 = tri1[0];
+            let v12 = tri1[1];
+            let v13 = tri1[2];
+            let v21 = tri2[0];
+            let v22 = tri2[1];
+            let v23 = tri2[2];
+            let y1 = positions[3 * v11 + 1] + positions[3 * v12 + 1] + positions[3 * v13 + 1];
+            let y2 = positions[3 * v21 + 1] + positions[3 * v22 + 1] + positions[3 * v23 + 1];
+            return y1 - y2;
+        });
+        indices = [];
+        for (let i = 0; i < triangleIndices.length; i++) {
+            indices.push(...triangleIndices[i]);
+        }
         this.meshInner.dispose();
         this.meshOuter.dispose();
         let t0 = performance.now();
@@ -6615,17 +6636,17 @@ class Voxelizer extends BABYLON.Mesh {
                 let y2 = positions[3 * v2Index + 1];
                 let z2 = positions[3 * v2Index + 2];
                 let IJK1ANext = {
-                    i: localIJK1.ijk.i + Math.round((x2 - x1) / 0.4),
-                    j: localIJK1.ijk.j + Math.round((z2 - z1) / 0.4),
-                    k: localIJK1.ijk.k + Math.round((y2 - y1) / 0.4),
+                    i: localIJK1.ijk.i + Math.floor((x2 - x1) / 0.4),
+                    j: localIJK1.ijk.j + Math.floor((z2 - z1) / 0.4),
+                    k: localIJK1.ijk.k + Math.floor((y2 - y1) / 0.4),
                 };
                 let x3 = positions[3 * v3Index];
                 let y3 = positions[3 * v3Index + 1];
                 let z3 = positions[3 * v3Index + 2];
                 let IJK1BNext = {
-                    i: localIJK1.ijk.i + Math.round((x3 - x1) / 0.4),
-                    j: localIJK1.ijk.j + Math.round((z3 - z1) / 0.4),
-                    k: localIJK1.ijk.k + Math.round((y3 - y1) / 0.4),
+                    i: localIJK1.ijk.i + Math.floor((x3 - x1) / 0.4),
+                    j: localIJK1.ijk.j + Math.floor((z3 - z1) / 0.4),
+                    k: localIJK1.ijk.k + Math.floor((y3 - y1) / 0.4),
                 };
                 let chuncks = triangle.draw(localIJK1.chunck, localIJK1.ijk, IJK1ANext, IJK1BNext, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.Add, false, true);
                 chuncks.forEach(chunck => {
@@ -6643,13 +6664,13 @@ class Voxelizer extends BABYLON.Mesh {
                 await Nabu.NextFrame();
                 t0 = performance.now();
                 doStep(triIndex);
-                if (breaks > 60) {
+                if (breaks > 30) {
                     breaks = 0;
-                    rebuildAffectedChuncks();
+                    await rebuildAffectedChuncks();
                 }
             }
         }
-        rebuildAffectedChuncks();
+        await rebuildAffectedChuncks();
     }
 }
 class GameRouter extends Nabu.Router {

@@ -250,13 +250,14 @@ class Voxelizer extends BABYLON.Mesh {
         let k0 = 0;
         let k1 = 0;
         let affectedChuncks = new Nabu.UniqueList<Kulla.Chunck>();
-        let rebuildAffectedChuncks = () => {
+        let rebuildAffectedChuncks = async () => {
             for (let i = 0; i < affectedChuncks.length; i++) {
                 let chunck = affectedChuncks.get(i);
                 for (let k = k0; k <= k1; k++) {
                     chunck.updateIsEmptyIsFull(k);
                 }
                 chunck.redrawMesh(true);
+                await Nabu.NextFrame();
                 chunck.saveToLocalStorage();
             }
             affectedChuncks = new Nabu.UniqueList<Kulla.Chunck>();
@@ -266,6 +267,30 @@ class Voxelizer extends BABYLON.Mesh {
         let data = BABYLON.VertexData.ExtractFromMesh(this.meshInner);
         let positions = data.positions;
         let indices = data.indices;
+
+        // sort indices
+        let triangleIndices: number[][] = [];
+        for (let i = 0; i < indices.length / 3; i++) {
+            triangleIndices[i] = [indices[3 * i], indices[3 * i + 1], indices[3 * i + 2]];
+        }
+        triangleIndices = triangleIndices.sort((tri1, tri2) => {
+            let v11 = tri1[0];
+            let v12 = tri1[1];
+            let v13 = tri1[2];
+
+            let v21 = tri2[0];
+            let v22 = tri2[1];
+            let v23 = tri2[2];
+
+            let y1 = positions[3 * v11 + 1] + positions[3 * v12 + 1] + positions[3 * v13 + 1];
+            let y2 = positions[3 * v21 + 1] + positions[3 * v22 + 1] + positions[3 * v23 + 1];
+
+            return y1 - y2;
+        });
+        indices = [];
+        for (let i = 0; i < triangleIndices.length; i++) {
+            indices.push(...triangleIndices[i]);
+        }
 
         this.meshInner.dispose();
         this.meshOuter.dispose();
@@ -322,12 +347,12 @@ class Voxelizer extends BABYLON.Mesh {
                 await Nabu.NextFrame();
                 t0 = performance.now();
                 doStep(triIndex);
-                if (breaks > 60) {
+                if (breaks > 30) {
                     breaks = 0;
-                    rebuildAffectedChuncks();
+                    await rebuildAffectedChuncks();
                 }
             }
         }
-        rebuildAffectedChuncks();
+        await rebuildAffectedChuncks();
     }
 }
