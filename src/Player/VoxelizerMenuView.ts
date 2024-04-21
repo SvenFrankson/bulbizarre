@@ -244,7 +244,7 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
         this._goBtn.innerHTML = "GO";
         categoriesContainer.appendChild(this._goBtn);
         this._goBtn.onclick = () => {
-            this._voxelizer.plouf();
+            this._voxelizer.ploufRasterize();
             this.hide(0.1);
         }
         
