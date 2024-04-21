@@ -4514,12 +4514,14 @@ class PlayerControler {
         if (this.player.game.playerInventoryView.shown) {
             return PlayMode.Inventory;
         }
+        /*
         if (this.player.game.brickMenuView.shown) {
             return PlayMode.Menu;
         }
         if (this.player.game.voxelizerMenuView.shown) {
             return PlayMode.Menu;
         }
+        */
         if (this.player.game.router.inPlayMode) {
             return PlayMode.Playing;
         }
@@ -5661,7 +5663,9 @@ class PlayerActionDefault {
                         player.game.voxelizerMenuView.setVoxelizer(aimedObject);
                         if (player.game.inputManager.isPointerLocked) {
                             document.exitPointerLock();
+                            player.game.inputManager.temporaryNoPointerLock = true;
                             player.game.voxelizerMenuView.onNextHide = () => {
+                                player.game.inputManager.temporaryNoPointerLock = false;
                                 player.game.canvas.requestPointerLock();
                             };
                         }

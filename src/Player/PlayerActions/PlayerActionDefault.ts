@@ -99,7 +99,9 @@ class PlayerActionDefault {
                         player.game.voxelizerMenuView.setVoxelizer(aimedObject);
                         if (player.game.inputManager.isPointerLocked) {
                             document.exitPointerLock();
+                            player.game.inputManager.temporaryNoPointerLock = true;
                             player.game.voxelizerMenuView.onNextHide = () => {
+                                player.game.inputManager.temporaryNoPointerLock = false;
                                 player.game.canvas.requestPointerLock();
                             }
                         }
