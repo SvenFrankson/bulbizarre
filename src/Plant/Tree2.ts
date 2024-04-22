@@ -3,7 +3,7 @@ class TreeNode {
     public depth: number = 0;
     public dir: BABYLON.Vector3 = BABYLON.Vector3.Up();
 
-    constructor(public position: BABYLON.Vector3, public parent?: TreeNode) {
+    constructor(public tree: Tree2, public position: BABYLON.Vector3, public parent?: TreeNode) {
         if (parent) {
             this.depth = parent.depth + 1;
             this.dir.copyFrom(this.position).subtractInPlace(parent.position).normalize();
@@ -34,18 +34,21 @@ class TreeNode {
     }
 
     public generateChildren(): void {
-        if (this.depth < 10) {
+        if (this.depth < this.tree.length) {
+            let f = this.depth / this.tree.length;
             let childCount = 1;
-            if (this.depth === 4 || this.depth === 6 || this.depth === 8) {
+            if (this.tree.splits.indexOf(this.depth) > - 1) {
                 childCount = 2;
             }
             childCount = Nabu.MinMax(childCount, 1, 2);
+            let l = this.tree.nodeDistBottom * (1 - f) + this.tree.nodeDistTop * f;
+            l *= 0.9 + 0.2 * Math.random();
             let dir = this.dir.clone();
             dir.addInPlaceFromFloats((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5));
-            dir.y += 0.2;
-            dir.normalize();
+            dir.y += 0.2 * l;
+            dir.normalize().scaleInPlace(l);
             if (childCount === 1) {
-                let child = new TreeNode(this.position.add(dir), this);
+                let child = new TreeNode(this.tree, this.position.add(dir), this);
                 this.children.push(child);
                 child.generateChildren();
             }
@@ -55,12 +58,12 @@ class TreeNode {
                 axis = BABYLON.Vector3.Cross(dir, axis).normalize();
 
                 let dir1 = Mummu.Rotate(dir, axis, a * 0.5);
-                let child1 = new TreeNode(this.position.add(dir1), this);
+                let child1 = new TreeNode(this.tree, this.position.add(dir1), this);
                 this.children.push(child1);
                 child1.generateChildren();
 
                 let dir2 = Mummu.Rotate(dir, axis, - a * 0.5);
-                let child2 = new TreeNode(this.position.add(dir2), this);
+                let child2 = new TreeNode(this.tree, this.position.add(dir2), this);
                 this.children.push(child2);
                 child2.generateChildren();
             }
@@ -73,8 +76,12 @@ class Tree2 {
     public ijk: Nabu.IJK;
     public chunck: Kulla.Chunck;
 
-    public height: number = 10;
-    public radius: number = 5;
+    public nodeDistBottom: number = 1;
+    public nodeDistTop: number = 1.2;
+    public sizeBottom: number = 3;
+    public sizeTop: number = 0.5;
+    public length: number = 15;
+    public splits: number[] = [5, 9, 12]
 
     constructor(public game: Game) {
     }
@@ -82,22 +89,35 @@ class Tree2 {
     private _debugStepInterval: number;
 
     public instantiate(): void {
+        let affectedChuncks = new Nabu.UniqueList<Kulla.Chunck>();
         let pos = this.chunck.getPosAtIJK(this.ijk);
-        let root = new TreeNode(pos);
+        let root = new TreeNode(this, pos);
         root.generateChildren();
 
         let line = new Kulla.FatLine(this.game.terrain);
         let children = root.getAllChildren();
         children.forEach(child => {
             if (child.parent) {
-                let f = child.parent.depth / 10;
-                line.size = 2 * (1 - f) + 0.5 * f;
+                let f = child.parent.depth / this.length;
+                line.size = this.sizeBottom * (1 - f) + this.sizeTop * f;
                 
                 line.p0 = child.position;
                 line.p1 = child.parent.position;
 
-                line.draw(Kulla.BlockType.Wood);
+                let chuncks = line.draw(Kulla.BlockType.Wood, false, true);
+                chuncks.forEach((chunck) => {
+                    affectedChuncks.push(chunck);
+                });
             }
         });
+
+        for (let i = 0; i < affectedChuncks.length; i++) {
+            let chunck = affectedChuncks.get(i);
+            for (let k = 0; k < chunck.dataSizeK; k++) {
+                chunck.updateIsEmptyIsFull(k);
+            }
+            chunck.redrawMesh(true);
+            chunck.saveToLocalStorage();
+        }
     }
 }

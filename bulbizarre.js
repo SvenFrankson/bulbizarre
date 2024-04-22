@@ -3758,7 +3758,8 @@ class Tree {
     }
 }
 class TreeNode {
-    constructor(position, parent) {
+    constructor(tree, position, parent) {
+        this.tree = tree;
         this.position = position;
         this.parent = parent;
         this.children = [];
@@ -3789,18 +3790,21 @@ class TreeNode {
         }
     }
     generateChildren() {
-        if (this.depth < 10) {
+        if (this.depth < this.tree.length) {
+            let f = this.depth / this.tree.length;
             let childCount = 1;
-            if (this.depth === 4 || this.depth === 6 || this.depth === 8) {
+            if (this.tree.splits.indexOf(this.depth) > -1) {
                 childCount = 2;
             }
             childCount = Nabu.MinMax(childCount, 1, 2);
+            let l = this.tree.nodeDistBottom * (1 - f) + this.tree.nodeDistTop * f;
+            l *= 0.9 + 0.2 * Math.random();
             let dir = this.dir.clone();
             dir.addInPlaceFromFloats((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5));
-            dir.y += 0.2;
-            dir.normalize();
+            dir.y += 0.2 * l;
+            dir.normalize().scaleInPlace(l);
             if (childCount === 1) {
-                let child = new TreeNode(this.position.add(dir), this);
+                let child = new TreeNode(this.tree, this.position.add(dir), this);
                 this.children.push(child);
                 child.generateChildren();
             }
@@ -3809,11 +3813,11 @@ class TreeNode {
                 let axis = new BABYLON.Vector3(-0.5 + Math.random(), -0.5 + Math.random(), -0.5 + Math.random());
                 axis = BABYLON.Vector3.Cross(dir, axis).normalize();
                 let dir1 = Mummu.Rotate(dir, axis, a * 0.5);
-                let child1 = new TreeNode(this.position.add(dir1), this);
+                let child1 = new TreeNode(this.tree, this.position.add(dir1), this);
                 this.children.push(child1);
                 child1.generateChildren();
                 let dir2 = Mummu.Rotate(dir, axis, -a * 0.5);
-                let child2 = new TreeNode(this.position.add(dir2), this);
+                let child2 = new TreeNode(this.tree, this.position.add(dir2), this);
                 this.children.push(child2);
                 child2.generateChildren();
             }
@@ -3823,24 +3827,40 @@ class TreeNode {
 class Tree2 {
     constructor(game) {
         this.game = game;
-        this.height = 10;
-        this.radius = 5;
+        this.nodeDistBottom = 1;
+        this.nodeDistTop = 1.2;
+        this.sizeBottom = 3;
+        this.sizeTop = 0.5;
+        this.length = 15;
+        this.splits = [5, 9, 12];
     }
     instantiate() {
+        let affectedChuncks = new Nabu.UniqueList();
         let pos = this.chunck.getPosAtIJK(this.ijk);
-        let root = new TreeNode(pos);
+        let root = new TreeNode(this, pos);
         root.generateChildren();
         let line = new Kulla.FatLine(this.game.terrain);
         let children = root.getAllChildren();
         children.forEach(child => {
             if (child.parent) {
-                let f = child.parent.depth / 10;
-                line.size = 2 * (1 - f) + 0.5 * f;
+                let f = child.parent.depth / this.length;
+                line.size = this.sizeBottom * (1 - f) + this.sizeTop * f;
                 line.p0 = child.position;
                 line.p1 = child.parent.position;
-                line.draw(Kulla.BlockType.Wood);
+                let chuncks = line.draw(Kulla.BlockType.Wood, false, true);
+                chuncks.forEach((chunck) => {
+                    affectedChuncks.push(chunck);
+                });
             }
         });
+        for (let i = 0; i < affectedChuncks.length; i++) {
+            let chunck = affectedChuncks.get(i);
+            for (let k = 0; k < chunck.dataSizeK; k++) {
+                chunck.updateIsEmptyIsFull(k);
+            }
+            chunck.redrawMesh(true);
+            chunck.saveToLocalStorage();
+        }
     }
 }
 class BrickMenuView extends HTMLElement {
