@@ -73,15 +73,17 @@ class TreeNode {
 
 class Tree2 {
 
+    public root: TreeNode;
     public ijk: Nabu.IJK;
     public chunck: Kulla.Chunck;
 
-    public nodeDistBottom: number = 1;
+    public nodeDistBottom: number = 1.2;
     public nodeDistTop: number = 1.2;
     public sizeBottom: number = 3;
     public sizeTop: number = 0.5;
     public length: number = 15;
-    public splits: number[] = [5, 9, 12]
+    public age: number = 0;
+    public splits: number[] = [6, 8, 10, 12]
 
     constructor(public game: Game) {
     }
@@ -89,25 +91,56 @@ class Tree2 {
     private _debugStepInterval: number;
 
     public instantiate(): void {
-        let affectedChuncks = new Nabu.UniqueList<Kulla.Chunck>();
         let pos = this.chunck.getPosAtIJK(this.ijk);
-        let root = new TreeNode(this, pos);
-        root.generateChildren();
+        this.root = new TreeNode(this, pos);
+        this.root.generateChildren();
 
+        this.doStepInterval = setInterval(this.doStep, 1500);
+    }
+
+    public doStepInterval: number;
+    public doStep = () => {
+        
+        this.age++;
+        if (this.age > this.length) {
+            clearInterval(this.doStepInterval);
+            return;
+        }
+
+        let affectedChuncks = new Nabu.UniqueList<Kulla.Chunck>();
         let line = new Kulla.FatLine(this.game.terrain);
-        let children = root.getAllChildren();
+        let children = this.root.getAllChildren();
         children.forEach(child => {
             if (child.parent) {
-                let f = child.parent.depth / this.length;
-                line.size = this.sizeBottom * (1 - f) + this.sizeTop * f;
-                
-                line.p0 = child.position;
-                line.p1 = child.parent.position;
+                if (child.parent.depth <= this.age) {
+                    let fAge = this.age / this.length * 0.8 + 0.2;
+                    let f = child.parent.depth / this.age;
+                    line.size = fAge * this.sizeBottom * (1 - f) + this.sizeTop * f;
+                    
+                    line.p0 = child.position;
+                    line.p1 = child.parent.position;
+    
+                    let chuncks = line.draw(Kulla.BlockType.Wood, false, true);
+                    chuncks.forEach((chunck) => {
+                        affectedChuncks.push(chunck);
+                    });
 
-                let chuncks = line.draw(Kulla.BlockType.Wood, false, true);
-                chuncks.forEach((chunck) => {
-                    affectedChuncks.push(chunck);
-                });
+                    if (child.parent.depth > this.length * 0.6) {
+                        let up = BABYLON.Vector3.Up();
+                        let forward = child.parent.position.subtract(child.position);
+                        let right = BABYLON.Vector3.Cross(up, forward);
+                        up = BABYLON.Vector3.Cross(forward, right).normalize();
+                        up.y += 1;
+                        up.normalize().scaleInPlace(2 * fAge);
+                        line.p0 = child.position.add(up);
+                        line.p1 = child.parent.position.add(up);
+                        line.size = 3 * fAge;
+                        chuncks = line.draw(Kulla.BlockType.Leaf, false, true);
+                        chuncks.forEach((chunck) => {
+                            affectedChuncks.push(chunck);
+                        });
+                    }
+                }
             }
         });
 
