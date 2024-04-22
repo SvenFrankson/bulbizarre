@@ -21,7 +21,9 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
     private _rotY: HTMLInputElement;
     private _rotZ: HTMLInputElement;
     private _size: HTMLInputElement;
+    private _block: HTMLInputElement;
     private _goBtn: HTMLButtonElement;
+    private _goRasterizeBtn: HTMLButtonElement;
     private _cancelBtn: HTMLButtonElement;
     private _options: HTMLButtonElement[];
 
@@ -239,17 +241,51 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
             this._voxelizer.meshInner.scaling.copyFromFloats(s, s, s);
         })
         divSize.appendChild(this._size);
+
+        let divBlock = document.createElement("div");
+        categoriesContainer.appendChild(divBlock);
+
+        let blockDataList = document.createElement("datalist");
+        blockDataList.id = "blocktypes";
+        blockDataList.innerHTML = "";
+        Kulla.BlockTypeNames.forEach(blockTypeName => {
+            blockDataList.innerHTML += `<option value="` + blockTypeName + `">`;
+        });
+        divBlock.appendChild(blockDataList);
+
+        let blockLabel = document.createElement("label");
+        blockLabel.setAttribute("for", "size");
+        blockLabel.innerHTML = "Block";
+        divBlock.appendChild(blockLabel);
+
+        this._block = document.createElement("input");
+        this._block.id = "size";
+        this._block.setAttribute("list", "blocktypes");
+        this._block.setAttribute("placeholder", "Rock");
+        this._block.addEventListener("input", (ev: Event) => {
+            let b = Kulla.BlockTypeNames.indexOf(this._block.value);
+            this._voxelizer.blocktype = b;
+        })
+        divBlock.appendChild(this._block);
         
         this._goBtn = document.createElement("button");
-        this._goBtn.innerHTML = "GO";
+        this._goBtn.innerHTML = "Run (Raycast)";
         categoriesContainer.appendChild(this._goBtn);
         this._goBtn.onclick = () => {
+            this._voxelizer.plouf();
+            this.hide(0.1);
+        }
+        
+        this._goRasterizeBtn = document.createElement("button");
+        this._goRasterizeBtn.innerHTML = "Run (Rasterize)";
+        categoriesContainer.appendChild(this._goRasterizeBtn);
+        this._goRasterizeBtn.onclick = () => {
             this._voxelizer.ploufRasterize();
             this.hide(0.1);
         }
         
         this._cancelBtn = document.createElement("button");
-        this._cancelBtn.innerHTML = "CANCEL";
+        this._cancelBtn.innerHTML = "Cancel";
         categoriesContainer.appendChild(this._cancelBtn);
         this._cancelBtn.onclick = () => {
             this.hide(0.1);
@@ -331,6 +367,8 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
 
     public setVoxelizer(voxelizer: Voxelizer): void {
         this._voxelizer = voxelizer;
+        this._urlInput.value = "";
+        this._block.value = "";
         this._posX.value = voxelizer.meshInner.position.x.toFixed(2);
         this._posY.value = voxelizer.meshInner.position.y.toFixed(2);
         this._posZ.value = voxelizer.meshInner.position.z.toFixed(2);

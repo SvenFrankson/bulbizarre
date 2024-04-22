@@ -248,6 +248,7 @@ class Game {
 
             this.player.playerActionManager.loadFromLocalStorage();
 
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), 8);
             this.player.playerActionManager.linkAction(PlayerActionVoxelizer.Create(this.player), 9);
 
             this.brickMenuView.setPlayer(this.player);

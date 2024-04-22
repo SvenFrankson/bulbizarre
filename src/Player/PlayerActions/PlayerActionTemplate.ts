@@ -103,7 +103,7 @@ class PlayerActionTemplate {
                     let n =  hit.getNormal(true).scaleInPlace(0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
-                        let mushroom = new Tree(player.game);
+                        let mushroom = new Tree2(player.game);
                         mushroom.chunck = chunckIJK.chunck;
                         mushroom.ijk = chunckIJK.ijk;
                         mushroom.instantiate();

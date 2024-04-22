@@ -46,7 +46,7 @@ class PlayerActionVoxelizer {
             }
         }
 
-        action.onPointerDown = () => {
+        action.onPointerUp = () => {
             if (player.controler.playMode === PlayMode.Playing) {
                 let x: number;
                 let y: number;
@@ -68,7 +68,6 @@ class PlayerActionVoxelizer {
                 if (hit && hit.pickedPoint) {
                     let voxelizer = new Voxelizer("", player.game);
                     voxelizer.position.copyFrom(hit.pickedPoint);
-                    voxelizer.position.y += 1.2;
                     player.currentAction = undefined;
                 }
             }

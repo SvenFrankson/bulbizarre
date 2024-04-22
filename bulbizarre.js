@@ -865,6 +865,7 @@ class Game {
                 this.player.inventory.addItem(new PlayerInventoryItem(BRICK_COLORS[i].name, InventoryCategory.Paint));
             }
             this.player.playerActionManager.loadFromLocalStorage();
+            this.player.playerActionManager.linkAction(PlayerActionTemplate.CreateMushroomAction(this.player), 8);
             this.player.playerActionManager.linkAction(PlayerActionVoxelizer.Create(this.player), 9);
             this.brickMenuView.setPlayer(this.player);
             this.voxelizerMenuView.setPlayer(this.player);
@@ -3756,6 +3757,92 @@ class Tree {
         this._debugStepInterval = setInterval(this.doStep, 2000);
     }
 }
+class TreeNode {
+    constructor(position, parent) {
+        this.position = position;
+        this.parent = parent;
+        this.children = [];
+        this.depth = 0;
+        this.dir = BABYLON.Vector3.Up();
+        if (parent) {
+            this.depth = parent.depth + 1;
+            this.dir.copyFrom(this.position).subtractInPlace(parent.position).normalize();
+        }
+    }
+    isConnected(other) {
+        return this.parent === other || other.parent === this;
+    }
+    getAllChildren() {
+        let children = [];
+        this.addWithChildren(children);
+        return children;
+    }
+    addWithChildren(children) {
+        children.push(this);
+        this.children.forEach(child => {
+            child.addWithChildren(children);
+        });
+    }
+    draw() {
+        if (this.parent) {
+            Mummu.DrawDebugLine(this.position, this.parent.position, Infinity, this.depth % 2 === 0 ? BABYLON.Color3.Red() : BABYLON.Color3.Blue());
+        }
+    }
+    generateChildren() {
+        if (this.depth < 10) {
+            let childCount = 1;
+            if (this.depth === 4 || this.depth === 6 || this.depth === 8) {
+                childCount = 2;
+            }
+            childCount = Nabu.MinMax(childCount, 1, 2);
+            let dir = this.dir.clone();
+            dir.addInPlaceFromFloats((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5));
+            dir.y += 0.2;
+            dir.normalize();
+            if (childCount === 1) {
+                let child = new TreeNode(this.position.add(dir), this);
+                this.children.push(child);
+                child.generateChildren();
+            }
+            else if (childCount === 2) {
+                let a = Math.PI * 0.4 + Math.random() * Math.PI * 0.4;
+                let axis = new BABYLON.Vector3(-0.5 + Math.random(), -0.5 + Math.random(), -0.5 + Math.random());
+                axis = BABYLON.Vector3.Cross(dir, axis).normalize();
+                let dir1 = Mummu.Rotate(dir, axis, a * 0.5);
+                let child1 = new TreeNode(this.position.add(dir1), this);
+                this.children.push(child1);
+                child1.generateChildren();
+                let dir2 = Mummu.Rotate(dir, axis, -a * 0.5);
+                let child2 = new TreeNode(this.position.add(dir2), this);
+                this.children.push(child2);
+                child2.generateChildren();
+            }
+        }
+    }
+}
+class Tree2 {
+    constructor(game) {
+        this.game = game;
+        this.height = 10;
+        this.radius = 5;
+    }
+    instantiate() {
+        let pos = this.chunck.getPosAtIJK(this.ijk);
+        let root = new TreeNode(pos);
+        root.generateChildren();
+        let line = new Kulla.FatLine(this.game.terrain);
+        let children = root.getAllChildren();
+        children.forEach(child => {
+            if (child.parent) {
+                let f = child.parent.depth / 10;
+                line.size = 2 * (1 - f) + 0.5 * f;
+                line.p0 = child.position;
+                line.p1 = child.parent.position;
+                line.draw(Kulla.BlockType.Wood);
+            }
+        });
+    }
+}
 class BrickMenuView extends HTMLElement {
     constructor() {
         super(...arguments);
@@ -5250,15 +5337,44 @@ class VoxelizerMenuView extends HTMLElement {
             this._voxelizer.meshInner.scaling.copyFromFloats(s, s, s);
         });
         divSize.appendChild(this._size);
+        let divBlock = document.createElement("div");
+        categoriesContainer.appendChild(divBlock);
+        let blockDataList = document.createElement("datalist");
+        blockDataList.id = "blocktypes";
+        blockDataList.innerHTML = "";
+        Kulla.BlockTypeNames.forEach(blockTypeName => {
+            blockDataList.innerHTML += `<option value="` + blockTypeName + `">`;
+        });
+        divBlock.appendChild(blockDataList);
+        let blockLabel = document.createElement("label");
+        blockLabel.setAttribute("for", "size");
+        blockLabel.innerHTML = "Block";
+        divBlock.appendChild(blockLabel);
+        this._block = document.createElement("input");
+        this._block.id = "size";
+        this._block.setAttribute("list", "blocktypes");
+        this._block.setAttribute("placeholder", "Rock");
+        this._block.addEventListener("input", (ev) => {
+            let b = Kulla.BlockTypeNames.indexOf(this._block.value);
+            this._voxelizer.blocktype = b;
+        });
+        divBlock.appendChild(this._block);
         this._goBtn = document.createElement("button");
-        this._goBtn.innerHTML = "GO";
+        this._goBtn.innerHTML = "Run (Raycast)";
         categoriesContainer.appendChild(this._goBtn);
         this._goBtn.onclick = () => {
+            this._voxelizer.plouf();
+            this.hide(0.1);
+        };
+        this._goRasterizeBtn = document.createElement("button");
+        this._goRasterizeBtn.innerHTML = "Run (Rasterize)";
+        categoriesContainer.appendChild(this._goRasterizeBtn);
+        this._goRasterizeBtn.onclick = () => {
             this._voxelizer.ploufRasterize();
             this.hide(0.1);
         };
         this._cancelBtn = document.createElement("button");
-        this._cancelBtn.innerHTML = "CANCEL";
+        this._cancelBtn.innerHTML = "Cancel";
         categoriesContainer.appendChild(this._cancelBtn);
         this._cancelBtn.onclick = () => {
             this.hide(0.1);
@@ -5335,6 +5451,8 @@ class VoxelizerMenuView extends HTMLElement {
     }
     setVoxelizer(voxelizer) {
         this._voxelizer = voxelizer;
+        this._urlInput.value = "";
+        this._block.value = "";
         this._posX.value = voxelizer.meshInner.position.x.toFixed(2);
         this._posY.value = voxelizer.meshInner.position.y.toFixed(2);
         this._posZ.value = voxelizer.meshInner.position.z.toFixed(2);
@@ -5911,7 +6029,7 @@ class PlayerActionTemplate {
                     let n = hit.getNormal(true).scaleInPlace(0.2);
                     let chunckIJK = player.game.terrain.getChunckAndIJKAtPos(hit.pickedPoint.add(n), 0, size % 2 === 0);
                     if (chunckIJK) {
-                        let mushroom = new Tree(player.game);
+                        let mushroom = new Tree2(player.game);
                         mushroom.chunck = chunckIJK.chunck;
                         mushroom.ijk = chunckIJK.ijk;
                         mushroom.instantiate();
@@ -6327,7 +6445,7 @@ class PlayerActionVoxelizer {
                 previewBox = undefined;
             }
         };
-        action.onPointerDown = () => {
+        action.onPointerUp = () => {
             if (player.controler.playMode === PlayMode.Playing) {
                 let x;
                 let y;
@@ -6345,7 +6463,6 @@ class PlayerActionVoxelizer {
                 if (hit && hit.pickedPoint) {
                     let voxelizer = new Voxelizer("", player.game);
                     voxelizer.position.copyFrom(hit.pickedPoint);
-                    voxelizer.position.y += 1.2;
                     player.currentAction = undefined;
                 }
             }
@@ -6368,7 +6485,18 @@ class Voxelizer extends BABYLON.Mesh {
         super("voxelizer");
         this.url = url;
         this.game = game;
-        BABYLON.CreateSphereVertexData({ diameter: 0.8 }).applyToMesh(this);
+        this.blocktype = Kulla.BlockType.Rock;
+        let voxelizerMaterial = new ToonMaterial("voxelizer-material", game.scene);
+        voxelizerMaterial.setSpecularIntensity(1);
+        voxelizerMaterial.setSpecularCount(4);
+        voxelizerMaterial.setSpecularPower(32);
+        voxelizerMaterial.setUseVertexColor(true);
+        this.material = voxelizerMaterial;
+        game.vertexDataLoader.get("./datas/meshes/voxelizer.babylon").then(datas => {
+            if (datas && datas[0]) {
+                datas[0].applyToMesh(this);
+            }
+        });
         this.meshInner = new BABYLON.Mesh("voxelizer-inner");
         this.meshInner.scaling.copyFromFloats(10, 10, 10);
         this.meshInner.parent = this;
@@ -6400,6 +6528,10 @@ class Voxelizer extends BABYLON.Mesh {
                 outerData.applyToMesh(this.meshOuter);
             }
         }
+        this.meshInner.position.copyFromFloats(0, 0, 0);
+        this.meshInner.rotation.copyFromFloats(0, 0, 0);
+        this.meshOuter.position.copyFromFloats(0, 0, 0);
+        this.meshOuter.rotation.copyFromFloats(0, 0, 0);
     }
     async plouf() {
         this.meshInner.isVisible = false;
@@ -6412,6 +6544,11 @@ class Voxelizer extends BABYLON.Mesh {
         let DI = (max.x - min.x) / this.game.terrain.blockSizeIJ_m;
         let DJ = (max.z - min.z) / this.game.terrain.blockSizeIJ_m;
         let DK = (max.y - min.y) / this.game.terrain.blockSizeK_m;
+        /*
+        if (Math.abs(DI) * Math.abs(DJ) * Math.abs(DK) > 30 * 30 * 30) {
+            return this.ploufRasterize();
+        }
+        */
         let k0 = 0;
         let k1 = 0;
         let affectedChuncks = new Nabu.UniqueList();
@@ -6446,7 +6583,7 @@ class Voxelizer extends BABYLON.Mesh {
                             return mesh === this.meshInner || mesh === this.meshOuter;
                         });
                         if (intersection && intersection.pickedMesh === this.meshInner) {
-                            let chuncks = chunck.setData(Kulla.BlockType.Rock, ijk.i + i, ijk.j + j, ijk.k + k);
+                            let chuncks = chunck.setData(this.blocktype, ijk.i + i, ijk.j + j, ijk.k + k);
                             chuncks.forEach((chunck) => {
                                 affectedChuncks.push(chunck);
                             });
@@ -6477,6 +6614,7 @@ class Voxelizer extends BABYLON.Mesh {
         }
         this.meshInner.dispose();
         this.meshOuter.dispose();
+        this.dispose();
     }
     async ploufEdges() {
         this.meshInner.isVisible = false;
@@ -6542,15 +6680,15 @@ class Voxelizer extends BABYLON.Mesh {
                         j: localIJK2.ijk.j + Math.round((z3 - z2) / 0.4),
                         k: localIJK2.ijk.k + Math.round((y3 - y2) / 0.4),
                     };
-                    let chuncks = line.draw(localIJK1.chunck, localIJK1.ijk, IJK1ANext, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.Add, false, true);
+                    let chuncks = line.draw(localIJK1.chunck, localIJK1.ijk, IJK1ANext, this.blocktype, Kulla.TerrainEditionMode.Add, false, true);
                     chuncks.forEach(chunck => {
                         affectedChuncks.push(chunck);
                     });
-                    chuncks = line.draw(localIJK1.chunck, localIJK1.ijk, IJK1BNext, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.Add, false, true);
+                    chuncks = line.draw(localIJK1.chunck, localIJK1.ijk, IJK1BNext, this.blocktype, Kulla.TerrainEditionMode.Add, false, true);
                     chuncks.forEach(chunck => {
                         affectedChuncks.push(chunck);
                     });
-                    chuncks = line.draw(localIJK2.chunck, localIJK2.ijk, IJK2Next, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.Add, false, true);
+                    chuncks = line.draw(localIJK2.chunck, localIJK2.ijk, IJK2Next, this.blocktype, Kulla.TerrainEditionMode.Add, false, true);
                     chuncks.forEach(chunck => {
                         affectedChuncks.push(chunck);
                     });
@@ -6574,6 +6712,7 @@ class Voxelizer extends BABYLON.Mesh {
             }
         }
         rebuildAffectedChuncks();
+        this.dispose();
     }
     async ploufRasterize() {
         this.meshInner.isVisible = false;
@@ -6633,26 +6772,69 @@ class Voxelizer extends BABYLON.Mesh {
             let x1 = positions[3 * v1Index];
             let y1 = positions[3 * v1Index + 1];
             let z1 = positions[3 * v1Index + 2];
+            let x2 = positions[3 * v2Index];
+            let y2 = positions[3 * v2Index + 1];
+            let z2 = positions[3 * v2Index + 2];
+            let x3 = positions[3 * v3Index];
+            let y3 = positions[3 * v3Index + 1];
+            let z3 = positions[3 * v3Index + 2];
+            /*
+            let n = BABYLON.Vector3.Cross(
+                new BABYLON.Vector3(x3 - x1, y3 - y1, z3 - z1),
+                new BABYLON.Vector3(x2 - x1, y2 - y1, z2 - z1)
+            ).normalize();
+
+            let correction = BABYLON.Vector3.Zero();
+            if (Math.abs(n.x) >= Math.abs(n.y) && Math.abs(n.x) >= Math.abs(n.z)) {
+                correction.x = Math.sign(n.x);
+            }
+            else if (Math.abs(n.y) >= Math.abs(n.z)) {
+                correction.y = Math.sign(n.y);
+            }
+            else {
+                correction.z = Math.sign(n.z);
+            }
+            */
             pos.copyFromFloats(x1, y1, z1);
-            let localIJK1 = this.game.terrain.getChunckAndIJKAtPos(pos, 0);
+            let localIJK1 = this.game.terrain.getChunckAndIJKAtPos(pos, 0, true);
+            /*
+            let roundedPos1 = localIJK1.chunck.getPosAtIJK(localIJK1.ijk);
+            if (BABYLON.Vector3.Dot(roundedPos1.subtract(pos), n) > 0) {
+                localIJK1.ijk.i += correction.x;
+                localIJK1.ijk.j += correction.z;
+                localIJK1.ijk.k += correction.y;
+            }
+                
+            pos.copyFromFloats(x2, y2, z2);
+            let localIJK2 = this.game.terrain.getChunckAndIJKAtPos(pos, 0, true);
+            let roundedPos2 = localIJK2.chunck.getPosAtIJK(localIJK2.ijk);
+            if (BABYLON.Vector3.Dot(roundedPos2.subtract(pos), n) > 0) {
+                x2 += correction.x * 0.4;
+                y2 += correction.y * 0.4;
+                z2 += correction.z * 0.4;
+            }
+                
+            pos.copyFromFloats(x3, y3, z3);
+            let localIJK3 = this.game.terrain.getChunckAndIJKAtPos(pos, 0, true);
+            let roundedPos3 = localIJK3.chunck.getPosAtIJK(localIJK3.ijk);
+            if (BABYLON.Vector3.Dot(roundedPos3.subtract(pos), n) > 0) {
+                x3 += correction.x * 0.4;
+                y3 += correction.y * 0.4;
+                z3 += correction.z * 0.4;
+            }
+            */
             if (localIJK1 && localIJK1.chunck) {
-                let x2 = positions[3 * v2Index];
-                let y2 = positions[3 * v2Index + 1];
-                let z2 = positions[3 * v2Index + 2];
                 let IJK1ANext = {
-                    i: localIJK1.ijk.i + Math.floor((x2 - x1) / 0.4),
-                    j: localIJK1.ijk.j + Math.floor((z2 - z1) / 0.4),
-                    k: localIJK1.ijk.k + Math.floor((y2 - y1) / 0.4),
+                    i: localIJK1.ijk.i + Math.round((x2 - x1) / 0.4),
+                    j: localIJK1.ijk.j + Math.round((z2 - z1) / 0.4),
+                    k: localIJK1.ijk.k + Math.round((y2 - y1) / 0.4),
                 };
-                let x3 = positions[3 * v3Index];
-                let y3 = positions[3 * v3Index + 1];
-                let z3 = positions[3 * v3Index + 2];
                 let IJK1BNext = {
-                    i: localIJK1.ijk.i + Math.floor((x3 - x1) / 0.4),
-                    j: localIJK1.ijk.j + Math.floor((z3 - z1) / 0.4),
-                    k: localIJK1.ijk.k + Math.floor((y3 - y1) / 0.4),
+                    i: localIJK1.ijk.i + Math.round((x3 - x1) / 0.4),
+                    j: localIJK1.ijk.j + Math.round((z3 - z1) / 0.4),
+                    k: localIJK1.ijk.k + Math.round((y3 - y1) / 0.4),
                 };
-                let chuncks = triangle.draw(localIJK1.chunck, localIJK1.ijk, IJK1ANext, IJK1BNext, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.Add, false, true);
+                let chuncks = triangle.draw(localIJK1.chunck, localIJK1.ijk, IJK1ANext, IJK1BNext, this.blocktype, Kulla.TerrainEditionMode.Add, false, true);
                 chuncks.forEach(chunck => {
                     affectedChuncks.push(chunck);
                 });
@@ -6675,6 +6857,90 @@ class Voxelizer extends BABYLON.Mesh {
             }
         }
         await rebuildAffectedChuncks();
+        this.dispose();
+    }
+    async ploufBetter() {
+        this.meshInner.isVisible = false;
+        this.meshOuter.isVisible = false;
+        this.meshOuter.computeWorldMatrix(true);
+        this.meshOuter.refreshBoundingInfo();
+        let min = this.meshOuter.getBoundingInfo().boundingBox.minimumWorld;
+        let max = this.meshOuter.getBoundingInfo().boundingBox.maximumWorld;
+        let center = min.add(max).scale(0.5);
+        let DI = (max.x - min.x) / this.game.terrain.blockSizeIJ_m;
+        let DJ = (max.z - min.z) / this.game.terrain.blockSizeIJ_m;
+        let DK = (max.y - min.y) / this.game.terrain.blockSizeK_m;
+        /*
+        if (Math.abs(DI) * Math.abs(DJ) * Math.abs(DK) > 30 * 30 * 30) {
+            return this.ploufRasterize();
+        }
+        */
+        let k0 = 0;
+        let k1 = 0;
+        let affectedChuncks = new Nabu.UniqueList();
+        let rebuildAffectedChuncks = () => {
+            for (let i = 0; i < affectedChuncks.length; i++) {
+                let chunck = affectedChuncks.get(i);
+                for (let k = k0; k <= k1; k++) {
+                    chunck.updateIsEmptyIsFull(k);
+                }
+                chunck.redrawMesh(true);
+                chunck.saveToLocalStorage();
+            }
+            affectedChuncks = new Nabu.UniqueList();
+        };
+        let localIJK = this.game.terrain.getChunckAndIJKAtPos(min, 0);
+        if (localIJK) {
+            let ijk = localIJK.ijk;
+            let chunck = localIJK.chunck;
+            if (chunck) {
+                k0 = ijk.k;
+                k1 = ijk.k + DK;
+                min = chunck.getPosAtIJK(ijk);
+                let p = BABYLON.Vector3.Zero();
+                let dir = BABYLON.Vector3.Zero();
+                let breaks = 0;
+                let doStep = (i, k) => {
+                    for (let j = 0; j < DJ; j++) {
+                        p.copyFromFloats(min.x + i * this.game.terrain.blockSizeIJ_m, min.y + k * this.game.terrain.blockSizeK_m, min.z + j * this.game.terrain.blockSizeIJ_m);
+                        dir.copyFrom(p).subtractInPlace(center).normalize();
+                        let ray = new BABYLON.Ray(p, dir);
+                        let intersection = this.game.scene.pickWithRay(ray, (mesh) => {
+                            return mesh === this.meshInner || mesh === this.meshOuter;
+                        });
+                        if (intersection && intersection.pickedMesh === this.meshInner) {
+                            let chuncks = chunck.setData(this.blocktype, ijk.i + i, ijk.j + j, ijk.k + k);
+                            chuncks.forEach((chunck) => {
+                                affectedChuncks.push(chunck);
+                            });
+                        }
+                    }
+                };
+                let t0 = performance.now();
+                for (let k = 0; k < DK; k++) {
+                    for (let i = 0; i < DI; i++) {
+                        let t1 = performance.now();
+                        if (t1 - t0 < 5) {
+                            doStep(i, k);
+                        }
+                        else {
+                            breaks++;
+                            await Nabu.NextFrame();
+                            t0 = performance.now();
+                            doStep(i, k);
+                            if (breaks > 60) {
+                                breaks = 0;
+                                rebuildAffectedChuncks();
+                            }
+                        }
+                    }
+                }
+                rebuildAffectedChuncks();
+            }
+        }
+        this.meshInner.dispose();
+        this.meshOuter.dispose();
+        this.dispose();
     }
 }
 class GameRouter extends Nabu.Router {

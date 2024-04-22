@@ -1,10 +1,27 @@
 class Voxelizer extends BABYLON.Mesh {
+
     public meshInner: BABYLON.Mesh;
     public meshOuter: BABYLON.Mesh;
 
+    public blocktype: Kulla.BlockType = Kulla.BlockType.Rock;
+
     constructor(public url: string, public game: Game) {
         super("voxelizer");
-        BABYLON.CreateSphereVertexData({ diameter: 0.8 }).applyToMesh(this);
+        
+        let voxelizerMaterial = new ToonMaterial("voxelizer-material", game.scene);
+        voxelizerMaterial.setSpecularIntensity(1);
+        voxelizerMaterial.setSpecularCount(4);
+        voxelizerMaterial.setSpecularPower(32);
+        voxelizerMaterial.setUseVertexColor(true);
+
+        this.material = voxelizerMaterial;
+
+        game.vertexDataLoader.get("./datas/meshes/voxelizer.babylon").then(datas => {
+            if (datas && datas[0]) {
+                datas[0].applyToMesh(this);
+            }
+        })
+
         this.meshInner = new BABYLON.Mesh("voxelizer-inner");
         this.meshInner.scaling.copyFromFloats(10, 10, 10);
         this.meshInner.parent = this;
@@ -41,6 +58,10 @@ class Voxelizer extends BABYLON.Mesh {
                 outerData.applyToMesh(this.meshOuter);
             }
         }
+        this.meshInner.position.copyFromFloats(0, 0, 0);
+        this.meshInner.rotation.copyFromFloats(0, 0, 0);
+        this.meshOuter.position.copyFromFloats(0, 0, 0);
+        this.meshOuter.rotation.copyFromFloats(0, 0, 0);
     }
 
     public async plouf(): Promise<void> {
@@ -55,6 +76,12 @@ class Voxelizer extends BABYLON.Mesh {
         let DI = (max.x - min.x) / this.game.terrain.blockSizeIJ_m;
         let DJ = (max.z - min.z) / this.game.terrain.blockSizeIJ_m;
         let DK = (max.y - min.y) / this.game.terrain.blockSizeK_m;
+
+        /*
+        if (Math.abs(DI) * Math.abs(DJ) * Math.abs(DK) > 30 * 30 * 30) {
+            return this.ploufRasterize();
+        }
+        */
 
         let k0 = 0;
         let k1 = 0;
@@ -92,7 +119,7 @@ class Voxelizer extends BABYLON.Mesh {
                             return mesh === this.meshInner || mesh === this.meshOuter;
                         });
                         if (intersection && intersection.pickedMesh === this.meshInner) {
-                            let chuncks = chunck.setData(Kulla.BlockType.Rock, ijk.i + i, ijk.j + j, ijk.k + k);
+                            let chuncks = chunck.setData(this.blocktype, ijk.i + i, ijk.j + j, ijk.k + k);
                             chuncks.forEach((chunck) => {
                                 affectedChuncks.push(chunck);
                             });
@@ -124,6 +151,7 @@ class Voxelizer extends BABYLON.Mesh {
 
         this.meshInner.dispose();
         this.meshOuter.dispose();
+        this.dispose();
     }
     
     public async ploufEdges(): Promise<void> {
@@ -204,15 +232,15 @@ class Voxelizer extends BABYLON.Mesh {
                         k: localIJK2.ijk.k + Math.round((y3 - y2) / 0.4),
                     }
 
-                    let chuncks = line.draw(localIJK1.chunck, localIJK1.ijk, IJK1ANext, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.Add, false, true);
+                    let chuncks = line.draw(localIJK1.chunck, localIJK1.ijk, IJK1ANext, this.blocktype, Kulla.TerrainEditionMode.Add, false, true);
                     chuncks.forEach(chunck => {
                         affectedChuncks.push(chunck);
                     })
-                    chuncks = line.draw(localIJK1.chunck, localIJK1.ijk, IJK1BNext, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.Add, false, true);
+                    chuncks = line.draw(localIJK1.chunck, localIJK1.ijk, IJK1BNext, this.blocktype, Kulla.TerrainEditionMode.Add, false, true);
                     chuncks.forEach(chunck => {
                         affectedChuncks.push(chunck);
                     })
-                    chuncks = line.draw(localIJK2.chunck, localIJK2.ijk, IJK2Next, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.Add, false, true);
+                    chuncks = line.draw(localIJK2.chunck, localIJK2.ijk, IJK2Next, this.blocktype, Kulla.TerrainEditionMode.Add, false, true);
                     chuncks.forEach(chunck => {
                         affectedChuncks.push(chunck);
                     })
@@ -236,6 +264,8 @@ class Voxelizer extends BABYLON.Mesh {
             }
         }
         rebuildAffectedChuncks();
+
+        this.dispose();
     }
     
     public async ploufRasterize(): Promise<void> {
@@ -306,32 +336,77 @@ class Voxelizer extends BABYLON.Mesh {
             let x1 = positions[3 * v1Index];
             let y1 = positions[3 * v1Index + 1];
             let z1 = positions[3 * v1Index + 2];
-            
+
+            let x2 = positions[3 * v2Index];
+            let y2 = positions[3 * v2Index + 1];
+            let z2 = positions[3 * v2Index + 2];
+
+            let x3 = positions[3 * v3Index];
+            let y3 = positions[3 * v3Index + 1];
+            let z3 = positions[3 * v3Index + 2];
+
+            /*
+            let n = BABYLON.Vector3.Cross(
+                new BABYLON.Vector3(x3 - x1, y3 - y1, z3 - z1),
+                new BABYLON.Vector3(x2 - x1, y2 - y1, z2 - z1)
+            ).normalize();
+
+            let correction = BABYLON.Vector3.Zero();
+            if (Math.abs(n.x) >= Math.abs(n.y) && Math.abs(n.x) >= Math.abs(n.z)) {
+                correction.x = Math.sign(n.x);
+            }
+            else if (Math.abs(n.y) >= Math.abs(n.z)) {
+                correction.y = Math.sign(n.y);
+            }
+            else {
+                correction.z = Math.sign(n.z);
+            }
+            */
+
             pos.copyFromFloats(x1, y1, z1);
-            let localIJK1 = this.game.terrain.getChunckAndIJKAtPos(pos, 0);
+            let localIJK1 = this.game.terrain.getChunckAndIJKAtPos(pos, 0, true);
+            /*
+            let roundedPos1 = localIJK1.chunck.getPosAtIJK(localIJK1.ijk);
+            if (BABYLON.Vector3.Dot(roundedPos1.subtract(pos), n) > 0) {
+                localIJK1.ijk.i += correction.x;
+                localIJK1.ijk.j += correction.z;
+                localIJK1.ijk.k += correction.y;
+            }
+                
+            pos.copyFromFloats(x2, y2, z2);
+            let localIJK2 = this.game.terrain.getChunckAndIJKAtPos(pos, 0, true);
+            let roundedPos2 = localIJK2.chunck.getPosAtIJK(localIJK2.ijk);
+            if (BABYLON.Vector3.Dot(roundedPos2.subtract(pos), n) > 0) {
+                x2 += correction.x * 0.4;
+                y2 += correction.y * 0.4;
+                z2 += correction.z * 0.4;
+            }
+                
+            pos.copyFromFloats(x3, y3, z3);
+            let localIJK3 = this.game.terrain.getChunckAndIJKAtPos(pos, 0, true);
+            let roundedPos3 = localIJK3.chunck.getPosAtIJK(localIJK3.ijk);
+            if (BABYLON.Vector3.Dot(roundedPos3.subtract(pos), n) > 0) {
+                x3 += correction.x * 0.4;
+                y3 += correction.y * 0.4;
+                z3 += correction.z * 0.4;
+            }
+            */            
 
             if (localIJK1 && localIJK1.chunck) {
-                let x2 = positions[3 * v2Index];
-                let y2 = positions[3 * v2Index + 1];
-                let z2 = positions[3 * v2Index + 2];
     
                 let IJK1ANext = {
-                    i: localIJK1.ijk.i + Math.floor((x2 - x1) / 0.4),
-                    j: localIJK1.ijk.j + Math.floor((z2 - z1) / 0.4),
-                    k: localIJK1.ijk.k + Math.floor((y2 - y1) / 0.4),
+                    i: localIJK1.ijk.i + Math.round((x2 - x1) / 0.4),
+                    j: localIJK1.ijk.j + Math.round((z2 - z1) / 0.4),
+                    k: localIJK1.ijk.k + Math.round((y2 - y1) / 0.4),
                 }
-                
-                let x3 = positions[3 * v3Index];
-                let y3 = positions[3 * v3Index + 1];
-                let z3 = positions[3 * v3Index + 2];
                 
                 let IJK1BNext = {
-                    i: localIJK1.ijk.i + Math.floor((x3 - x1) / 0.4),
-                    j: localIJK1.ijk.j + Math.floor((z3 - z1) / 0.4),
-                    k: localIJK1.ijk.k + Math.floor((y3 - y1) / 0.4),
+                    i: localIJK1.ijk.i + Math.round((x3 - x1) / 0.4),
+                    j: localIJK1.ijk.j + Math.round((z3 - z1) / 0.4),
+                    k: localIJK1.ijk.k + Math.round((y3 - y1) / 0.4),
                 }
     
-                let chuncks = triangle.draw(localIJK1.chunck, localIJK1.ijk, IJK1ANext, IJK1BNext, Kulla.BlockType.Rock, Kulla.TerrainEditionMode.Add, false, true);
+                let chuncks = triangle.draw(localIJK1.chunck, localIJK1.ijk, IJK1ANext, IJK1BNext, this.blocktype, Kulla.TerrainEditionMode.Add, false, true);
                 chuncks.forEach(chunck => {
                     affectedChuncks.push(chunck);
                 })             
@@ -354,5 +429,97 @@ class Voxelizer extends BABYLON.Mesh {
             }
         }
         await rebuildAffectedChuncks();
+        this.dispose();
+    }
+
+    public async ploufBetter(): Promise<void> {
+
+        this.meshInner.isVisible = false;
+        this.meshOuter.isVisible = false;
+        this.meshOuter.computeWorldMatrix(true);
+        this.meshOuter.refreshBoundingInfo();
+        let min = this.meshOuter.getBoundingInfo().boundingBox.minimumWorld;
+        let max = this.meshOuter.getBoundingInfo().boundingBox.maximumWorld;
+        let center = min.add(max).scale(0.5);
+        let DI = (max.x - min.x) / this.game.terrain.blockSizeIJ_m;
+        let DJ = (max.z - min.z) / this.game.terrain.blockSizeIJ_m;
+        let DK = (max.y - min.y) / this.game.terrain.blockSizeK_m;
+
+        /*
+        if (Math.abs(DI) * Math.abs(DJ) * Math.abs(DK) > 30 * 30 * 30) {
+            return this.ploufRasterize();
+        }
+        */
+
+        let k0 = 0;
+        let k1 = 0;
+        let affectedChuncks = new Nabu.UniqueList<Kulla.Chunck>();
+        let rebuildAffectedChuncks = () => {
+            for (let i = 0; i < affectedChuncks.length; i++) {
+                let chunck = affectedChuncks.get(i);
+                for (let k = k0; k <= k1; k++) {
+                    chunck.updateIsEmptyIsFull(k);
+                }
+                chunck.redrawMesh(true);
+                chunck.saveToLocalStorage();
+            }
+            affectedChuncks = new Nabu.UniqueList<Kulla.Chunck>();
+        };
+        let localIJK = this.game.terrain.getChunckAndIJKAtPos(min, 0);
+        if (localIJK) {
+            let ijk = localIJK.ijk;
+            let chunck = localIJK.chunck;
+            if (chunck) {
+                k0 = ijk.k;
+                k1 = ijk.k + DK;
+                min = chunck.getPosAtIJK(ijk);
+
+                let p = BABYLON.Vector3.Zero();
+                let dir = BABYLON.Vector3.Zero();
+
+                let breaks = 0;
+                let doStep = (i: number, k: number) => {
+                    for (let j = 0; j < DJ; j++) {
+                        p.copyFromFloats(min.x + i * this.game.terrain.blockSizeIJ_m, min.y + k * this.game.terrain.blockSizeK_m, min.z + j * this.game.terrain.blockSizeIJ_m);
+                        dir.copyFrom(p).subtractInPlace(center).normalize();
+                        let ray = new BABYLON.Ray(p, dir);
+                        
+                        let intersection = this.game.scene.pickWithRay(ray, (mesh) => {
+                            return mesh === this.meshInner || mesh === this.meshOuter;
+                        });
+                        if (intersection && intersection.pickedMesh === this.meshInner) {
+                            let chuncks = chunck.setData(this.blocktype, ijk.i + i, ijk.j + j, ijk.k + k);
+                            chuncks.forEach((chunck) => {
+                                affectedChuncks.push(chunck);
+                            });
+                        }
+                    }
+                };
+
+                let t0 = performance.now();
+                for (let k = 0; k < DK; k++) {
+                    for (let i = 0; i < DI; i++) {
+                        let t1 = performance.now();
+                        if (t1 - t0 < 5) {
+                            doStep(i, k);
+                        } else {
+                            breaks++;
+                            await Nabu.NextFrame();
+                            t0 = performance.now();
+                            doStep(i, k);
+                            if (breaks > 60) {
+                                breaks = 0;
+                                rebuildAffectedChuncks();
+                            }
+                        }
+                    }
+                }
+                rebuildAffectedChuncks();
+            }
+        }
+
+        this.meshInner.dispose();
+        this.meshOuter.dispose();
+        this.dispose();
     }
 }
