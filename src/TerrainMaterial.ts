@@ -46,11 +46,11 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
         
         this.setTexture("barkTexture", new BABYLON.Texture("./datas/textures/bark.png"));
-        this.setTexture("leavesTexture", new BABYLON.Texture("./datas/textures/leaves.png"));
+        this.setTexture("leavesTexture", new BABYLON.Texture("./datas/textures/leaves_2.png"));
         this.setTexture("dirtTexture", new BABYLON.Texture("./datas/textures/dirt.png"));
         this.setTexture("grassTexture", new BABYLON.Texture("./datas/textures/grass.png"));
         this.setTexture("grassSparseTexture", new BABYLON.Texture("./datas/textures/grassSparse.png"));
-        this.setTexture("rockTexture", new BABYLON.Texture("./datas/textures/rock.png"));
+        this.setTexture("rockTexture", new BABYLON.Texture("./datas/textures/concrete.png"));
         this.setTexture("iceTexture", new BABYLON.Texture("./datas/textures/ice.png"));
         this.setTexture("asphaltTexture", new BABYLON.Texture("./datas/textures/asphalt.png"));
         this.setTexture("rustTexture", new BABYLON.Texture("./datas/textures/rust.png"));

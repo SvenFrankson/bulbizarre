@@ -89,9 +89,9 @@ class Drone extends Sumuqan.Polypode {
                 infos[0].position,
             ],
             footTargets: [
-                new BABYLON.Vector3(0.25, -0.3, 0),
+                new BABYLON.Vector3(0.3, -0.3, 0.2),
             ],
-            footThickness: 0.2,
+            footThickness: 0.1,
             upperLegLength: upperLegLength,
             lowerLegLength: lowerLegLength,
             stepHeight: 0.1,

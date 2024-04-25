@@ -303,10 +303,10 @@ void main() {
    
    vec3 uvr = vec3(vPositionL.x / 26. / blockSize_m, vPositionL.z / 26. / blockSize_m, vPositionL.y / 257. / blockHeight_m);
    float gi = texture(lightTexture, uvr).r;
-   gi = round(gi * 3.) / 3. * 0.7 + 0.3;
+   gi = round(gi * 3.) / 3. * 0.6 + 0.4;
    //gi = floor(gi);
    lightFactor = round(lightFactor * 12.) / 12.;
-   lightFactor = min(lightFactor, gi);
+   lightFactor = lightFactor * gi;
 
    if (colorIndex >= 2 && colorIndex <= 4) {
       // Case dirt and grass > no tall flat surfaces

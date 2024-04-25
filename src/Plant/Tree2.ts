@@ -86,6 +86,7 @@ class Tree2 {
     public splits: number[] = [6, 8, 10, 12]
 
     constructor(public game: Game) {
+
     }
 
     private _debugStepInterval: number;
@@ -95,7 +96,9 @@ class Tree2 {
         this.root = new TreeNode(this, pos);
         this.root.generateChildren();
 
+        this.age = this.length - 1;
         this.doStepInterval = setInterval(this.doStep, 1500);
+        this.doStep();
     }
 
     public doStepInterval: number;

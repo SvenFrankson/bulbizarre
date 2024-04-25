@@ -228,7 +228,7 @@ class Game {
                 phasm.initialize();
                 phasm.instantiate();
                 phasm.setPosition(this.player.absolutePosition);
-            }, 6000);
+            }, 4000);
             */
 
             this.player.inventory.addItem(new PlayerInventoryItem("None", InventoryCategory.Block));

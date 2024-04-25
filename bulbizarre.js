@@ -530,9 +530,9 @@ class Drone extends Sumuqan.Polypode {
                 infos[0].position,
             ],
             footTargets: [
-                new BABYLON.Vector3(0.25, -0.3, 0),
+                new BABYLON.Vector3(0.3, -0.3, 0.2),
             ],
-            footThickness: 0.2,
+            footThickness: 0.1,
             upperLegLength: upperLegLength,
             lowerLegLength: lowerLegLength,
             stepHeight: 0.1,
@@ -851,7 +851,7 @@ class Game {
                 phasm.initialize();
                 phasm.instantiate();
                 phasm.setPosition(this.player.absolutePosition);
-            }, 6000);
+            }, 4000);
             */
             this.player.inventory.addItem(new PlayerInventoryItem("None", InventoryCategory.Block));
             for (let b = Kulla.BlockType.Grass; b < Kulla.BlockType.Unknown; b++) {
@@ -2303,11 +2303,11 @@ class TerrainMaterial extends BABYLON.ShaderMaterial {
         this.setFloat("blockHeight_m", 0.4);
         this.setColor3Array("terrainColors", Kulla.BlockTypeColors);
         this.setTexture("barkTexture", new BABYLON.Texture("./datas/textures/bark.png"));
-        this.setTexture("leavesTexture", new BABYLON.Texture("./datas/textures/leaves.png"));
+        this.setTexture("leavesTexture", new BABYLON.Texture("./datas/textures/leaves_2.png"));
         this.setTexture("dirtTexture", new BABYLON.Texture("./datas/textures/dirt.png"));
         this.setTexture("grassTexture", new BABYLON.Texture("./datas/textures/grass.png"));
         this.setTexture("grassSparseTexture", new BABYLON.Texture("./datas/textures/grassSparse.png"));
-        this.setTexture("rockTexture", new BABYLON.Texture("./datas/textures/rock.png"));
+        this.setTexture("rockTexture", new BABYLON.Texture("./datas/textures/concrete.png"));
         this.setTexture("iceTexture", new BABYLON.Texture("./datas/textures/ice.png"));
         this.setTexture("asphaltTexture", new BABYLON.Texture("./datas/textures/asphalt.png"));
         this.setTexture("rustTexture", new BABYLON.Texture("./datas/textures/rust.png"));
@@ -3887,7 +3887,9 @@ class Tree2 {
         let pos = this.chunck.getPosAtIJK(this.ijk);
         this.root = new TreeNode(this, pos);
         this.root.generateChildren();
+        this.age = this.length - 1;
         this.doStepInterval = setInterval(this.doStep, 1500);
+        this.doStep();
     }
 }
 class BrickMenuView extends HTMLElement {
