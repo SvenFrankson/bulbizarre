@@ -986,9 +986,23 @@ class Game {
             setTimeout(async () => {
                 let human = new HumanTest(this);
                 human.position.copyFrom(this.player.position).addInPlace(this.player.forward.scale(3));
-                human.targetLook = this.player.absolutePosition;
+                let target = BABYLON.MeshBuilder.CreateBox("targetPos", { width: 0.1, height: 3, depth: 0.1 });
                 let update = () => {
-                    human.targetPosition = this.player.absolutePosition.subtract(new BABYLON.Vector3(0, -2, 0));
+                    if (!human.targetPosition || BABYLON.Vector3.Distance(human.targetPosition, human.position) < 4) {
+                        let rayOrigin = human.position.clone();
+                        rayOrigin.y += 10;
+                        rayOrigin.x += -30 + 60 * Math.random();
+                        rayOrigin.z += -30 + 60 * Math.random();
+                        let ray = new BABYLON.Ray(rayOrigin, new BABYLON.Vector3(0, -1, 0));
+                        let hit = this.scene.pickWithRay(ray, (mesh) => {
+                            return mesh.name === "ground" || mesh.name.startsWith("chunck");
+                        });
+                        if (hit.hit) {
+                            target.position.copyFrom(hit.pickedPoint);
+                            human.targetPosition = target.position;
+                            human.targetLook = target.position.add(new BABYLON.Vector3(0, 1.5, 0));
+                        }
+                    }
                 };
                 this.scene.onBeforeRenderObservable.add(update);
                 await human.instantiate();
@@ -3727,7 +3741,9 @@ class HumanTest extends BABYLON.Mesh {
         super("human");
         this.game = game;
         this.currentSpeed = 0;
-        this.rootAlt = 0.62;
+        this.rootAlt = 0.84;
+        this.legLength = 0.42;
+        this.lowerLegLength = 0.42;
         this.armLength = 0.3;
         this.lowerArmLength = 0.3;
         this.handLength = 0.1;
@@ -3738,16 +3754,12 @@ class HumanTest extends BABYLON.Mesh {
         this._simpleWalk = () => {
             let dt = this.engine.getDeltaTime() / 1000;
             if (this.targetLook && BABYLON.Vector3.Distance(this.targetLook, this.position) > 4) {
-                this.currentSpeed = 0.95 * this.currentSpeed + 0.05 * 1;
+                this.currentSpeed = 0.95 * this.currentSpeed + 0.05 * 0.5;
                 this.position.addInPlace(this.forward.scale(this.currentSpeed * dt));
-                this.rootAlt *= 0.95;
-                this.rootAlt += 0.75 * 0.05;
                 BABYLON.Vector3.LerpToRef(this.targetGravityAdvance, this.forward.scale(0.2), 0.1, this.targetGravityAdvance);
             }
             else {
                 this.currentSpeed = 0.95 * this.currentSpeed + 0.05 * 0;
-                this.rootAlt *= 0.95;
-                this.rootAlt += 0.77 * 0.05;
                 BABYLON.Vector3.LerpToRef(this.targetGravityAdvance, BABYLON.Vector3.Zero(), 0.1, this.targetGravityAdvance);
             }
             //this.m16.position = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0.05, 0.25, 0.3), this.torso.getWorldMatrix());
@@ -3811,7 +3823,7 @@ class HumanTest extends BABYLON.Mesh {
                     if (dL > 0.01) {
                         this._steping = true;
                         this.groundedFeet.remove(this.footL);
-                        this.step(this.footL, footTargetL).then(() => {
+                        this.step(this.footL, footTargetL, 0.98, () => {
                             this._steping = false;
                             this.groundedFeet.push(this.footL);
                         });
@@ -3821,7 +3833,7 @@ class HumanTest extends BABYLON.Mesh {
                     if (dR > 0.01) {
                         this._steping = true;
                         this.groundedFeet.remove(this.footR);
-                        this.step(this.footR, footTargetR).then(() => {
+                        this.step(this.footR, footTargetR, 0.98, () => {
                             this._steping = false;
                             this.groundedFeet.push(this.footR);
                         });
@@ -3881,24 +3893,27 @@ class HumanTest extends BABYLON.Mesh {
             let q = BABYLON.Quaternion.Identity();
             let footCenter = this.footL.position.add(this.footR.position).scaleInPlace(0.5);
             let handCenter = this.handL.position.add(this.handR.position).scaleInPlace(0.5);
-            let torsoDir = handCenter.subtract(footCenter).normalize();
-            torsoDir.addInPlace(BABYLON.Axis.Y.scale(0.5)).normalize();
-            torsoDir = BABYLON.Vector3.Up();
+            let torsoDir = BABYLON.Vector3.Up().add(this.forward.scale(this.currentSpeed * 0.3));
+            torsoDir.normalize();
             let targetRoot = footCenter.clone();
-            targetRoot.addInPlace(this.forward.scale(this.currentSpeed * 0.2));
-            targetRoot.y = Math.min(this.footR.position.y, this.footL.position.y);
+            //targetRoot.addInPlace(this.forward.scale(this.currentSpeed * 0.2))
             targetRoot.y += this.rootAlt;
-            if (BABYLON.Vector3.Distance(this.footR.position, targetRoot) > 0.8) {
-                Mummu.ForceDistanceFromOriginInPlace(targetRoot, this.footR.position, 0.8);
+            while (targetRoot.y > this.footR.position.y && BABYLON.Vector3.Distance(this.footR.position, targetRoot) > this.rootAlt * 1.05) {
+                targetRoot.y -= 0.01;
             }
-            if (BABYLON.Vector3.Distance(this.footL.position, targetRoot) > 0.8) {
-                Mummu.ForceDistanceFromOriginInPlace(targetRoot, this.footL.position, 0.8);
+            while (targetRoot.y > this.footL.position.y && BABYLON.Vector3.Distance(this.footL.position, targetRoot) > this.rootAlt * 1.05) {
+                targetRoot.y -= 0.01;
             }
-            this.root.position.scaleInPlace(0.8).addInPlace(targetRoot.scale(0.2));
-            this.torsoHeight = 0.33 + 0.005 * Math.cos(this._timer / 3 * 2 * Math.PI);
+            let f = Nabu.Easing.smooth025Sec(1 / dt);
+            this.root.position.y = this.root.position.y * f + targetRoot.y * (1 - f);
+            f = 0;
+            this.root.position.x = this.root.position.x * f + targetRoot.x * (1 - f);
+            this.root.position.z = this.root.position.z * f + targetRoot.z * (1 - f);
+            this.torsoHeight = 0.25 + 0.005 * Math.cos(this._timer / 3 * 2 * Math.PI);
             // Shake that ass
             let footDir = this.footR.position.subtract(this.footL.position).normalize();
-            footDir.addInPlace(this.right.scale(10)).normalize();
+            footDir.addInPlace(this.right.scale(8)).normalize();
+            //footDir = this.right;
             Mummu.QuaternionFromXYAxisToRef(footDir, torsoDir, this.root.rotationQuaternion);
             // Alpha shouldering
             let handDir = this.handR.position.subtract(this.handL.position).normalize();
@@ -3942,10 +3957,10 @@ class HumanTest extends BABYLON.Mesh {
             this.kneeL.position.addInPlace(this.forward.scale(0.1)).addInPlace(this.right.scale(0));
             let upperLegLZ = BABYLON.Vector3.Zero();
             let lowerLegLZ = BABYLON.Vector3.Zero();
-            for (let i = 0; i < 3; i++) {
-                lowerLegLZ.copyFrom(this.footL.position).subtractInPlace(this.kneeL.position).normalize().scaleInPlace(0.39);
+            for (let i = 0; i < 5; i++) {
+                lowerLegLZ.copyFrom(this.footL.position).subtractInPlace(this.kneeL.position).normalize().scaleInPlace(this.lowerLegLength);
                 this.kneeL.position.copyFrom(this.footL.position).subtractInPlace(lowerLegLZ);
-                upperLegLZ.copyFrom(this.kneeL.position).subtractInPlace(this.hipL.absolutePosition).normalize().scaleInPlace(0.39);
+                upperLegLZ.copyFrom(this.kneeL.position).subtractInPlace(this.hipL.absolutePosition).normalize().scaleInPlace(this.legLength);
                 this.kneeL.position.copyFrom(this.hipL.absolutePosition).addInPlace(upperLegLZ);
             }
             // Leg Right
@@ -3953,10 +3968,10 @@ class HumanTest extends BABYLON.Mesh {
             this.kneeR.position.addInPlace(this.forward.scale(0.1)).addInPlace(this.right.scale(0));
             let upperLegRZ = BABYLON.Vector3.Zero();
             let lowerLegRZ = BABYLON.Vector3.Zero();
-            for (let i = 0; i < 3; i++) {
-                lowerLegRZ.copyFrom(this.footR.position).subtractInPlace(this.kneeR.position).normalize().scaleInPlace(0.39);
+            for (let i = 0; i < 5; i++) {
+                lowerLegRZ.copyFrom(this.footR.position).subtractInPlace(this.kneeR.position).normalize().scaleInPlace(this.lowerLegLength);
                 this.kneeR.position.copyFrom(this.footR.position).subtractInPlace(lowerLegRZ);
-                upperLegRZ.copyFrom(this.kneeR.position).subtractInPlace(this.hipR.absolutePosition).normalize().scaleInPlace(0.39);
+                upperLegRZ.copyFrom(this.kneeR.position).subtractInPlace(this.hipR.absolutePosition).normalize().scaleInPlace(this.legLength);
                 this.kneeR.position.copyFrom(this.hipR.absolutePosition).addInPlace(upperLegRZ);
             }
             this.human.root.setPosition(this.root.absolutePosition);
@@ -4008,6 +4023,7 @@ class HumanTest extends BABYLON.Mesh {
         this.armLength = BABYLON.Vector3.Distance(this.human.armR.getAbsolutePosition(), this.human.lowerArmR.getAbsolutePosition());
         this.lowerArmLength = BABYLON.Vector3.Distance(this.human.lowerArmR.getAbsolutePosition(), this.human.handR.getAbsolutePosition());
         this.root = new BABYLON.Mesh("root");
+        this.root = BABYLON.CreateBox("root", { width: 1, height: 0.05, depth: 0.05 });
         this.root.rotationQuaternion = BABYLON.Quaternion.Identity();
         this.torso = new BABYLON.Mesh("torso");
         this.torso.rotationQuaternion = BABYLON.Quaternion.Identity();
@@ -4026,13 +4042,13 @@ class HumanTest extends BABYLON.Mesh {
         this.hipL = new BABYLON.Mesh("hipL");
         this.hipL.parent = this.root;
         this.hipL.position = new BABYLON.Vector3(-0.13, 0, 0);
-        this.kneeL = new BABYLON.Mesh("kneeL");
-        this.footL = BABYLON.MeshBuilder.CreateBox("footL", { size: 0.01 });
+        this.kneeL = BABYLON.MeshBuilder.CreateBox("kneeL", { width: 0.4, height: 0.01, depth: 0.01 });
+        this.footL = BABYLON.MeshBuilder.CreateBox("footL", { width: 0.4, height: 0.01, depth: 0.01 });
         this.hipR = new BABYLON.Mesh("hipR");
         this.hipR.parent = this.root;
         this.hipR.position = new BABYLON.Vector3(0.13, 0, 0);
-        this.kneeR = new BABYLON.Mesh("kneeR");
-        this.footR = BABYLON.MeshBuilder.CreateBox("footR", { size: 0.01 });
+        this.kneeR = BABYLON.MeshBuilder.CreateBox("kneeR", { width: 0.4, height: 0.01, depth: 0.01 });
+        this.footR = BABYLON.MeshBuilder.CreateBox("footR", { width: 0.4, height: 0.01, depth: 0.01 });
         this.handL.position.copyFrom(this.position);
         this.handL.position.x -= 0.5;
         this.handL.position.y += 0.8;
@@ -4105,7 +4121,7 @@ class HumanTest extends BABYLON.Mesh {
         gravityCenter.scaleInPlace(1 / 7);
         return gravityCenter;
     }
-    async step(foot, target) {
+    async step(foot, target, nearEndCallbackF = 0.9, nearEndCallback) {
         return new Promise(resolve => {
             let origin = foot.position.clone();
             let destination = target.clone();
@@ -4114,18 +4130,26 @@ class HumanTest extends BABYLON.Mesh {
             let d = BABYLON.Vector3.Distance(origin, destination);
             let h = Math.min(d, 0.2) + dy;
             let up = this.up;
-            let duration = 0.4;
+            let duration = 0.8;
             let t = 0;
             let animationCB = () => {
                 t += this._scene.getEngine().getDeltaTime() / 1000;
                 let f = t / duration;
+                if (nearEndCallback && f >= nearEndCallbackF) {
+                    nearEndCallback();
+                    nearEndCallback = undefined;
+                }
                 if (f < 1) {
-                    f = 0.3 * Nabu.Easing.easeInOutSine(f) + 0.7 * f;
+                    //f = 1 * Nabu.Easing.easeInSine(f) + 0 * f;
                     let p = origin.scale(1 - f).addInPlace(destination.scale(f));
                     p.addInPlace(up.scale(h * Math.sin(f * Math.PI)));
                     foot.position.copyFrom(p);
                 }
                 else {
+                    if (nearEndCallback) {
+                        nearEndCallback();
+                        nearEndCallback = undefined;
+                    }
                     foot.position.copyFrom(destination);
                     this._scene.onBeforeRenderObservable.removeCallback(animationCB);
                     resolve();

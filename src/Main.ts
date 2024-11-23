@@ -390,9 +390,24 @@ class Game {
             setTimeout(async () => {
                 let human = new HumanTest(this);
                 human.position.copyFrom(this.player.position).addInPlace(this.player.forward.scale(3));
-                human.targetLook = this.player.absolutePosition;
+                let target = BABYLON.MeshBuilder.CreateBox("targetPos", { width: 0.1, height: 3, depth: 0.1 });
                 let update = () => {
-                    human.targetPosition = this.player.absolutePosition.subtract(new BABYLON.Vector3(0, -2, 0));
+                    if (!human.targetPosition || BABYLON.Vector3.Distance(human.targetPosition, human.position) < 4) {
+                        let rayOrigin = human.position.clone();
+                        rayOrigin.y += 10;
+                        rayOrigin.x += -30 + 60 * Math.random();
+                        rayOrigin.z += -30 + 60 * Math.random();
+
+                        let ray = new BABYLON.Ray(rayOrigin, new BABYLON.Vector3(0, -1, 0));
+                        let hit = this.scene.pickWithRay(ray, (mesh) => {
+                            return mesh.name === "ground" || mesh.name.startsWith("chunck");
+                        });
+                        if (hit.hit) {
+                            target.position.copyFrom(hit.pickedPoint);
+                            human.targetPosition = target.position;
+                            human.targetLook = target.position.add(new BABYLON.Vector3(0, 1.5, 0));
+                        }
+                    }
                 }
                 this.scene.onBeforeRenderObservable.add(update);
                 await human.instantiate();
