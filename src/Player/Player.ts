@@ -1,6 +1,6 @@
 class Player extends BABYLON.Mesh {
 
-    public godMode: boolean = false;
+    public godMode: boolean = true;
     public controler: PlayerControler;
     public inventory: PlayerInventory;
     public playerActionManager: PlayerActionManager;

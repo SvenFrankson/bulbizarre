@@ -58,7 +58,7 @@ class Game {
     constructor(canvasElement: string) {
         Game.Instance = this;
         
-		this.canvas = document.getElementById(canvasElement) as HTMLCanvasElement;
+		this.canvas = document.getElementById(canvasElement) as unknown as HTMLCanvasElement;
         this.canvas.requestPointerLock = this.canvas.requestPointerLock || this.canvas.msRequestPointerLock || this.canvas.mozRequestPointerLock || this.canvas.webkitRequestPointerLock;
 		this.engine = new BABYLON.Engine(this.canvas, true);
 		BABYLON.Engine.ShadersRepository = "./shaders/";
@@ -165,7 +165,7 @@ class Game {
         this.brickManager = new BrickManager(this);
 
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
-            this.router.initialize();
+            await this.router.initialize();
             this.router.optionPage.setConfiguration(this.configuration);
 
             /*
@@ -254,6 +254,8 @@ class Game {
             this.brickMenuView.setPlayer(this.player);
             this.voxelizerMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
+
+            this.router.start();
             
             window.addEventListener("keydown", (event: KeyboardEvent) => {
                 if (event.key === "Escape") {
@@ -329,17 +331,9 @@ class Game {
         this.freeCamera.parent = undefined;
             
         this.terrain = new Kulla.Terrain({
-            scene: this.scene,
             generatorProps: {
                 type: Kulla.GeneratorType.Map
             },
-            /*
-            generatorProps: {
-                type: Kulla.GeneratorType.PNG,
-                url: "./datas/textures/test_terrain.png",
-                squareSize: 2
-            },
-            */
             maxDisplayedLevel: 0,
             blockSizeIJ_m: 1,
             blockSizeK_m: 1,
@@ -375,7 +369,6 @@ class Game {
                 this.terrain.dispose();
             }
             this.terrain = new Kulla.Terrain({
-                scene: this.scene,
                 generatorProps: {
                     type: Kulla.GeneratorType.MapSimple,
                     altitude: 64,
@@ -393,6 +386,40 @@ class Game {
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
 
             this.terrain.sunDir.copyFrom(this.light.direction);
+
+            setTimeout(async () => {
+                let human = new HumanTest(this);
+                human.position.copyFrom(this.player.position).addInPlace(this.player.forward.scale(3));
+                human.targetLook = this.player.absolutePosition;
+                let update = () => {
+                    human.targetPosition = this.player.absolutePosition.subtract(new BABYLON.Vector3(0, -2, 0));
+                }
+                this.scene.onBeforeRenderObservable.add(update);
+                await human.instantiate();
+                console.log(human);
+
+                setInterval(() => {
+                    console.log(human.root.position);
+                    console.log(human.torso.position);
+                    console.log(human.head.position);
+
+                    console.log(human.shoulderL.position);
+                    console.log(human.elbowL.position);
+                    console.log(human.handL.position);
+
+                    console.log(human.shoulderR.position);
+                    console.log(human.elbowR.position);
+                    console.log(human.handR.position);
+                    
+                    console.log(human.hipL.position);
+                    console.log(human.kneeL.position);
+                    console.log(human.footL.position);
+
+                    console.log(human.hipR.position);
+                    console.log(human.kneeR.position);
+                    console.log(human.footR.position);
+                }, 5000);
+            }, 3000);
 
             //this.playerInventoryView.show(0.2);
             //this.brickMenuView.show(0.1);
@@ -446,7 +473,6 @@ class Game {
         this.arcCamera.attachControl();
 
         this.terrain = new Kulla.Terrain({
-            scene: this.scene,
             generatorProps: {
                 type: Kulla.GeneratorType.Flat,
                 altitude: 10,

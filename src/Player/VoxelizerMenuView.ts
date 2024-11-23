@@ -5,6 +5,22 @@ class VoxelizerMenuView extends HTMLElement implements Nabu.IPage {
     }
 
     private _loaded: boolean = false;
+    public get loaded(): boolean {
+        return this._loaded;
+    }
+    public waitLoaded(): Promise<void> {
+        return new Promise<void>(resolve => {
+            let step = () => {
+                if (this.loaded) {
+                    resolve();
+                }
+                else {
+                    requestAnimationFrame(step);
+                }
+            }
+            step();
+        });
+    }
     private _shown: boolean = false;
     public get shown(): boolean {
         return this._shown;

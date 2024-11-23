@@ -626,7 +626,7 @@ class GameConfiguration extends Nabu.Configuration {
                     }
                 }
             }),
-            new Nabu.ConfigurationElement("renderDist", Nabu.ConfigurationElementType.Number, 4, Nabu.ConfigurationElementCategory.Graphic, {
+            new Nabu.ConfigurationElement("renderDist", Nabu.ConfigurationElementType.Number, 2, Nabu.ConfigurationElementCategory.Graphic, {
                 displayName: "Render Distance",
                 min: 1,
                 max: 15,
@@ -795,7 +795,7 @@ class Game {
         this.propEditor = new PropEditor(this);
         this.brickManager = new BrickManager(this);
         Kulla.ChunckVertexData.InitializeData("./datas/meshes/chunck-parts.babylon").then(async () => {
-            this.router.initialize();
+            await this.router.initialize();
             this.router.optionPage.setConfiguration(this.configuration);
             /*
             let masterSeed = MasterSeed.GetFor("Paulita");
@@ -870,6 +870,7 @@ class Game {
             this.brickMenuView.setPlayer(this.player);
             this.voxelizerMenuView.setPlayer(this.player);
             this.brickManager.loadFromLocalStorage();
+            this.router.start();
             window.addEventListener("keydown", (event) => {
                 if (event.key === "Escape") {
                     var a = document.createElement("a");
@@ -934,17 +935,9 @@ class Game {
         this.freeCamera.attachControl();
         this.freeCamera.parent = undefined;
         this.terrain = new Kulla.Terrain({
-            scene: this.scene,
             generatorProps: {
                 type: Kulla.GeneratorType.Map
             },
-            /*
-            generatorProps: {
-                type: Kulla.GeneratorType.PNG,
-                url: "./datas/textures/test_terrain.png",
-                squareSize: 2
-            },
-            */
             maxDisplayedLevel: 0,
             blockSizeIJ_m: 1,
             blockSizeK_m: 1,
@@ -974,7 +967,6 @@ class Game {
                 this.terrain.dispose();
             }
             this.terrain = new Kulla.Terrain({
-                scene: this.scene,
                 generatorProps: {
                     type: Kulla.GeneratorType.MapSimple,
                     altitude: 64,
@@ -991,6 +983,34 @@ class Game {
             this.terrain.initialize();
             this.terrainEditor = new Kulla.TerrainEditor(this.terrain);
             this.terrain.sunDir.copyFrom(this.light.direction);
+            setTimeout(async () => {
+                let human = new HumanTest(this);
+                human.position.copyFrom(this.player.position).addInPlace(this.player.forward.scale(3));
+                human.targetLook = this.player.absolutePosition;
+                let update = () => {
+                    human.targetPosition = this.player.absolutePosition.subtract(new BABYLON.Vector3(0, -2, 0));
+                };
+                this.scene.onBeforeRenderObservable.add(update);
+                await human.instantiate();
+                console.log(human);
+                setInterval(() => {
+                    console.log(human.root.position);
+                    console.log(human.torso.position);
+                    console.log(human.head.position);
+                    console.log(human.shoulderL.position);
+                    console.log(human.elbowL.position);
+                    console.log(human.handL.position);
+                    console.log(human.shoulderR.position);
+                    console.log(human.elbowR.position);
+                    console.log(human.handR.position);
+                    console.log(human.hipL.position);
+                    console.log(human.kneeL.position);
+                    console.log(human.footL.position);
+                    console.log(human.hipR.position);
+                    console.log(human.kneeR.position);
+                    console.log(human.footR.position);
+                }, 5000);
+            }, 3000);
             //this.playerInventoryView.show(0.2);
             //this.brickMenuView.show(0.1);
         }
@@ -1035,7 +1055,6 @@ class Game {
         this.scene.activeCameras = [this.arcCamera, this.uiCamera];
         this.arcCamera.attachControl();
         this.terrain = new Kulla.Terrain({
-            scene: this.scene,
             generatorProps: {
                 type: Kulla.GeneratorType.Flat,
                 altitude: 10,
@@ -3582,6 +3601,543 @@ class BrickVertexDataGenerator {
     }
 }
 BrickVertexDataGenerator._StudVertexData = [];
+class Human extends BABYLON.Mesh {
+    constructor(game) {
+        super("human");
+        this.game = game;
+        this.rootAlt = 0.3;
+        this._instantiated = false;
+        this._timer = 0;
+        this._update = () => {
+            return;
+            let dt = this.engine.getDeltaTime() / 1000;
+            this._timer += dt;
+            //this.rootAlt = 0.8 + 0.4 * Math.cos(this._timer);
+            this.root.setAbsolutePosition(new BABYLON.Vector3(this.position.x, this.rootAlt, this.position.z));
+            let q = BABYLON.Quaternion.Identity();
+            this.humanMesh.refreshBoundingInfo(true);
+            this.footTargetL.position.copyFromFloats(-0.2, 0, 0);
+            BABYLON.Vector3.TransformCoordinatesToRef(this.footTargetL.position, this.getWorldMatrix(), this.footTargetL.position);
+            this.kneeL.position.addInPlace(this.forward.scale(0.1));
+            this.footTargetR.position.copyFromFloats(0.2, 0, 0);
+            BABYLON.Vector3.TransformCoordinatesToRef(this.footTargetR.position, this.getWorldMatrix(), this.footTargetR.position);
+            this.kneeR.position.addInPlace(this.forward.scale(0.1));
+            this.upperLegL.setAbsolutePosition(BABYLON.Vector3.TransformCoordinates(this.hipLPosition, this.root.getWorldMatrix()));
+            let upperLegLZ = BABYLON.Vector3.Zero();
+            let lowerLegLZ = BABYLON.Vector3.Zero();
+            for (let i = 0; i < 3; i++) {
+                lowerLegLZ.copyFrom(this.footTargetL.position).subtractInPlace(this.kneeL.position).normalize().scaleInPlace(0.3);
+                this.kneeL.position.copyFrom(this.footTargetL.position).subtractInPlace(lowerLegLZ);
+                upperLegLZ.copyFrom(this.kneeL.position).subtractInPlace(this.upperLegL.getAbsolutePosition()).normalize().scaleInPlace(0.3);
+                this.kneeL.position.copyFrom(this.upperLegL.getAbsolutePosition()).addInPlace(upperLegLZ);
+            }
+            Mummu.QuaternionFromYZAxisToRef(upperLegLZ.scale(-1), this.forward, q);
+            this.upperLegL.setRotationQuaternion(q);
+            this.legL.setAbsolutePosition(this.kneeL.position);
+            Mummu.QuaternionFromYZAxisToRef(lowerLegLZ.scale(-1), this.forward, q);
+            this.legL.setRotationQuaternion(q);
+        };
+        this.footTargetL = new BABYLON.Mesh("footTargetL");
+        BABYLON.CreateBoxVertexData({ size: 0.2 }).applyToMesh(this.footTargetL);
+        this.footTargetR = new BABYLON.Mesh("footTargetR");
+        this.kneeL = new BABYLON.Mesh("kneeL");
+        BABYLON.CreateBoxVertexData({ size: 0.2 }).applyToMesh(this.kneeL);
+        this.kneeR = new BABYLON.Mesh("kneeR");
+        this.handTargetL = new BABYLON.Mesh("handTargetL");
+        this.handTargetR = new BABYLON.Mesh("handTargetR");
+    }
+    get engine() {
+        return this._scene.getEngine();
+    }
+    async instantiate() {
+        return new Promise(resolve => {
+            BABYLON.SceneLoader.ImportMesh("", "datas/meshes/riflewoman.babylon", "", this._scene, (meshes, particlesSystems, skeletons) => {
+                meshes.forEach(mesh => {
+                    if (mesh instanceof BABYLON.Mesh) {
+                        this.humanMesh = mesh;
+                        this.humanMesh.alwaysSelectAsActiveMesh = true;
+                        let material = mesh.material;
+                        if (material instanceof BABYLON.MultiMaterial) {
+                            for (let i = 0; i < material.subMaterials.length; i++) {
+                                let subMat = material.subMaterials[i];
+                                if (subMat instanceof BABYLON.PBRMaterial) {
+                                    /*
+                                    let toonMat = new ToonMaterial(subMat.name + "-3-toon", this.scene);
+                                    toonMat.setDiffuseColor(subMat.albedoColor);
+                                    material.subMaterials[i] = toonMat;
+                                    */
+                                }
+                            }
+                        }
+                        else if (material instanceof BABYLON.PBRMaterial) {
+                            /*
+                            let toonMat = new ToonMaterial(material.name + "-3-toon", this.scene);
+                            toonMat.setDiffuseColor(material.albedoColor);
+                            mesh.material = toonMat;
+                            */
+                        }
+                    }
+                });
+                skeletons.forEach(skeleton => {
+                    console.log(skeleton);
+                    this.root = skeleton.bones.find(bone => { return bone.name === "ass"; });
+                    this.head = skeleton.bones.find(bone => { return bone.name === "head"; });
+                    this.head.parent = undefined;
+                    this.torso = skeleton.bones.find(bone => { return bone.name === "torso"; });
+                    console.log("torso");
+                    console.log(this.torso);
+                    console.log(this.torso.getAbsolutePosition());
+                    console.log(this.torso.rotationQuaternion);
+                    console.log(BABYLON.Quaternion.Identity());
+                    console.log("- - -");
+                    this.upperLegL = skeleton.bones.find(bone => { return bone.name === "upper-leg-left"; });
+                    this.upperLegR = skeleton.bones.find(bone => { return bone.name === "upper-leg-right"; });
+                    this.legL = skeleton.bones.find(bone => { return bone.name === "leg-left"; });
+                    this.legR = skeleton.bones.find(bone => { return bone.name === "leg-right"; });
+                    this.armL = skeleton.bones.find(bone => { return bone.name === "upper-arm-left"; });
+                    this.armR = skeleton.bones.find(bone => { return bone.name === "upper-arm-right"; });
+                    this.lowerArmL = skeleton.bones.find(bone => { return bone.name === "lower-arm-left"; });
+                    this.lowerArmR = skeleton.bones.find(bone => { return bone.name === "lower-arm-right"; });
+                    this.handL = skeleton.bones.find(bone => { return bone.name === "hand-left"; });
+                    this.handR = skeleton.bones.find(bone => { return bone.name === "hand-right"; });
+                    this.thumbL = skeleton.bones.find(bone => { return bone.name === "thumb-left"; });
+                    this.thumbR = skeleton.bones.find(bone => { return bone.name === "thumb-right"; });
+                    skeleton.bones.forEach(bone => {
+                        if (!bone.parent) {
+                            console.log(bone.name + " no parent");
+                        }
+                        else {
+                            console.log(bone.name + " " + bone.parent.name);
+                        }
+                    });
+                    console.log(this.root);
+                });
+                this._instantiated = true;
+                this.start();
+                resolve();
+            });
+        });
+    }
+    start() {
+        this._scene.onBeforeRenderObservable.add(this._update);
+    }
+}
+class HumanTest extends BABYLON.Mesh {
+    constructor(game) {
+        super("human");
+        this.game = game;
+        this.currentSpeed = 0;
+        this.rootAlt = 0.62;
+        this.armLength = 0.3;
+        this.lowerArmLength = 0.3;
+        this.handLength = 0.1;
+        this._instantiated = false;
+        this.groundedFeet = new Nabu.UniqueList();
+        this.targetGravityAdvance = BABYLON.Vector3.Zero();
+        this._steping = false;
+        this._simpleWalk = () => {
+            let dt = this.engine.getDeltaTime() / 1000;
+            if (this.targetLook && BABYLON.Vector3.Distance(this.targetLook, this.position) > 4) {
+                this.currentSpeed = 0.95 * this.currentSpeed + 0.05 * 1;
+                this.position.addInPlace(this.forward.scale(this.currentSpeed * dt));
+                this.rootAlt *= 0.95;
+                this.rootAlt += 0.75 * 0.05;
+                BABYLON.Vector3.LerpToRef(this.targetGravityAdvance, this.forward.scale(0.2), 0.1, this.targetGravityAdvance);
+            }
+            else {
+                this.currentSpeed = 0.95 * this.currentSpeed + 0.05 * 0;
+                this.rootAlt *= 0.95;
+                this.rootAlt += 0.77 * 0.05;
+                BABYLON.Vector3.LerpToRef(this.targetGravityAdvance, BABYLON.Vector3.Zero(), 0.1, this.targetGravityAdvance);
+            }
+            //this.m16.position = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0.05, 0.25, 0.3), this.torso.getWorldMatrix());
+            /*
+            this.m16.position = this.shoulderR.absolutePosition.add(this.forward.scale(0.05));
+            let q = BABYLON.Quaternion.Identity();
+            if (this.targetLook) {
+                Mummu.QuaternionFromZYAxisToRef(this.targetLook.subtract(this.m16.position), BABYLON.Axis.Y, q);
+            }
+            else {
+                Mummu.QuaternionFromZYAxisToRef(this.forward, BABYLON.Axis.Y, q);
+            }
+            this.m16.rotationQuaternion = BABYLON.Quaternion.Slerp(this.m16.rotationQuaternion, q, 0.05);
+            */
+            let deltaFootR = BABYLON.Vector3.Dot(this.footR.position.subtract(this.root.position), this.forward);
+            this.handR.position = this.up.scale(-0.6).add(this.right.scale(0.15));
+            Mummu.RotateInPlace(this.handR.position, this.right, deltaFootR * Math.PI / 3.5);
+            this.handR.position.addInPlace(this.shoulderR.absolutePosition);
+            let deltaFootL = BABYLON.Vector3.Dot(this.footL.position.subtract(this.root.position), this.forward);
+            this.handL.position = this.up.scale(-0.6).add(this.right.scale(-0.15));
+            Mummu.RotateInPlace(this.handL.position, this.right, deltaFootL * Math.PI / 3.5);
+            this.handL.position.addInPlace(this.shoulderL.absolutePosition);
+            Mummu.QuaternionFromYZAxisToRef(this.right, this.handR.position.subtract(this.elbowR.position), this.handR.rotationQuaternion);
+            Mummu.QuaternionFromYZAxisToRef(this.right.scale(-1), this.handL.position.subtract(this.elbowL.position), this.handL.rotationQuaternion);
+            //this.handR.position = this.footL.position.multiplyByFloats(1, 0, 1).add(new BABYLON.Vector3(0, 0.8, 0)).add(this.right.scale(0.4));
+            //this.handL.position = this.footR.position.multiplyByFloats(1, 0, 1).add(new BABYLON.Vector3(0, 0.8, 0)).subtract(this.right.scale(0.4));
+            if (this.targetPosition && BABYLON.Vector3.Distance(this.position, this.targetPosition) > 3) {
+                let dir = this.targetPosition.subtract(this.position).normalize();
+                this.position.addInPlace(dir.scale(dt * 0.8));
+            }
+            if (this.targetLook) {
+                let dirToTarget = this.targetLook.subtract(this.position).normalize();
+                let angle = Mummu.AngleFromToAround(this.forward, dirToTarget, BABYLON.Axis.Y);
+                if (angle > Math.PI / 32) {
+                    this.rotation.y += dt * Math.PI * 0.3;
+                }
+                else if (angle < -Math.PI / 32) {
+                    this.rotation.y -= dt * Math.PI * 0.3;
+                }
+            }
+            if (!this._steping) {
+                let footTargetR = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0.06, 0, 0), this.getWorldMatrix());
+                let rayR = new BABYLON.Ray(footTargetR.add(new BABYLON.Vector3(0, 2, 0)), new BABYLON.Vector3(0, -1, 0));
+                let hitR = this._scene.pickWithRay(rayR, (mesh) => {
+                    return mesh.name === "ground" || mesh.name.startsWith("chunck");
+                });
+                if (hitR.hit) {
+                    footTargetR = hitR.pickedPoint;
+                }
+                let footTargetL = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(-0.06, 0, 0), this.getWorldMatrix());
+                let rayL = new BABYLON.Ray(footTargetL.add(new BABYLON.Vector3(0, 2, 0)), new BABYLON.Vector3(0, -1, 0));
+                let hitL = this._scene.pickWithRay(rayL, (mesh) => {
+                    return mesh.name === "ground" || mesh.name.startsWith("chunck");
+                });
+                if (hitL.hit) {
+                    footTargetL = hitL.pickedPoint;
+                }
+                let dL = BABYLON.Vector3.Distance(this.footL.absolutePosition, footTargetL);
+                let dR = BABYLON.Vector3.Distance(this.footR.absolutePosition, footTargetR);
+                if (dL > dR) {
+                    if (dL > 0.01) {
+                        this._steping = true;
+                        this.groundedFeet.remove(this.footL);
+                        this.step(this.footL, footTargetL).then(() => {
+                            this._steping = false;
+                            this.groundedFeet.push(this.footL);
+                        });
+                    }
+                }
+                else {
+                    if (dR > 0.01) {
+                        this._steping = true;
+                        this.groundedFeet.remove(this.footR);
+                        this.step(this.footR, footTargetR).then(() => {
+                            this._steping = false;
+                            this.groundedFeet.push(this.footR);
+                        });
+                    }
+                }
+            }
+        };
+        this.onPointerEvent = (eventData, eventState) => {
+            if (eventData.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+                let pick = this._scene.pick(this._scene.pointerX, this._scene.pointerY, (mesh) => {
+                    return mesh === this.handL || mesh === this.handR || mesh === this.footL || mesh === this.footR;
+                });
+                let pickedMesh = pick.pickedMesh;
+                if (pickedMesh === this.handL) {
+                    this.target = this.handL;
+                }
+                else if (pickedMesh === this.handR) {
+                    this.target = this.handR;
+                }
+                else if (pickedMesh === this.footL) {
+                    this.target = this.footL;
+                }
+                else if (pickedMesh === this.footR) {
+                    this.target = this.footR;
+                }
+                if (this.target) {
+                    let d = this._scene.activeCamera.globalPosition.subtract(this.target.position);
+                    Mummu.QuaternionFromYZAxisToRef(pick.getNormal(), d, this.pointerPlane.rotationQuaternion);
+                    this.pointerPlane.position.copyFrom(this.target.position);
+                    this._scene.activeCamera.detachControl();
+                }
+                console.log("pointer down " + this.target);
+            }
+            else if (eventData.type === BABYLON.PointerEventTypes.POINTERMOVE) {
+                if (this.target) {
+                    console.log(".");
+                    let pick = this._scene.pick(this._scene.pointerX, this._scene.pointerY, (mesh) => {
+                        return mesh === this.pointerPlane;
+                    });
+                    if (pick && pick.hit) {
+                        this.target.position.copyFrom(pick.pickedPoint);
+                    }
+                }
+            }
+            else if (eventData.type === BABYLON.PointerEventTypes.POINTERUP) {
+                this.target = undefined;
+                this._scene.activeCamera.attachControl();
+            }
+        };
+        this.onPointerMove = () => {
+        };
+        this.torsoHeight = 0.33;
+        this._timer = 0;
+        this._update = () => {
+            let dt = this.engine.getDeltaTime() / 1000;
+            this._timer += dt;
+            let q = BABYLON.Quaternion.Identity();
+            let footCenter = this.footL.position.add(this.footR.position).scaleInPlace(0.5);
+            let handCenter = this.handL.position.add(this.handR.position).scaleInPlace(0.5);
+            let torsoDir = handCenter.subtract(footCenter).normalize();
+            torsoDir.addInPlace(BABYLON.Axis.Y.scale(0.5)).normalize();
+            torsoDir = BABYLON.Vector3.Up();
+            let targetRoot = footCenter.clone();
+            targetRoot.addInPlace(this.forward.scale(this.currentSpeed * 0.2));
+            targetRoot.y = Math.min(this.footR.position.y, this.footL.position.y);
+            targetRoot.y += this.rootAlt;
+            if (BABYLON.Vector3.Distance(this.footR.position, targetRoot) > 0.8) {
+                Mummu.ForceDistanceFromOriginInPlace(targetRoot, this.footR.position, 0.8);
+            }
+            if (BABYLON.Vector3.Distance(this.footL.position, targetRoot) > 0.8) {
+                Mummu.ForceDistanceFromOriginInPlace(targetRoot, this.footL.position, 0.8);
+            }
+            this.root.position.scaleInPlace(0.8).addInPlace(targetRoot.scale(0.2));
+            this.torsoHeight = 0.33 + 0.005 * Math.cos(this._timer / 3 * 2 * Math.PI);
+            // Shake that ass
+            let footDir = this.footR.position.subtract(this.footL.position).normalize();
+            footDir.addInPlace(this.right.scale(10)).normalize();
+            Mummu.QuaternionFromXYAxisToRef(footDir, torsoDir, this.root.rotationQuaternion);
+            // Alpha shouldering
+            let handDir = this.handR.position.subtract(this.handL.position).normalize();
+            handDir.addInPlace(this.right.scale(4)).normalize();
+            Mummu.QuaternionFromXYAxisToRef(handDir, torsoDir, this.torso.rotationQuaternion);
+            let shoulderForward = BABYLON.Vector3.Cross(this.head.absolutePosition.subtract(this.torso.absolutePosition), handDir).normalize();
+            let footForward = BABYLON.Vector3.Cross(this.torso.absolutePosition.subtract(this.root.absolutePosition), footDir).normalize();
+            this.torso.position = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, this.torsoHeight, 0), this.root.getWorldMatrix());
+            this.head.position = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, 0.33, -0.05), this.torso.getWorldMatrix());
+            if (this.targetLook) {
+                Mummu.QuaternionFromZYAxisToRef(this.targetLook.subtract(this.head.position), BABYLON.Axis.Y, q);
+            }
+            else {
+                Mummu.QuaternionFromZYAxisToRef(this.forward, BABYLON.Axis.Y, q);
+            }
+            this.head.rotationQuaternion = q.clone().normalize();
+            // Arm Left
+            let wristLPosition = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, 0, -this.handLength), this.handL.getWorldMatrix());
+            this.elbowL.position.copyFrom(wristLPosition).subtractInPlace(this.forward.scale(this.lowerArmLength)).subtractInPlace(this.right.scale(this.lowerArmLength)).subtractInPlace(this.up.scale(this.lowerArmLength));
+            let upperArmLZ = BABYLON.Vector3.Zero();
+            let lowerArmLZ = BABYLON.Vector3.Zero();
+            for (let i = 0; i < 3; i++) {
+                lowerArmLZ.copyFrom(wristLPosition).subtractInPlace(this.elbowL.position).normalize().scaleInPlace(this.lowerArmLength);
+                this.elbowL.position.copyFrom(wristLPosition).subtractInPlace(lowerArmLZ);
+                upperArmLZ.copyFrom(this.elbowL.position).subtractInPlace(this.shoulderL.absolutePosition).normalize().scaleInPlace(this.armLength);
+                this.elbowL.position.copyFrom(this.shoulderL.absolutePosition).addInPlace(upperArmLZ);
+            }
+            // Arm Right
+            let wristRPosition = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, 0, -this.handLength), this.handR.getWorldMatrix());
+            this.elbowR.position.copyFrom(wristRPosition).subtractInPlace(this.forward.scale(this.lowerArmLength)).addInPlace(this.right.scale(this.lowerArmLength)).subtractInPlace(this.up.scale(this.lowerArmLength));
+            let upperArmRZ = BABYLON.Vector3.Zero();
+            let lowerArmRZ = BABYLON.Vector3.Zero();
+            for (let i = 0; i < 3; i++) {
+                lowerArmRZ.copyFrom(wristRPosition).subtractInPlace(this.elbowR.position).normalize().scaleInPlace(this.lowerArmLength);
+                this.elbowR.position.copyFrom(wristRPosition).subtractInPlace(lowerArmRZ);
+                upperArmRZ.copyFrom(this.elbowR.position).subtractInPlace(this.shoulderR.absolutePosition).normalize().scaleInPlace(this.armLength);
+                this.elbowR.position.copyFrom(this.shoulderR.absolutePosition).addInPlace(upperArmRZ);
+            }
+            // Leg Left
+            this.kneeL.position.copyFrom(this.hipL.absolutePosition).addInPlace(this.footL.position).scaleInPlace(0.5);
+            this.kneeL.position.addInPlace(this.forward.scale(0.1)).addInPlace(this.right.scale(0));
+            let upperLegLZ = BABYLON.Vector3.Zero();
+            let lowerLegLZ = BABYLON.Vector3.Zero();
+            for (let i = 0; i < 3; i++) {
+                lowerLegLZ.copyFrom(this.footL.position).subtractInPlace(this.kneeL.position).normalize().scaleInPlace(0.39);
+                this.kneeL.position.copyFrom(this.footL.position).subtractInPlace(lowerLegLZ);
+                upperLegLZ.copyFrom(this.kneeL.position).subtractInPlace(this.hipL.absolutePosition).normalize().scaleInPlace(0.39);
+                this.kneeL.position.copyFrom(this.hipL.absolutePosition).addInPlace(upperLegLZ);
+            }
+            // Leg Right
+            this.kneeR.position.copyFrom(this.hipR.absolutePosition).addInPlace(this.footR.position).scaleInPlace(0.5);
+            this.kneeR.position.addInPlace(this.forward.scale(0.1)).addInPlace(this.right.scale(0));
+            let upperLegRZ = BABYLON.Vector3.Zero();
+            let lowerLegRZ = BABYLON.Vector3.Zero();
+            for (let i = 0; i < 3; i++) {
+                lowerLegRZ.copyFrom(this.footR.position).subtractInPlace(this.kneeR.position).normalize().scaleInPlace(0.39);
+                this.kneeR.position.copyFrom(this.footR.position).subtractInPlace(lowerLegRZ);
+                upperLegRZ.copyFrom(this.kneeR.position).subtractInPlace(this.hipR.absolutePosition).normalize().scaleInPlace(0.39);
+                this.kneeR.position.copyFrom(this.hipR.absolutePosition).addInPlace(upperLegRZ);
+            }
+            this.human.root.setPosition(this.root.absolutePosition);
+            Mummu.QuaternionFromYZAxisToRef(this.torso.absolutePosition.subtract(this.root.absolutePosition).scale(-1), footForward, q);
+            this.human.root.setRotationQuaternion(q.normalize());
+            this.human.torso.setPosition(this.torso.absolutePosition);
+            Mummu.QuaternionFromYZAxisToRef(this.head.absolutePosition.subtract(this.torso.absolutePosition).scale(-1), shoulderForward, q);
+            this.human.torso.setRotationQuaternion(q.normalize());
+            this.human.head.setPosition(this.head.absolutePosition);
+            Mummu.QuaternionFromYZAxisToRef(this.head.up.scale(-1), this.head.forward.scale(-1), q);
+            this.human.head.setRotationQuaternion(q.normalize());
+            this.human.upperLegR.setPosition(this.hipR.absolutePosition.clone());
+            Mummu.QuaternionFromYZAxisToRef(this.kneeR.position.subtract(this.hipR.absolutePosition).scale(-1), this.forward.add(this.up), q);
+            this.human.upperLegR.setRotationQuaternion(q.normalize());
+            this.human.legR.setPosition(this.kneeR.absolutePosition.clone());
+            Mummu.QuaternionFromYZAxisToRef(this.footR.position.subtract(this.kneeR.absolutePosition).scale(-1), this.forward, q);
+            this.human.legR.setRotationQuaternion(q.normalize());
+            this.human.upperLegL.setPosition(this.hipL.absolutePosition.clone());
+            Mummu.QuaternionFromYZAxisToRef(this.kneeL.position.subtract(this.hipL.absolutePosition).scale(-1), this.forward.add(this.up), q);
+            this.human.upperLegL.setRotationQuaternion(q.normalize());
+            this.human.legL.setPosition(this.kneeL.absolutePosition.clone());
+            Mummu.QuaternionFromYZAxisToRef(this.footL.position.subtract(this.kneeL.absolutePosition).scale(-1), this.forward, q);
+            this.human.legL.setRotationQuaternion(q.normalize());
+            this.human.armR.setPosition(this.shoulderR.absolutePosition);
+            Mummu.QuaternionFromYZAxisToRef(this.elbowR.position.subtract(this.shoulderR.absolutePosition).scale(-1), this.right, q);
+            this.human.armR.setRotationQuaternion(q.normalize());
+            this.human.lowerArmR.setPosition(this.elbowR.absolutePosition.clone());
+            Mummu.QuaternionFromYZAxisToRef(wristRPosition.subtract(this.elbowR.absolutePosition).scale(-1), this.handR.up, q);
+            this.human.lowerArmR.setRotationQuaternion(q.normalize());
+            this.human.handR.setPosition(wristRPosition.clone());
+            this.human.handR.setRotationQuaternion(this.handR.rotationQuaternion.multiply(BABYLON.Quaternion.FromEulerAngles(-Math.PI * 0.5, 0, 0)).normalize());
+            this.human.armL.setPosition(this.shoulderL.absolutePosition);
+            let armLUp = this.right.scale(-1);
+            Mummu.QuaternionFromYZAxisToRef(this.elbowL.position.subtract(this.shoulderL.absolutePosition).scale(-1), armLUp.add(this.handL.up), q);
+            this.human.armL.setRotationQuaternion(q.normalize());
+            this.human.lowerArmL.setPosition(this.elbowL.absolutePosition.clone());
+            Mummu.QuaternionFromYZAxisToRef(wristLPosition.subtract(this.elbowL.absolutePosition).scale(-1), this.handL.up, q);
+            this.human.lowerArmL.setRotationQuaternion(q.normalize());
+            this.human.handL.setPosition(wristLPosition.clone());
+            this.human.handL.setRotationQuaternion(this.handL.rotationQuaternion.multiply(BABYLON.Quaternion.FromEulerAngles(-Math.PI * 0.5, 0, 0)).normalize());
+        };
+        this.human = new Human(game);
+    }
+    get engine() {
+        return this._scene.getEngine();
+    }
+    async instantiate() {
+        await this.human.instantiate();
+        this.armLength = BABYLON.Vector3.Distance(this.human.armR.getAbsolutePosition(), this.human.lowerArmR.getAbsolutePosition());
+        this.lowerArmLength = BABYLON.Vector3.Distance(this.human.lowerArmR.getAbsolutePosition(), this.human.handR.getAbsolutePosition());
+        this.root = new BABYLON.Mesh("root");
+        this.root.rotationQuaternion = BABYLON.Quaternion.Identity();
+        this.torso = new BABYLON.Mesh("torso");
+        this.torso.rotationQuaternion = BABYLON.Quaternion.Identity();
+        //this.torso.material = Main.TestRedMaterial;
+        this.head = new BABYLON.Mesh("head");
+        this.shoulderL = new BABYLON.Mesh("shoulderL");
+        this.shoulderL.parent = this.torso;
+        this.shoulderL.position = new BABYLON.Vector3(-0.16, 0.24, 0);
+        this.elbowL = new BABYLON.Mesh("elbowL");
+        this.handL = BABYLON.MeshBuilder.CreateBox("handL", { size: 0.01 });
+        this.shoulderR = new BABYLON.Mesh("shoulderR");
+        this.shoulderR.parent = this.torso;
+        this.shoulderR.position = new BABYLON.Vector3(0.16, 0.24, 0);
+        this.elbowR = new BABYLON.Mesh("elbowR");
+        this.handR = BABYLON.MeshBuilder.CreateBox("handR", { size: 0.01 });
+        this.hipL = new BABYLON.Mesh("hipL");
+        this.hipL.parent = this.root;
+        this.hipL.position = new BABYLON.Vector3(-0.13, 0, 0);
+        this.kneeL = new BABYLON.Mesh("kneeL");
+        this.footL = BABYLON.MeshBuilder.CreateBox("footL", { size: 0.01 });
+        this.hipR = new BABYLON.Mesh("hipR");
+        this.hipR.parent = this.root;
+        this.hipR.position = new BABYLON.Vector3(0.13, 0, 0);
+        this.kneeR = new BABYLON.Mesh("kneeR");
+        this.footR = BABYLON.MeshBuilder.CreateBox("footR", { size: 0.01 });
+        this.handL.position.copyFrom(this.position);
+        this.handL.position.x -= 0.5;
+        this.handL.position.y += 0.8;
+        this.handL.position.z += 0.2;
+        this.handL.rotationQuaternion = BABYLON.Quaternion.Identity();
+        this.handR.position.copyFrom(this.position);
+        this.handR.position.x += 0.5;
+        this.handR.position.y += 0.8;
+        this.handR.position.z += 0.2;
+        this.handR.rotationQuaternion = BABYLON.Quaternion.Identity();
+        this.footL.position.copyFrom(this.position);
+        this.footL.position.x -= 0.12;
+        this.footL.position.z -= 0.1;
+        this.footR.position.copyFrom(this.position);
+        this.footR.position.x += 0.12;
+        this.footR.position.z += 0.1;
+        this.groundedFeet.push(this.footR, this.footL);
+        /*
+        this.m16 = new BABYLON.Mesh("m16");
+        this.m16.rotationQuaternion = BABYLON.Quaternion.Identity();
+        BABYLON.SceneLoader.ImportMesh("", "datas/meshes/m16.babylon", "", this._scene, (meshes) => {
+            meshes.forEach(mesh => {
+                if (mesh instanceof BABYLON.Mesh) {
+                    let material = mesh.material;
+                    if (material instanceof BABYLON.PBRMaterial) {
+                        
+                        let toonMat = new ToonMaterial(material.name + "-3-toon", this._scene);
+                        toonMat.setDiffuseColor(material.albedoColor);
+                        mesh.material = toonMat;
+                        
+                    }
+                    this.m16 = mesh;
+                    //this.m16.isVisible = false;
+                    this.m16.rotationQuaternion = BABYLON.Quaternion.Identity();
+                }
+            });
+        });
+        */
+        this.pointerPlane = BABYLON.MeshBuilder.CreateGround("pointer-plane", { width: 10, height: 10 });
+        this.pointerPlane.visibility = 0.1;
+        this.pointerPlane.rotationQuaternion = BABYLON.Quaternion.Identity();
+        this._scene.onBeforeRenderObservable.add(this._update);
+        this._scene.onBeforeRenderObservable.add(this._simpleWalk);
+        this._scene.onPointerObservable.add(this.onPointerEvent);
+    }
+    getContactPoint() {
+        let contactPoint = BABYLON.Vector3.Zero();
+        let count = 0;
+        this.groundedFeet.forEach(f => {
+            contactPoint.addInPlace(f.position);
+            count++;
+        });
+        if (count > 0) {
+            contactPoint.scaleInPlace(1 / count);
+        }
+        else {
+            contactPoint.copyFrom(this.root.position);
+        }
+        return contactPoint;
+    }
+    getGravityCenter() {
+        let gravityCenter = BABYLON.Vector3.Zero();
+        gravityCenter.addInPlace(this.root.position);
+        gravityCenter.addInPlace(this.torso.position);
+        gravityCenter.addInPlace(this.head.position);
+        gravityCenter.addInPlace(this.footR.position);
+        gravityCenter.addInPlace(this.footL.position);
+        gravityCenter.addInPlace(this.handR.position);
+        gravityCenter.addInPlace(this.handL.position);
+        gravityCenter.scaleInPlace(1 / 7);
+        return gravityCenter;
+    }
+    async step(foot, target) {
+        return new Promise(resolve => {
+            let origin = foot.position.clone();
+            let destination = target.clone();
+            let dy = destination.y - origin.y;
+            dy = Nabu.MinMax(dy, 0, 0.1);
+            let d = BABYLON.Vector3.Distance(origin, destination);
+            let h = Math.min(d, 0.2) + dy;
+            let up = this.up;
+            let duration = 0.4;
+            let t = 0;
+            let animationCB = () => {
+                t += this._scene.getEngine().getDeltaTime() / 1000;
+                let f = t / duration;
+                if (f < 1) {
+                    f = 0.3 * Nabu.Easing.easeInOutSine(f) + 0.7 * f;
+                    let p = origin.scale(1 - f).addInPlace(destination.scale(f));
+                    p.addInPlace(up.scale(h * Math.sin(f * Math.PI)));
+                    foot.position.copyFrom(p);
+                }
+                else {
+                    foot.position.copyFrom(destination);
+                    this._scene.onBeforeRenderObservable.removeCallback(animationCB);
+                    resolve();
+                }
+            };
+            this._scene.onBeforeRenderObservable.add(animationCB);
+        });
+    }
+    start() {
+        this._scene.onBeforeRenderObservable.add(this._update);
+    }
+}
 class Mushroom {
     constructor(game) {
         this.game = game;
@@ -3903,6 +4459,22 @@ class BrickMenuView extends HTMLElement {
     static get observedAttributes() {
         return [];
     }
+    get loaded() {
+        return this._loaded;
+    }
+    waitLoaded() {
+        return new Promise(resolve => {
+            let step = () => {
+                if (this.loaded) {
+                    resolve();
+                }
+                else {
+                    requestAnimationFrame(step);
+                }
+            };
+            step();
+        });
+    }
     get shown() {
         return this._shown;
     }
@@ -4121,7 +4693,7 @@ class Player extends BABYLON.Mesh {
     constructor(game) {
         super("player");
         this.game = game;
-        this.godMode = false;
+        this.godMode = true;
         this.mass = 2;
         this.height = 2;
         this.velocity = BABYLON.Vector3.Zero();
@@ -4881,6 +5453,22 @@ class PlayerInventoryView extends HTMLElement {
     static get observedAttributes() {
         return [];
     }
+    get loaded() {
+        return this._loaded;
+    }
+    waitLoaded() {
+        return new Promise(resolve => {
+            let step = () => {
+                if (this.loaded) {
+                    resolve();
+                }
+                else {
+                    requestAnimationFrame(step);
+                }
+            };
+            step();
+        });
+    }
     get shown() {
         return this._shown;
     }
@@ -5199,6 +5787,22 @@ class VoxelizerMenuView extends HTMLElement {
     }
     static get observedAttributes() {
         return [];
+    }
+    get loaded() {
+        return this._loaded;
+    }
+    waitLoaded() {
+        return new Promise(resolve => {
+            let step = () => {
+                if (this.loaded) {
+                    resolve();
+                }
+                else {
+                    requestAnimationFrame(step);
+                }
+            };
+            step();
+        });
     }
     get shown() {
         return this._shown;

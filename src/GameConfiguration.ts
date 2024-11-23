@@ -64,7 +64,7 @@ class GameConfiguration extends Nabu.Configuration {
             new Nabu.ConfigurationElement(
                 "renderDist",
                 Nabu.ConfigurationElementType.Number,
-                4,
+                2,
                 Nabu.ConfigurationElementCategory.Graphic,
                 {
                     displayName: "Render Distance",
