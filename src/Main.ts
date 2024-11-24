@@ -388,52 +388,14 @@ class Game {
             this.terrain.sunDir.copyFrom(this.light.direction);
 
             setTimeout(async () => {
-                let human = new HumanTest(this);
-                human.position.copyFrom(this.player.position).addInPlace(this.player.forward.scale(3));
-                let target = BABYLON.MeshBuilder.CreateBox("targetPos", { width: 0.1, height: 3, depth: 0.1 });
+                let human = new Human(this);
+                human.spinalCord.position.copyFrom(this.player.position).addInPlace(this.player.forward.scale(3));
                 let update = () => {
-                    if (!human.targetPosition || BABYLON.Vector3.Distance(human.targetPosition, human.position) < 4) {
-                        let rayOrigin = human.position.clone();
-                        rayOrigin.y += 10;
-                        rayOrigin.x += -30 + 60 * Math.random();
-                        rayOrigin.z += -30 + 60 * Math.random();
-
-                        let ray = new BABYLON.Ray(rayOrigin, new BABYLON.Vector3(0, -1, 0));
-                        let hit = this.scene.pickWithRay(ray, (mesh) => {
-                            return mesh.name === "ground" || mesh.name.startsWith("chunck");
-                        });
-                        if (hit.hit) {
-                            target.position.copyFrom(hit.pickedPoint);
-                            human.targetPosition = target.position;
-                            human.targetLook = target.position.add(new BABYLON.Vector3(0, 1.5, 0));
-                        }
-                    }
+                    human.brain.update();
                 }
                 this.scene.onBeforeRenderObservable.add(update);
                 await human.instantiate();
                 console.log(human);
-
-                setInterval(() => {
-                    console.log(human.root.position);
-                    console.log(human.torso.position);
-                    console.log(human.head.position);
-
-                    console.log(human.shoulderL.position);
-                    console.log(human.elbowL.position);
-                    console.log(human.handL.position);
-
-                    console.log(human.shoulderR.position);
-                    console.log(human.elbowR.position);
-                    console.log(human.handR.position);
-                    
-                    console.log(human.hipL.position);
-                    console.log(human.kneeL.position);
-                    console.log(human.footL.position);
-
-                    console.log(human.hipR.position);
-                    console.log(human.kneeR.position);
-                    console.log(human.footR.position);
-                }, 5000);
             }, 3000);
 
             //this.playerInventoryView.show(0.2);
