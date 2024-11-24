@@ -3622,7 +3622,7 @@ class HumanBody extends BABYLON.Mesh {
     }
     async instantiate() {
         return new Promise(resolve => {
-            BABYLON.SceneLoader.ImportMesh("", "datas/meshes/riflewoman.babylon", "", this._scene, (meshes, particlesSystems, skeletons) => {
+            BABYLON.SceneLoader.ImportMesh("", "datas/meshes/woman.babylon", "", this._scene, (meshes, particlesSystems, skeletons) => {
                 meshes.forEach(mesh => {
                     if (mesh instanceof BABYLON.Mesh) {
                         this.mesh = mesh;
@@ -3708,6 +3708,7 @@ class LookAtTask extends BrainTask {
         return new Promise(resolve => {
             this.brain.human.spinalCord.targetPosition = undefined;
             this.brain.human.spinalCord.targetLook = this.target;
+            this.brain.human.spinalCord.handMode = HandMode.Look;
             setTimeout(() => {
                 resolve();
             }, 3000);
@@ -3723,6 +3724,7 @@ class TravelToTask extends BrainTask {
         return new Promise(resolve => {
             this.brain.human.spinalCord.targetPosition = this.target;
             this.brain.human.spinalCord.targetLook = this.target.add(new BABYLON.Vector3(0, 1, 0));
+            this.brain.human.spinalCord.handMode = HandMode.None;
             let step = () => {
                 let dx = this.brain.human.spinalCord.position.x - this.brain.human.spinalCord.targetPosition.x;
                 let dz = this.brain.human.spinalCord.position.z - this.brain.human.spinalCord.targetPosition.z;
@@ -3777,11 +3779,19 @@ class HumanBrain {
         }
     }
 }
+var HandMode;
+(function (HandMode) {
+    HandMode[HandMode["None"] = 0] = "None";
+    HandMode[HandMode["Show"] = 1] = "Show";
+    HandMode[HandMode["Look"] = 2] = "Look";
+})(HandMode || (HandMode = {}));
 class HumanSpinalCord extends BABYLON.Mesh {
     constructor(human) {
         super("human");
         this.human = human;
         this.currentSpeed = 0;
+        this.currentRotSpeed = 0;
+        this.handMode = HandMode.None;
         this.rootAlt = 0.84;
         this.torsoHeight = 0.25;
         this.legLength = 0.42;
@@ -3796,23 +3806,37 @@ class HumanSpinalCord extends BABYLON.Mesh {
         this.walkingUpdate = () => {
             let dt = this.engine.getDeltaTime() / 1000;
             let deltaFootR = BABYLON.Vector3.Dot(this.footR.position.subtract(this.root.position), this.forward);
-            this.handR.position = this.up.scale(-0.6).add(this.right.scale(0.15));
-            Mummu.RotateInPlace(this.handR.position, this.right, deltaFootR * Math.PI / 3);
-            this.handR.position.addInPlace(this.shoulderR.absolutePosition);
             let deltaFootL = BABYLON.Vector3.Dot(this.footL.position.subtract(this.root.position), this.forward);
-            this.handL.position = this.up.scale(-0.6).add(this.right.scale(-0.15));
-            Mummu.RotateInPlace(this.handL.position, this.right, deltaFootL * Math.PI / 3);
-            this.handL.position.addInPlace(this.shoulderL.absolutePosition);
-            Mummu.QuaternionFromYZAxisToRef(this.right, this.handR.position.subtract(this.elbowR.position), this.handR.rotationQuaternion);
+            if (this.handMode === HandMode.None) {
+                let p = this.up.scale(-0.6).add(this.right.scale(0.05));
+                Mummu.RotateInPlace(p, this.right, deltaFootR * Math.PI / 3);
+                p.addInPlace(this.shoulderR.absolutePosition);
+                Mummu.StepToRef(this.handR.position, p, 2 * dt, this.handR.position);
+                Mummu.QuaternionFromYZAxisToRef(this.right, this.handR.position.subtract(this.elbowR.position), this.handR.rotationQuaternion);
+            }
+            else if (this.handMode === HandMode.Look) {
+                let p = this.head.position.add(this.head.forward.scale(0.3)).add(this.head.up.scale(0.25));
+                Mummu.StepToRef(this.handR.position, p, 2 * dt, this.handR.position);
+                Mummu.QuaternionFromYZAxisToRef(this.up.add(this.right.scale(0.5)), this.handR.position.subtract(this.elbowR.position), this.handR.rotationQuaternion);
+            }
+            let p = this.up.scale(-0.6).add(this.right.scale(-0.05));
+            Mummu.RotateInPlace(p, this.right, deltaFootL * Math.PI / 3);
+            p.addInPlace(this.shoulderL.absolutePosition);
+            Mummu.StepToRef(this.handL.position, p, 2 * dt, this.handL.position);
             Mummu.QuaternionFromYZAxisToRef(this.right.scale(-1), this.handL.position.subtract(this.elbowL.position), this.handL.rotationQuaternion);
             if (this.targetPosition) {
                 let dirToTarget = this.targetPosition.subtract(this.position).normalize();
                 let angleToTargetPosition = Mummu.AngleFromToAround(this.forward, dirToTarget, BABYLON.Axis.Y);
                 if (angleToTargetPosition > Math.PI / 32) {
-                    this.rotation.y += dt * Math.PI * 0.3;
+                    this.currentRotSpeed = 0.5 * this.currentRotSpeed + 0.5 * Math.PI;
+                    this.rotation.y += dt * this.currentRotSpeed;
                 }
                 else if (angleToTargetPosition < -Math.PI / 32) {
-                    this.rotation.y -= dt * Math.PI * 0.3;
+                    this.currentRotSpeed = 0.5 * this.currentRotSpeed - 0.5 * Math.PI;
+                    this.rotation.y += dt * this.currentRotSpeed;
+                }
+                else {
+                    this.currentRotSpeed = 0.5 * this.currentRotSpeed;
                 }
                 let targetSpeed = 1.1 * (1 - Math.abs(angleToTargetPosition / Math.PI));
                 if (BABYLON.Vector3.Distance(this.targetPosition, this.position) > 0) {
@@ -3822,11 +3846,12 @@ class HumanSpinalCord extends BABYLON.Mesh {
                 }
             }
             else {
-                this.currentSpeed = 0.95 * this.currentSpeed + 0.05 * 0;
+                this.currentRotSpeed = 0.5 * this.currentRotSpeed;
+                this.currentSpeed = 0.95 * this.currentSpeed;
                 BABYLON.Vector3.LerpToRef(this.targetGravityAdvance, BABYLON.Vector3.Zero(), 0.1, this.targetGravityAdvance);
             }
             if (!this._steping) {
-                let footTargetR = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0.06, 0, 0), this.getWorldMatrix());
+                let footTargetR = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0.06 + 0.05 * Math.abs(this.currentRotSpeed), 0, 0), this.getWorldMatrix());
                 let rayR = new BABYLON.Ray(footTargetR.add(new BABYLON.Vector3(0, 2, 0)), new BABYLON.Vector3(0, -1, 0));
                 let hitR = this._scene.pickWithRay(rayR, (mesh) => {
                     return mesh.name === "ground" || mesh.name.startsWith("chunck");
@@ -3834,7 +3859,7 @@ class HumanSpinalCord extends BABYLON.Mesh {
                 if (hitR.hit) {
                     footTargetR = hitR.pickedPoint;
                 }
-                let footTargetL = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(-0.06, 0, 0), this.getWorldMatrix());
+                let footTargetL = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(-0.06 - 0.05 * Math.abs(this.currentRotSpeed), 0, 0), this.getWorldMatrix());
                 let rayL = new BABYLON.Ray(footTargetL.add(new BABYLON.Vector3(0, 2, 0)), new BABYLON.Vector3(0, -1, 0));
                 let hitL = this._scene.pickWithRay(rayL, (mesh) => {
                     return mesh.name === "ground" || mesh.name.startsWith("chunck");
@@ -3874,7 +3899,6 @@ class HumanSpinalCord extends BABYLON.Mesh {
             this._timer += dt;
             let q = BABYLON.Quaternion.Identity();
             let footCenter = this.footL.position.add(this.footR.position).scaleInPlace(0.5);
-            let handCenter = this.handL.position.add(this.handR.position).scaleInPlace(0.5);
             let torsoDir = BABYLON.Vector3.Up().add(this.forward.scale(this.currentSpeed * 0.1));
             torsoDir.normalize();
             let targetRoot = footCenter.clone();
@@ -3931,7 +3955,8 @@ class HumanSpinalCord extends BABYLON.Mesh {
             }
             // Arm Right
             let wristRPosition = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, 0, -this.handLength), this.handR.getWorldMatrix());
-            this.elbowR.position.copyFrom(wristRPosition).subtractInPlace(this.forward.scale(this.lowerArmLength)).addInPlace(this.right.scale(this.lowerArmLength)).subtractInPlace(this.up.scale(this.lowerArmLength));
+            this.elbowR.position.copyFrom(wristRPosition).addInPlace(this.shoulderR.absolutePosition).scaleInPlace(0.5);
+            this.elbowR.position.addInPlace(this.right.scale(this.lowerArmLength * 0.3));
             let upperArmRZ = BABYLON.Vector3.Zero();
             let lowerArmRZ = BABYLON.Vector3.Zero();
             for (let i = 0; i < 3; i++) {
@@ -4030,12 +4055,12 @@ class HumanSpinalCord extends BABYLON.Mesh {
         this.head.rotationQuaternion = BABYLON.Quaternion.Identity();
         this.shoulderL = new BABYLON.Mesh("shoulderL");
         this.shoulderL.parent = this.torso;
-        this.shoulderL.position = new BABYLON.Vector3(-0.16, 0.24, 0);
+        this.shoulderL.position = new BABYLON.Vector3(-0.22, 0.24, 0);
         this.elbowL = new BABYLON.Mesh("elbowL");
         this.handL = BABYLON.MeshBuilder.CreateBox("handL", { size: 0.01 });
         this.shoulderR = new BABYLON.Mesh("shoulderR");
         this.shoulderR.parent = this.torso;
-        this.shoulderR.position = new BABYLON.Vector3(0.16, 0.24, 0);
+        this.shoulderR.position = new BABYLON.Vector3(0.22, 0.24, 0);
         this.elbowR = new BABYLON.Mesh("elbowR");
         this.handR = BABYLON.MeshBuilder.CreateBox("handR", { size: 0.01 });
         this.hipL = new BABYLON.Mesh("hipL");

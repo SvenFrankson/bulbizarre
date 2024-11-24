@@ -22,6 +22,7 @@ class LookAtTask extends BrainTask {
         return new Promise<void>(resolve => {
             this.brain.human.spinalCord.targetPosition = undefined;
             this.brain.human.spinalCord.targetLook = this.target;
+            this.brain.human.spinalCord.handMode = HandMode.Look;
             setTimeout(() => {
                 resolve();
             }, 3000)
@@ -39,6 +40,7 @@ class TravelToTask extends BrainTask {
         return new Promise<void>(resolve => {
             this.brain.human.spinalCord.targetPosition = this.target;
             this.brain.human.spinalCord.targetLook = this.target.add(new BABYLON.Vector3(0, 1, 0));
+            this.brain.human.spinalCord.handMode = HandMode.None;
             
             let step = () => {
                 let dx = this.brain.human.spinalCord.position.x - this.brain.human.spinalCord.targetPosition.x;

@@ -54,7 +54,7 @@ class HumanBody extends BABYLON.Mesh {
     protected _instantiated = false;
     public async instantiate(): Promise<void> {
         return new Promise<void>(resolve => {
-            BABYLON.SceneLoader.ImportMesh("", "datas/meshes/riflewoman.babylon", "", this._scene, (meshes, particlesSystems, skeletons) => {
+            BABYLON.SceneLoader.ImportMesh("", "datas/meshes/woman.babylon", "", this._scene, (meshes, particlesSystems, skeletons) => {
                 meshes.forEach(mesh => {
                     if (mesh instanceof BABYLON.Mesh) {
                         this.mesh = mesh;
