@@ -31,7 +31,8 @@ class ToonMaterial extends BABYLON.ShaderMaterial {
                     "specularColor",
                     "specularCount",
                     "specularPower"
-                ]
+                ],
+                defines: ["#define INSTANCES"]
             }
         );
 

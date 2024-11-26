@@ -72,11 +72,11 @@ class HumanBrain {
         }
         else {
             let task: BrainTask;
-            if (Math.random() < 0.2) {
+            if (Math.random() < 0.3) {
                 let rayOrigin = this.human.spinalCord.position.clone();
                 rayOrigin.y += 10;
-                rayOrigin.x += -15 + 30 * Math.random();
-                rayOrigin.z += -15 + 30 * Math.random();
+                rayOrigin.x += -10 + 20 * Math.random();
+                rayOrigin.z += -10 + 20 * Math.random();
 
                 let ray = new BABYLON.Ray(rayOrigin, new BABYLON.Vector3(0, -1, 0));
                 let hit = this.human.game.scene.pickWithRay(ray, (mesh) => {
@@ -92,7 +92,7 @@ class HumanBrain {
                 targetLook.addInPlace(this.human.spinalCord.forward.scale(20));
                 targetLook.addInPlaceFromFloats(
                     -10 + 20 * Math.random(),
-                    -10 + 20 * Math.random(),
+                    -20 + 40 * Math.random(),
                     -10 + 20 * Math.random()
                 )
                 task = new LookAtTask(this, targetLook);

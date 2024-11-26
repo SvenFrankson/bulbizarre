@@ -5,29 +5,34 @@ class HumanBody extends BABYLON.Mesh {
     public torso: BABYLON.Bone;
 
     public upperLegL: BABYLON.Bone;
-    public legL: BABYLON.Bone;
+    public lowerLegL: BABYLON.Bone;
+    public footL: BABYLON.Bone;
     public upperLegR: BABYLON.Bone;
-    public legR: BABYLON.Bone;
+    public lowerLegR: BABYLON.Bone;
+    public footR: BABYLON.Bone;
 
-    public armL: BABYLON.Bone;
+    public upperArmL: BABYLON.Bone;
     public lowerArmL: BABYLON.Bone;
     public handL: BABYLON.Bone;
     public thumbL: BABYLON.Bone;
-    public armR: BABYLON.Bone;
+    public upperArmR: BABYLON.Bone;
     public lowerArmR: BABYLON.Bone;
     public handR: BABYLON.Bone;
     public thumbR: BABYLON.Bone;
 
-    public rootAlt: number = 0.3;
-    public hipLPosition: BABYLON.Vector3;
-    public footTargetL: BABYLON.Mesh;
-    public footTargetR: BABYLON.Mesh;
-    public kneeL: BABYLON.Mesh;
-    public kneeR: BABYLON.Mesh;
-    public handTargetL: BABYLON.Mesh;
-    public handTargetR: BABYLON.Mesh;
-
     public mesh: BABYLON.Mesh;
+
+    public rootAlt: number = 0.8;
+    public rootLength: number = 0.4;
+    public torsoLength: number = 0.4;
+    public hipPos: BABYLON.Vector3 = BABYLON.Vector3.Zero();
+    public upperLegLength: number = 0.4;
+    public lowerLegLength: number = 0.4;
+    public shoulderPos: BABYLON.Vector3 = BABYLON.Vector3.Zero();
+    public upperArmLength: number = 0.4;
+    public lowerArmLength: number = 0.4;
+    public handLength: number = 0.15;
+    public totalArmLength: number = 0.95;
 
     public get game(): Game {
         return this.human.game;
@@ -39,47 +44,20 @@ class HumanBody extends BABYLON.Mesh {
 
     constructor(public human: Human) {
         super("human");
-        this.footTargetL = new BABYLON.Mesh("footTargetL");
-        BABYLON.CreateBoxVertexData({ size: 0.2 }).applyToMesh(this.footTargetL);
-        this.footTargetR = new BABYLON.Mesh("footTargetR");
-
-        this.kneeL = new BABYLON.Mesh("kneeL");
-        BABYLON.CreateBoxVertexData({ size: 0.2 }).applyToMesh(this.kneeL);
-        this.kneeR = new BABYLON.Mesh("kneeR");
-
-        this.handTargetL = new BABYLON.Mesh("handTargetL");
-        this.handTargetR = new BABYLON.Mesh("handTargetR");
     }
 
     protected _instantiated = false;
     public async instantiate(): Promise<void> {
         return new Promise<void>(resolve => {
-            BABYLON.SceneLoader.ImportMesh("", "datas/meshes/woman.babylon", "", this._scene, (meshes, particlesSystems, skeletons) => {
+            BABYLON.SceneLoader.ImportMesh("", "datas/meshes/scientist.babylon", "", this._scene, (meshes, particlesSystems, skeletons) => {
                 meshes.forEach(mesh => {
                     if (mesh instanceof BABYLON.Mesh) {
                         this.mesh = mesh;
                         this.mesh.alwaysSelectAsActiveMesh = true;
                         
-                        let material = mesh.material;
-                        if (material instanceof BABYLON.MultiMaterial) {
-                            for (let i = 0; i < material.subMaterials.length; i++) {
-                                let subMat = material.subMaterials[i];
-                                if (subMat instanceof BABYLON.PBRMaterial) {
-                                    /*
-                                    let toonMat = new ToonMaterial(subMat.name + "-3-toon", this.scene);
-                                    toonMat.setDiffuseColor(subMat.albedoColor);
-                                    material.subMaterials[i] = toonMat;
-                                    */
-                                }
-                            }
-                        }
-                        else if (material instanceof BABYLON.PBRMaterial) {
-                            /*
-                            let toonMat = new ToonMaterial(material.name + "-3-toon", this.scene);
-                            toonMat.setDiffuseColor(material.albedoColor);
-                            mesh.material = toonMat;
-                            */
-                        }
+                        let toonMat = new BABYLON.StandardMaterial("toon-material", this.game.scene);
+                        toonMat.specularColor.copyFromFloats(0, 0, 0);
+                        mesh.material = toonMat;
                     }
                 });
 
@@ -99,11 +77,14 @@ class HumanBody extends BABYLON.Mesh {
                     this.upperLegL = skeleton.bones.find(bone => { return bone.name === "upper-leg-left"; });
                     this.upperLegR = skeleton.bones.find(bone => { return bone.name === "upper-leg-right"; });
                     
-                    this.legL = skeleton.bones.find(bone => { return bone.name === "leg-left"; });
-                    this.legR = skeleton.bones.find(bone => { return bone.name === "leg-right"; });
+                    this.lowerLegL = skeleton.bones.find(bone => { return bone.name === "leg-left"; });
+                    this.lowerLegR = skeleton.bones.find(bone => { return bone.name === "leg-right"; });
+
+                    this.footL = skeleton.bones.find(bone => { return bone.name === "foot-left"; });
+                    this.footR = skeleton.bones.find(bone => { return bone.name === "foot-right"; });
                     
-                    this.armL = skeleton.bones.find(bone => { return bone.name === "upper-arm-left"; });
-                    this.armR = skeleton.bones.find(bone => { return bone.name === "upper-arm-right"; });
+                    this.upperArmL = skeleton.bones.find(bone => { return bone.name === "upper-arm-left"; });
+                    this.upperArmR = skeleton.bones.find(bone => { return bone.name === "upper-arm-right"; });
                     
                     this.lowerArmL = skeleton.bones.find(bone => { return bone.name === "lower-arm-left"; });
                     this.lowerArmR = skeleton.bones.find(bone => { return bone.name === "lower-arm-right"; });
@@ -113,6 +94,27 @@ class HumanBody extends BABYLON.Mesh {
                     
                     this.thumbL = skeleton.bones.find(bone => { return bone.name === "thumb-left"; });
                     this.thumbR = skeleton.bones.find(bone => { return bone.name === "thumb-right"; });
+                    
+                    this.rootLength = BABYLON.Vector3.Distance(this.root.getAbsolutePosition(), this.torso.getAbsolutePosition());
+                    this.torsoLength = BABYLON.Vector3.Distance(this.torso.getAbsolutePosition(), this.head.getAbsolutePosition());
+                    this.upperArmLength = BABYLON.Vector3.Distance(this.upperArmR.getAbsolutePosition(), this.lowerArmR.getAbsolutePosition());
+                    this.lowerArmLength = BABYLON.Vector3.Distance(this.lowerArmR.getAbsolutePosition(), this.handR.getAbsolutePosition());
+                    this.upperLegLength = BABYLON.Vector3.Distance(this.upperLegR.getAbsolutePosition(), this.lowerLegR.getAbsolutePosition());
+                    this.lowerLegLength = BABYLON.Vector3.Distance(this.lowerLegR.getAbsolutePosition(), this.footR.getAbsolutePosition());
+                    this.rootAlt = this.upperLegLength + this.lowerLegLength;
+                    this.hipPos = this.root.getLocalPositionFromAbsolute(this.upperLegR.getAbsolutePosition());
+                    let deltaShoulder = this.upperArmR.getAbsolutePosition().subtract(this.torso.getAbsolutePosition());
+                    this.shoulderPos.x = BABYLON.Vector3.Dot(deltaShoulder, this.torso.getDirection(BABYLON.Axis.X));
+                    this.shoulderPos.y = BABYLON.Vector3.Dot(deltaShoulder, this.torso.getDirection(BABYLON.Axis.Y));
+                    this.shoulderPos.z = -BABYLON.Vector3.Dot(deltaShoulder, this.torso.getDirection(BABYLON.Axis.Z));
+                    this.totalArmLength = this.upperArmLength + this.lowerArmLength + this.handLength;
+
+                    this.upperArmR.setParent(undefined, true);
+                    this.upperArmL.setParent(undefined, true);
+
+                    console.log(this.rootAlt);
+                    console.log(this.hipPos);
+                    console.log(this.shoulderPos);
 
                     skeleton.bones.forEach(bone => {
                         if (!bone.parent) {
